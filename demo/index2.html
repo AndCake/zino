@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<link href="../../dist/my-new-tag.html" type="zinotag"/>
+	<link href="../../dist/todolist.html" type="zinotag"/>
+</head>
+	<body>
+		<my-new-tag test="hallo!"></my-new-tag>
+
+		<todo-list></todo-list>
+
+		<button type="button" onclick="doit()">add hallo!</button>
+
+		<script src="../zino.js"></script>
+		<script src="mystore.js"></script>
+
+		<script>
+			function doit() {
+				var st = document.createElement('second-tag'),
+					name = prompt('Name:');
+
+				st.setAttribute('me', 'hallo');
+				document.body.appendChild(st);
+
+				Zino.mount('second-tag', st, '../../dist/second-tag.html', {
+					name: name
+				});
+			};
+		</script>
+	</body>
+</html>

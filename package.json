@@ -1,0 +1,13 @@
+{
+  "name": "zinojs",
+  "version": "1.0.0",
+  "description": "Mixture of Polymer and ReactJS-like microframework",
+  "main": "zino.js",
+  "dependencies": {},
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Robert Kunze <r.kunze@mobizcorp.de>",
+  "license": "ISC"
+}
