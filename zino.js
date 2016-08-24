@@ -3,49 +3,69 @@
 /**
 	This library enables you to use custom tags, similar to web components, without any additional polyfills.
 
-	Definition of a new tag:
+	Importing custom tags on page via:
 
-		<my-new-tag>
-			<div>This is some content</div>
-			<p>{{props.myprop}}</p>
+		<link type="zino/tag" href="..."/>
 
-			<script>
-				({
-					props: {
-						myprop: "test"
-					},
-					events: {
-						div: {
-							click: function(e) { this.getHost().setState('myprop', prompt('new name:')); }
-						}
-					},
-					mount: function() {
-						alert('element has been added to the DOM');
-					},
-					unmount: function() {
-						alert('element has been removed from the DOM');
-					}
-				})
-			</script>
-			<style>
-				my-new-tag {
-					display: block;
-					background: red;
-				}
-			</style>
-		</my-new-tag>
+	Properties
 
-	Usage of a new tag:
+	events
+	props
+	render
+	mount
+	unmount
+	styles
+	...
 
-		<my-new-tag/>
+	Exports:
 
-	If you want to dynamically add a new tag using Javascript into the DOM, please use this method:
+		- mount(tagName, element[, url][, props])
+			- tagName - name of the tag to be mounted
+			- element - the DOM element to be mounted
+			- url - URL to load the element from, if not loaded yet (optional)
+			- props - initially set properties (optional)
 
-		<script>
-			var tag = document.createElement('my-new-tag');
-			document.body.appendChild(tag);
-			mount('my-new-tag', tag);
-		</script>
+			Mounts the given element as the given tag name, optionally, loaded from the
+			server, if it has not been loaded already.
+
+		- mountAll([baseElement])
+			- baseElement - DOM element to start mounting from (optional, default = document.body)
+
+			Mounts all loaded tags on the page, starting from the given position
+
+		- trigger(event[, data])
+			- event - name of the event to trigger
+			- data - data to send with the event (optional)
+
+			Triggers the given event
+
+		- on(event, callback)
+			- event - name of the event to listen for
+			- callback - callback function to call when the event is triggered
+
+			Listens for the given event and calls the callback for every occurrence.
+			Any data sent with the trigger will be directly given into the callback.
+
+		- one(event, callback)
+			- event - name of the event to listen for
+			- callback - callback function to call when the event is triggered
+
+			Listens for the given event and calls the callback only for the first
+			occurrence. Any data sent with the trigger will be directly given into
+			the callback.
+
+		- off(event, callback)
+			- event - name of the event to listen for
+			- callback - function to remove as event listener
+
+			Removes the event listener for the given event
+
+		- fetch(url, callback)
+			- url - from where to fetch some content/data?
+			- callback - function to call once successful
+
+			Do a very simple AJAX call (supports only GET). The response body will
+			be handed into the callback function as it is received.
 */
 (function(exports, win, doc) {
 	'use strict';
@@ -73,15 +93,17 @@
 		},
 
 		// simplified GET AJAX request
-		fetch = function(url, callback) {
-			if (urlLibrary[url]) {
+		fetch = function(url, callback, cache) {
+			if (cache && urlLibrary[url]) {
 				return callback(urlLibrary[url]);
 			}
 			var req = new XMLHttpRequest();
 			req.open('GET', url, true);
 			req.onreadystatechange = function() {
 				if (req.readyState === 4 && req.status === 200) {
-					urlLibrary[url] = req.responseText;
+					if (cache) {
+						urlLibrary[url] = req.responseText;
+					}
 					callback(req.responseText);
 				}
 			};
@@ -118,11 +140,21 @@
 				renderStyle = function(name) {
 					var value = getValue(name, data),
 						style = '',
-						replaced = function(g) { return '-' + g.toLowerCase(); };
+						replaced = function(g) { return '-' + g.toLowerCase(); },
+
+						transformValue = function(val) {
+							if (typeof val === 'number' && val !== 0) {
+								return val + 'px';
+							}
+							if (typeof val === 'function') {
+								return transformValue(val.apply(data));
+							}
+							return val;
+						};
 
 					if (typeof value === 'object') {
 						for (var all in value) {
-							style += all.replace(/[A-Z]/g, replaced) + ':' + value[all] + ';';
+							style += all.replace(/[A-Z]/g, replaced) + ':' + transformValue(value[all]) + ';';
 						}
 					}
 					return style;
@@ -133,7 +165,10 @@
 
 			// reset regexp so that recursion works
 			if (!code.match(syntax)) {
-				return code;
+				return {
+					content: code,
+					lastIndex: code.length - 1
+				};
 			}
 
 			while ((match = syntax.exec(code)) !== null) {
@@ -427,13 +462,20 @@
 			frag.appendChild(doc.createElement('div'));
 			frag.firstChild.innerHTML = code;
 			return frag.firstChild.firstElementChild;
+		},
+
+		initializeInstances = function(name, el, props) {
+			if (!(el instanceof NodeList)) el = [el];
+			[].forEach.call(el, function(el) {
+				initializeInstance(name, el, props);
+			});
 		};
 
 	// initialize all tags that are supposed to be pre-loaded via link tag
-	$('link[type="zinotag"]').forEach(function(tag) {
+	$('link[rel="zino-tag"]').forEach(function(tag) {
 		fetch(tag.href, function(code) {
 			registerTag(getTagFromCode(code));
-		});
+		}, true);
 	});
 
 	// export the mount function to enable dynamic mounting
@@ -441,19 +483,17 @@
 			if (url && typeof url === 'string') {
 				fetch(url, function(code) {
 					registerTag(getTagFromCode(code), false);
-					initializeInstance(tag.toUpperCase(), el, props);
-				});
+					initializeInstances(tag.toUpperCase(), el, props);
+				}, true);
 			} else {
-				initializeInstance(tag.toUpperCase(), el, url);
+				initializeInstances(tag.toUpperCase(), el, url);
 			}
 		};
 	exports.mountAll = function(startEl) {
 			startEl = startEl || doc.body;
 
 			Object.keys(tagLibrary).forEach(function(tag) {
-				$(tag, startEl).forEach(function(el) {
-					initializeInstance(tag, el);
-				});
+				initializeInstances(tag, $(tag, startEl));
 			});
 		};
 	// event handling
@@ -476,4 +516,6 @@
 	exports.off = function(event, cb) {
 			this.removeEventListener(event, cb);
 		}.bind(win);
+	// some util functions
+	exports.fetch = fetch;
 }((this.window.Zino = this.window && (this.window.Zino || {})) || exports, window, document));
