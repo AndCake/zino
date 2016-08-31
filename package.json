@@ -10,6 +10,7 @@
     "grunt-contrib-connect": "^1.0.2",
     "grunt-contrib-uglify": "^2.0.0",
     "grunt-contrib-watch": "^1.0.0",
+    "grunt-zino": "git+ssh://git@bitbucket.org/rkunze/grunt-zino.git",
     "load-grunt-tasks": "^3.5.2"
   },
   "scripts": {

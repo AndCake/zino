@@ -1,3 +1,4 @@
+/* jshint node:true */
 /*
  * grunt
  *
@@ -66,7 +67,6 @@ module.exports = function(grunt) {
 		}
 	});
 
-	grunt.loadTasks('../grunt-zino/tasks');
 	grunt.registerTask('build', ['uglify', 'compress']);
 	grunt.registerTask('default', ['build', 'zino', 'connect', 'watch']);
 };

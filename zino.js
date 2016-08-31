@@ -400,9 +400,13 @@
 			style.innerHTML = (styles || []).map(function(style) {
 				var code = style.innerHTML;
 				style.parentNode.removeChild(style);
-				return code.replace(/[\r\n]+([^\{]+?)\{[^\}]+?\}/gm, function (g, m) {
+				return code.replace(/[\r\n \t]+([^\{]+?)\{[^\}]+?[\}\s]+/gm, function (g, m) {
 					var selectors = m.split(',').map(function (selector) {
+						selector = selector.trim();
 						if (selector.match(/:host\b/) || selector.indexOf(tag) >= 0) { return selector; }
+						if (selector[0] === '@' || parseInt(selector[0]) >= 0 || selector === 'from' || selector === 'to') {
+							return selector;
+						}
 						return tag + ' ' + selector;
 					});
 					return g.replace(m, selectors.join(','));
