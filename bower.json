@@ -1,0 +1,26 @@
+{
+  "name": "ZinoJS",
+  "version": "0.0.1",
+  "authors": [
+    "Robert Kunze <r.kunze@mobizcorp.de>"
+  ],
+  "description": "Micro component framework",
+  "main": "zino.js",
+  "keywords": [
+    "Web",
+    "Components",
+    "ReactJS",
+    "Polymer",
+    "micro",
+    "framework"
+  ],
+  "license": "MIT",
+  "homepage": "https://bitbucket.org/rkunze/zinojs",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ]
+}

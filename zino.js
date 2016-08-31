@@ -317,11 +317,13 @@
 					return el || tag;
 				},
 
-				path = doc.activeElement.nodeName === 'INPUT' && getFocus(doc.activeElement);
+				path = doc.activeElement.nodeName === 'INPUT' && getFocus(doc.activeElement),
 
-			tag.innerHTML = parseTemplate(tagDescription.code, merge(getAttributes(tag), {
-				body: tag.__originalInnerHTML
-			})).content;
+				code = parseTemplate(tagDescription.code, merge(getAttributes(tag), {
+					body: tag.__originalInnerHTML
+				}));
+
+			tag.innerHTML = code.content;
 			tagDescription.functions.render.call(tag);
 			restoreFocus(path);
 
@@ -379,11 +381,11 @@
 				tag.props = merge(tagDescription.functions.props, props);
 			}
 
-			// render the tag's content
-			renderInstance(tagDescription, tag);
-
 			// fire the mount event callback
 			tagDescription.functions.mount.call(tag);
+
+			// render the tag's content
+			renderInstance(tagDescription, tag);
 		},
 
 		handleStyles = function(tag, links, styles) {
@@ -400,11 +402,11 @@
 			style.innerHTML = (styles || []).map(function(style) {
 				var code = style.innerHTML;
 				style.parentNode.removeChild(style);
-				return code.replace(/[\r\n \t]+([^\{]+?)\{[^\}]+?[\}\s]+/gm, function (g, m) {
+				return code.replace(/[\r\n]+([^@%\{;\}]+?)\{/gm, function (g, m) {
 					var selectors = m.split(',').map(function (selector) {
 						selector = selector.trim();
 						if (selector.match(/:host\b/) || selector.indexOf(tag) >= 0) { return selector; }
-						if (selector[0] === '@' || parseInt(selector[0]) >= 0 || selector === 'from' || selector === 'to') {
+						if (selector.match(/^\s*(?:(?:\d+%)|(?:from)|(?:to)|(?:@\w+)|\})\s*$/)) {
 							return selector;
 						}
 						return tag + ' ' + selector;
