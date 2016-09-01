@@ -1,0 +1,47 @@
+<comment-form>
+	<form class='comment-form'>
+		<input type="text" name="author" placeholder="Your name" />
+		<textarea name="comment" placeholder="Say something..."></textarea>
+		<button>Post</button>
+	</form>
+	<script>
+	({
+		events: {
+			form: {
+				submit: function(e) {
+					e.preventDefault();
+					Zino.trigger('comments-added', {
+						author: this.author.value,
+						comment: this.comment.value
+					});
+				}
+			}
+		}
+	})
+	</script>
+
+	<style>
+		input, textarea {
+			display: block;
+			width: 200px;
+			padding: 2px 5px;
+			margin-bottom: 5px;
+			border: 1px solid #ccc;
+		}
+
+		button {
+			background: #efefef;
+			border: 1px solid #ccc;
+			text-transform: uppercase;
+			color: #414141;
+			border-radius: 3px;
+			padding: 2px 5px;
+			cursor: pointer;
+		}
+		button:hover {
+			background: #fff;
+			box-shadow: 0px 0px 2px #efefef;
+			color: black;
+		}
+	</style>
+</comment-form>

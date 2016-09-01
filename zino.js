@@ -321,9 +321,15 @@
 
 				code = parseTemplate(tagDescription.code, merge(getAttributes(tag), {
 					body: tag.__originalInnerHTML
-				}));
+				})),
+				content = document.createDocumentFragment(),
+				div = document.createElement('div');
 
-			tag.innerHTML = code.content;
+			div.className = '-shadow-root';
+			content.appendChild(div);
+			content.querySelector('div').innerHTML = code.content;
+			tag.replaceChild(content, tag.firstChild);
+
 			tagDescription.functions.render.call(tag);
 			restoreFocus(path);
 
@@ -366,7 +372,15 @@
 
 			tag.__baseElementAttrs = baseAttrs;
 			tag.__originalInnerHTML = tag.innerHTML;
+			tag.innerHTML = '<div class="-shadow-root"></div>';
 			tag.__oldSetAttribute = tag.__oldSetAttribute || tag.setAttribute;
+			Object.defineProperty(tag, 'innerHTML', {
+				set: function(val) {
+					tag.__originalInnerHTML = val;
+					renderInstance(tagDescription, tag);
+				},
+				get: function() { return tag.__originalInnerHTML; }
+			});
 			tag.setAttribute = function(attr, val) {
 				tag.__oldSetAttribute(attr, val);
 				renderInstance(tagDescription, tag);
@@ -405,7 +419,7 @@
 				return code.replace(/[\r\n]+([^@%\{;\}]+?)\{/gm, function (g, m) {
 					var selectors = m.split(',').map(function (selector) {
 						selector = selector.trim();
-						if (selector.match(/:host\b/) || selector.indexOf(tag) >= 0) { return selector; }
+						if (selector.match(/:host\b/) || selector.match(new RegExp('^\\s*' + tag + '\\b'))) { return selector; }
 						if (selector.match(/^\s*(?:(?:\d+%)|(?:from)|(?:to)|(?:@\w+)|\})\s*$/)) {
 							return selector;
 						}
