@@ -8,7 +8,7 @@ Comparison
 
 - ReactJS: 43.8 KB minified & gzipped
 - Polymer: 48.80 KB minified & gzipped
-- ZinoJS: 2.3 KB minified & gzipped
+- ZinoJS: 2.8 KB minified & gzipped
 
 Features
 --------
@@ -497,6 +497,13 @@ There are certain default properties that do exist for every component implicitl
 					msTransition: 'all'
 				}
 			}
+
+	* setProps(prop[, value]), setState(prop[, value])
+		- setState is an alias for setProps.
+		- call this function in order to update your props and trigger a re-render with the updated values.
+		- the first parameter can be a the name of a prop (type string) or an object containing multiple props and their values.
+		- the second parameter is only used, if the first parameter is a string to represent the prop's value.
+		- never try to update your props without this method, unless you know what you are doing.
 
 You can define additional properties for the component that will be automatically bound to the component upon mounting by returning them in any of the component's script tags.
 

@@ -15,6 +15,7 @@
 	mount
 	unmount
 	styles
+	setProps
 	...
 
 	Exports:
@@ -432,20 +433,22 @@
 		},
 
 		handleScripts = function(tag, scripts) {
-			var functions = {
-				props: {},
-				mount: function() {},
-				unmount: function() {},
-				render: function() {},
-				setState: function(name, value) {
+			var setProps = function(name, value) {
 					if (typeof name === 'object') {
 						merge(this.props, name);
 					} else {
 						this.props[name] = value;
 					}
 					renderInstance(tagLibrary[this.tagName], this);
-				}
-			};
+				},
+				functions = {
+					props: {},
+					mount: function() {},
+					unmount: function() {},
+					render: function() {},
+					setProps: setProps,
+					setState: setProps
+				};
 
 			scripts.forEach(function(script) {
 				if (script.src) {
