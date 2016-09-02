@@ -438,7 +438,11 @@
 				unmount: function() {},
 				render: function() {},
 				setState: function(name, value) {
-					this.props[name] = value;
+					if (typeof name === 'object') {
+						merge(this.props, name);
+					} else {
+						this.props[name] = value;
+					}
 					renderInstance(tagLibrary[this.tagName], this);
 				}
 			};
