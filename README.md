@@ -450,6 +450,20 @@ There are certain default properties that do exist for every component implicitl
 				}
 			}
 
+	* element
+		- an object used to access the original tag's content before it is rendered. It uses a JSON-notation to allow access to child elements.
+
+		- Example:
+
+			// given the following structure:
+			// <my-tag>
+			//    <div><a href="#test" title="my title">click me</a></div>
+			//    <div><p>lorem ipsum</p></div>
+			// </my-tag>
+
+			// this will extract the A-tag's title attribute
+			element.div[0].a.title
+
 	* props
 		- an object used to define the initial internal state of the component. You can read the state by using `this.props.<prop-name>`, however, never write a value to the state using this syntax. Instead use `this.setState('<prop-name>', <prop-value>);`, else there will be no automatic re-rendering of the component upon state-change.
 

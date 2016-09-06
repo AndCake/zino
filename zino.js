@@ -185,6 +185,8 @@
 					condition = getValue(key, data);
 					if (match[1][0] === '^' && (!condition || condition && condition.length <= 0)) {
 						condition = true;
+					} else if (match[1][0] === '^') {
+						condition = false;
 					}
 
 					parsed = '';
@@ -192,6 +194,7 @@
 					if (condition) {
 						if (typeof condition === 'object') {
 							for (var all in condition) {
+								if (all === 'isArray') continue;
 								parsed = parseTemplate(
 										code,
 										merge({
@@ -258,7 +261,7 @@
 
 		// retrieves all attributes that can be used for rendering
 		getAttributes = function(tag) {
-			var attrs = {props: {}, element: tag.__baseElementAttrs, styles: {}};
+			var attrs = {props: {}, element: tag.element, styles: {}};
 
 			[].slice.call(tag.attributes).forEach(function(attribute) {
 				attrs[attribute.name] = attribute.value;
@@ -371,7 +374,7 @@
 				}
 			});
 
-			tag.__baseElementAttrs = baseAttrs;
+			tag.element = baseAttrs;
 			tag.__originalInnerHTML = tag.innerHTML;
 			tag.innerHTML = '<div class="-shadow-root"></div>';
 			tag.__oldSetAttribute = tag.__oldSetAttribute || tag.setAttribute;
@@ -456,9 +459,13 @@
 					doc.head.appendChild(script);
 					return {};
 				}
-				//jshint evil:true
-				merge(functions, eval(script.innerHTML));
-				//jshint evil:false
+				try {
+					//jshint evil:true
+					merge(functions, eval(script.innerHTML));
+					//jshint evil:false
+				} catch(e) {
+					throw e.message + ' while parsing ' + tag + ' script: ' + script.innerHTML;
+				}
 				script.parentNode.removeChild(script);
 			});
 
