@@ -429,6 +429,7 @@ There are certain default properties that do exist for every component implicitl
 			}
 
 		- a special CSS selector can be used to bind an event to the component tag itself: `:host`
+		- the `this.getHost()` function can be used to access the custom tag that event's target element belongs to.
 
 		- Example:
 
@@ -521,6 +522,18 @@ There are certain default properties that do exist for every component implicitl
 
 You can define additional properties for the component that will be automatically bound to the component upon mounting by returning them in any of the component's script tags.
 
+Since all these functions are bound to the ZinoJS custom tag they were defined for, you can access all methods
+and attributes of that tag via the DOM API. Example:
+
+	<!-- tag is used -->
+	<my-tag myattr="1"></my-tag>
+
+	// in your tag's JS code then:
+	render: function() {
+		this.attributes.myattr.value === '1' // true
+	}
+
+
 ZinoJS itself
 -------------
 
@@ -533,7 +546,7 @@ ZinoJS exports a set of functions in order to interact with it. Those functions 
 		- props - initially set properties (optional)
 
 		Mounts the given element as the given tag name, optionally, loaded from the
-		server, if it has not been loaded already. This is especially useful, if you want to render a component dynamically, meaning after the page load.
+		server, if it has not been loaded already. This is especially useful, if you want to render a component dynamically, meaning after the page load. By providing props as part of this call, you can transmit complex Javascript objects, which would not be possible through normal tag attributes.
 
 		Example:
 
