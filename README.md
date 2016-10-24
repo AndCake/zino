@@ -604,7 +604,8 @@ ZinoJS exports a set of functions in order to interact with it. Those functions 
 
 	- fetch(url, callback)
 		- url - from where to fetch some content/data?
-		- callback - function to call once successful
+		- callback(data, err) - function to call once successful
 
-		Do a very simple AJAX call (supports only GET). The response body will
-		be handed into the callback function as it is received.
+		Do a very simple AJAX call (supports only GET). The response body will be handed
+		into the callback function as `data`. If an error occurs, the `err` parameter
+		will be filled with the server's response status code.

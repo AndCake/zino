@@ -63,10 +63,10 @@
 
 		- fetch(url, callback)
 			- url - from where to fetch some content/data?
-			- callback - function to call once successful
+			- callback(data, err) - function to call once successful
 
 			Do a very simple AJAX call (supports only GET). The response body will
-			be handed into the callback function as it is received.
+			be handed into the callback function as data. If an error occurs, the err parameter will be filled with the server's response status code.
 */
 (function(exports, win, doc) {
 	'use strict';
@@ -106,6 +106,8 @@
 						urlLibrary[url] = req.responseText;
 					}
 					callback(req.responseText);
+				} else if (req.readyState === 4) {
+					callback(req.responseText, req.status);
 				}
 			};
 			req.send();
