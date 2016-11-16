@@ -73,7 +73,7 @@
 	var tagLibrary = {},
 		urlLibrary = {},
 
-		addObserver = new MutationObserver(function(records) {
+		tagObserver = new MutationObserver(function(records) {
 			records.forEach(function(record) {
 				var tag;
 				if (record.addedNodes.length > 0) {
@@ -547,7 +547,7 @@
 		}, true);
 	});
 
-	addObserver.observe(document.body, {
+	tagObserver.observe(document.body, {
 		subtree: true,
 		childList: true
 	});
