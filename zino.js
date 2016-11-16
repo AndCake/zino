@@ -1,5 +1,4 @@
 // zino.js
-
 /**
 	This library enables you to use custom tags, similar to web components, without any additional polyfills.
 
@@ -74,6 +73,31 @@
 	var tagLibrary = {},
 		urlLibrary = {},
 
+		addObserver = new MutationObserver(function(records) {
+			records.forEach(function(record) {
+				var tag;
+				if (record.addedNodes.length > 0) {
+					for (var all in record.addedNodes) {
+						tag = record.addedNodes[all];
+						if (tagLibrary[tag.tagName] && !tag.__oldSetAttribute) {
+							// mount the tag
+							exports.mount(tag.tagName, tag);
+						}
+					}
+				} else if (record.removedNodes.length > 0) {
+					records.forEach(function(record) {
+						var tag;
+						for (var i in record.removedNodes) {
+							tag = record.removedNodes[i];
+							if (tagLibrary[tag.tagName]) {
+								tagLibrary[tag.tagName].functions.unmount.call(tag);
+							}
+						}
+					});
+				}
+			});
+		}),
+
 		// returns an array of elements that match the given selector in the given context
 		$ = function(selector, context) {
 			return [].slice.call((context || doc).querySelectorAll(selector));
@@ -95,19 +119,26 @@
 
 		// simplified GET AJAX request
 		fetch = function(url, callback, cache) {
-			if (cache && urlLibrary[url]) {
+			if (cache && urlLibrary[url] && !urlLibrary[url].cb) {
 				return callback(urlLibrary[url]);
+			} else if (typeof urlLibrary[url] === 'object') {
+				return urlLibrary[url].cb.push(callback);
 			}
+			urlLibrary[url] = {
+				cb: [callback]
+			};
 			var req = new XMLHttpRequest();
 			req.open('GET', url, true);
 			req.onreadystatechange = function() {
-				if (req.readyState === 4 && req.status === 200) {
-					if (cache) {
+				if (req.readyState === 4) {
+					var callbacks = urlLibrary[url].cb;
+					if (req.status === 200 && cache) {
 						urlLibrary[url] = req.responseText;
 					}
-					callback(req.responseText);
-				} else if (req.readyState === 4) {
-					callback(req.responseText, req.status);
+					if (!cache) delete urlLibrary[url];
+					for (var all in callbacks) {
+						callbacks[all](req.responseText);
+					}
 				}
 			};
 			req.send();
@@ -380,13 +411,15 @@
 			tag.__originalInnerHTML = tag.innerHTML;
 			tag.innerHTML = '<div class="-shadow-root"></div>';
 			tag.__oldSetAttribute = tag.__oldSetAttribute || tag.setAttribute;
-			Object.defineProperty(tag, 'innerHTML', {
-				set: function(val) {
-					tag.__originalInnerHTML = val;
-					renderInstance(tagDescription, tag);
-				},
-				get: function() { return tag.__originalInnerHTML; }
-			});
+			try {
+				Object.defineProperty(tag, 'innerHTML', {
+					set: function(val) {
+						tag.__originalInnerHTML = val;
+						renderInstance(tagDescription, tag);
+					},
+					get: function() { return tag.__originalInnerHTML; }
+				});
+			} catch(e) { console.error(e); }
 			tag.setAttribute = function(attr, val) {
 				tag.__oldSetAttribute(attr, val);
 				renderInstance(tagDescription, tag);
@@ -512,6 +545,11 @@
 		fetch(tag.href, function(code) {
 			registerTag(getTagFromCode(code));
 		}, true);
+	});
+
+	addObserver.observe(document.body, {
+		subtree: true,
+		childList: true
 	});
 
 	// export the mount function to enable dynamic mounting
