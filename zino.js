@@ -81,7 +81,7 @@
 						tag = record.addedNodes[all];
 						if (tagLibrary[tag.tagName] && !tag.__oldSetAttribute) {
 							// mount the tag
-							exports.mount(tag.tagName, tag);
+							exports.mount(tag);
 						}
 					}
 				} else if (record.removedNodes.length > 0) {
@@ -380,8 +380,8 @@
 			}
 		},
 
-		initializeInstance = function(name, tag, props) {
-			var tagDescription = tagLibrary[name],
+		initializeInstance = function(tag, props) {
+			var tagDescription = tagLibrary[tag.tagName],
 				baseAttrs = {};
 
 			for (var all in tagDescription.functions) {
@@ -423,10 +423,6 @@
 			tag.setAttribute = function(attr, val) {
 				tag.__oldSetAttribute(attr, val);
 				renderInstance(tagDescription, tag);
-			};
-			tag.remove = function() {
-				tagDescription.functions.unmount.call(tag);
-				tag.parentNode.removeChild(tag);
 			};
 
 			// pre-set props, if given
@@ -521,7 +517,7 @@
 
 			if (initializeAll !== false) {
 				$(code.tagName).forEach(function(tag) {
-					initializeInstance(tag.tagName, tag);
+					initializeInstance(tag);
 				});
 			}
 		},
@@ -533,10 +529,10 @@
 			return frag.firstChild.firstElementChild;
 		},
 
-		initializeInstances = function(name, el, props) {
+		initializeInstances = function(el, props) {
 			if (!(el instanceof NodeList)) el = [el];
 			[].forEach.call(el, function(el) {
-				initializeInstance(name, el, props);
+				!el.__oldSetAttribute && initializeInstance(el, props);
 			});
 		};
 
@@ -553,21 +549,21 @@
 	});
 
 	// export the mount function to enable dynamic mounting
-	exports.mount = function(tag, el, url, props) {
+	exports.mount = function(el, url, props) {
 			if (url && typeof url === 'string') {
 				fetch(url, function(code) {
 					registerTag(getTagFromCode(code), false);
-					initializeInstances(tag.toUpperCase(), el, props);
+					initializeInstances(el, props);
 				}, true);
 			} else {
-				initializeInstances(tag.toUpperCase(), el, url);
+				initializeInstances(el, url);
 			}
 		};
 	exports.mountAll = function(startEl) {
 			startEl = startEl || doc.body;
 
 			Object.keys(tagLibrary).forEach(function(tag) {
-				initializeInstances(tag, $(tag, startEl));
+				initializeInstances($(tag, startEl));
 			});
 		};
 	// event handling
