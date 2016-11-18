@@ -72,25 +72,27 @@
 
 	var tagLibrary = {},
 		urlLibrary = {},
+		innerHTML = 'innerHTML',
+		originalInnerHTML = '__i',
+		oldSetAttribute = '__s',
 
 		tagObserver = new MutationObserver(function(records) {
 			records.forEach(function(record) {
-				var tag;
-				if (record.addedNodes.length > 0) {
-					for (var all in record.addedNodes) {
-						tag = record.addedNodes[all];
-						if (tagLibrary[tag.tagName] && !tag.__oldSetAttribute) {
+				var tag, added = record.addedNodes, removed = record.removedNodes;
+				if (added.length > 0) {
+					for (var all in added) {
+						tag = added[all];
+						if (tagLibrary[tag.tagName] && !tag[oldSetAttribute]) {
 							// mount the tag
-							exports.mount(tag);
+							exports['mount'](tag);
 						}
 					}
-				} else if (record.removedNodes.length > 0) {
+				} else if (removed.length > 0) {
 					records.forEach(function(record) {
-						var tag;
-						for (var i in record.removedNodes) {
-							tag = record.removedNodes[i];
+						for (var i in removed) {
+							tag = removed[i];
 							if (tagLibrary[tag.tagName]) {
-								tagLibrary[tag.tagName].functions.unmount.call(tag);
+								tagLibrary[tag.tagName].functions['unmount'].call(tag);
 							}
 						}
 					});
@@ -294,27 +296,27 @@
 
 		// retrieves all attributes that can be used for rendering
 		getAttributes = function(tag) {
-			var attrs = {props: {}, element: tag.element, styles: {}};
+			var attrs = {'props': {}, 'element': tag.element, 'styles': {}};
 
 			[].slice.call(tag.attributes).forEach(function(attribute) {
 				attrs[attribute.name] = attribute.value;
 			});
 
 			if (tag.styles) {
-				merge(attrs.styles, tag.styles);
+				merge(attrs['styles'], tag['styles']);
 			}
 
-			merge(attrs.props, tag.props);
+			merge(attrs['props'], tag['props']);
 			return attrs;
 		},
 
 		// renders an element instance from scratch
 		renderInstance = function(tagDescription, tag) {
-			var events = tagDescription.functions.events || [],
+			var events = tagDescription.functions['events'] || [],
 
 				attachEvent = function(el, events) {
 					events = typeof events !== 'number' ? events : this;
-					el.getHost = function() { return tag; };
+					el['getHost'] = function() { return tag; };
 					for (var each in events) {
 						el.addEventListener(each, events[each].bind(el), false);
 					}
@@ -345,7 +347,7 @@
 				restoreFocus = function(path) {
 					var el;
 					if (path) {
-						el = tag.querySelector(path.selector);
+						el = $(path.selector, tag)[0];
 						if (el) {
 							el.value = path.value || '';
 							el.focus();
@@ -357,24 +359,28 @@
 				path = doc.activeElement.nodeName === 'INPUT' && getFocus(doc.activeElement),
 
 				code = parseTemplate(tagDescription.code, merge(getAttributes(tag), {
-					body: tag.__originalInnerHTML
+					body: tag[originalInnerHTML]
 				})),
-				content = document.createDocumentFragment(),
-				div = document.createElement('div');
+				content = doc.createDocumentFragment(),
+				div = doc.createElement('div'),
+				isNew = false;
 
 			div.className = '-shadow-root';
 			content.appendChild(div);
-			content.querySelector('div').innerHTML = code.content;
+			$('div', content)[0][innerHTML] = code.content;
 			tag.replaceChild(content, tag.firstChild);
 
-			tagDescription.functions.render.call(tag);
+			if (tagDescription.functions['render'].call(tag) !== false && !tag.getAttribute('__ready')) {
+				tag[oldSetAttribute]('__ready', true);
+				isNew = true;
+			}
 			restoreFocus(path);
 
 			// attach events
 			for (var all in events) {
 				if (all !== ':host' && all !== tag.tagName) {
 					$(all, tag).forEach(attachEvent, events[all]);
-				} else {
+				} else if (isNew) {
 					attachEvent(tag, events[all]);
 				}
 			}
@@ -408,30 +414,30 @@
 			});
 
 			tag.element = baseAttrs;
-			tag.__originalInnerHTML = tag.innerHTML;
-			tag.innerHTML = '<div class="-shadow-root"></div>';
-			tag.__oldSetAttribute = tag.__oldSetAttribute || tag.setAttribute;
+			tag[originalInnerHTML] = tag[innerHTML];
+			tag[innerHTML] = '<div class="-shadow-root"></div>';
+			tag[oldSetAttribute] = tag[oldSetAttribute] || tag.setAttribute;
 			try {
-				Object.defineProperty(tag, 'innerHTML', {
+				Object.defineProperty(tag, innerHTML, {
 					set: function(val) {
-						tag.__originalInnerHTML = val;
+						tag[originalInnerHTML] = val;
 						renderInstance(tagDescription, tag);
 					},
-					get: function() { return tag.__originalInnerHTML; }
+					get: function() { return tag[originalInnerHTML]; }
 				});
 			} catch(e) { console.error(e); }
-			tag.setAttribute = function(attr, val) {
-				tag.__oldSetAttribute(attr, val);
+			tag['setAttribute'] = function(attr, val) {
+				tag[oldSetAttribute](attr, val);
 				renderInstance(tagDescription, tag);
 			};
 
 			// pre-set props, if given
 			if (props) {
-				tag.props = merge(tagDescription.functions.props, props);
+				tag['props'] = merge(tagDescription.functions['props'], props);
 			}
 
 			// fire the mount event callback
-			tagDescription.functions.mount.call(tag);
+			tagDescription.functions['mount'].call(tag);
 
 			// render the tag's content
 			renderInstance(tagDescription, tag);
@@ -448,8 +454,8 @@
 			});
 
 			style.id = tag + '-styles';
-			style.innerHTML = (styles || []).map(function(style) {
-				var code = style.innerHTML;
+			style[innerHTML] = (styles || []).map(function(style) {
+				var code = style[innerHTML];
 				style.parentNode.removeChild(style);
 				return code.replace(/[\r\n]+([^@%\{;\}]+?)\{/gm, function (g, m) {
 					var selectors = m.split(',').map(function (selector) {
@@ -469,19 +475,19 @@
 		handleScripts = function(tag, scripts) {
 			var setProps = function(name, value) {
 					if (typeof name === 'object') {
-						merge(this.props, name);
+						merge(this['props'], name);
 					} else {
-						this.props[name] = value;
+						this['props'][name] = value;
 					}
 					renderInstance(tagLibrary[this.tagName], this);
 				},
 				functions = {
-					props: {},
-					mount: function() {},
-					unmount: function() {},
-					render: function() {},
-					setProps: setProps,
-					setState: setProps
+					'props': {},
+					'mount': function() {},
+					'unmount': function() {},
+					'render': function() {},
+					'setProps': setProps,
+					'setState': setProps
 				};
 
 			scripts.forEach(function(script) {
@@ -492,10 +498,10 @@
 				}
 				try {
 					//jshint evil:true
-					merge(functions, eval(script.innerHTML));
+					merge(functions, eval(script[innerHTML]));
 					//jshint evil:false
 				} catch(e) {
-					throw e.message + ' while parsing ' + tag + ' script: ' + script.innerHTML;
+					throw e.message + ' while parsing ' + tag + ' script: ' + script[innerHTML];
 				}
 				script.parentNode.removeChild(script);
 			});
@@ -512,12 +518,12 @@
 
 			tagLibrary[code.tagName] = {
 				functions: handleScripts(code.tagName, $('script', code)),
-				code: code.innerHTML
+				code: code[innerHTML]
 			};
 
 			if (initializeAll !== false) {
 				$(code.tagName).forEach(function(tag) {
-					initializeInstance(tag);
+					!tag[oldSetAttribute] && initializeInstance(tag);
 				});
 			}
 		},
@@ -525,14 +531,14 @@
 		getTagFromCode = function(code) {
 			var frag = doc.createDocumentFragment();
 			frag.appendChild(doc.createElement('div'));
-			frag.firstChild.innerHTML = code;
+			frag.firstChild[innerHTML] = code;
 			return frag.firstChild.firstElementChild;
 		},
 
 		initializeInstances = function(el, props) {
 			if (!(el instanceof NodeList)) el = [el];
 			[].forEach.call(el, function(el) {
-				!el.__oldSetAttribute && initializeInstance(el, props);
+				!el[oldSetAttribute] && initializeInstance(el, props);
 			});
 		};
 
@@ -543,13 +549,13 @@
 		}, true);
 	});
 
-	tagObserver.observe(document.body, {
+	tagObserver.observe(doc.body, {
 		subtree: true,
 		childList: true
 	});
 
 	// export the mount function to enable dynamic mounting
-	exports.mount = function(el, url, props) {
+	exports['mount'] = function(el, url, props) {
 			if (url && typeof url === 'string') {
 				fetch(url, function(code) {
 					registerTag(getTagFromCode(code), false);
@@ -559,7 +565,7 @@
 				initializeInstances(el, url);
 			}
 		};
-	exports.mountAll = function(startEl) {
+	exports['mountAll'] = function(startEl) {
 			startEl = startEl || doc.body;
 
 			Object.keys(tagLibrary).forEach(function(tag) {
@@ -567,15 +573,15 @@
 			});
 		};
 	// event handling
-	exports.trigger = function(event, data) {
+	exports['trigger'] = function(event, data) {
 			this.dispatchEvent(new CustomEvent(event, {detail: data}));
 		}.bind(win);
-	exports.on = function(event, cb) {
+	exports['on'] = function(event, cb) {
 			this.addEventListener(event, function(e) {
 				cb(e.detail);
 			}, false);
 		}.bind(win);
-	exports.one = function(event, cb) {
+	exports['one'] = function(event, cb) {
 			var _this = this,
 				remove = function(e) {
 					cb(e.detail);
@@ -583,9 +589,9 @@
 				};
 			_this.addEventListener(event, remove, false);
 		}.bind(win);
-	exports.off = function(event, cb) {
+	exports['off'] = function(event, cb) {
 			this.removeEventListener(event, cb);
 		}.bind(win);
 	// some util functions
-	exports.fetch = fetch;
-}((this.window.Zino = this.window && (this.window.Zino || {})) || exports, window, document));
+	exports['fetch'] = fetch;
+}(this.exports || (window['Zino'] = (window['Zino'] || {})), window, document));

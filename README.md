@@ -8,7 +8,7 @@ Comparison
 
 - ReactJS: 43.8 KB minified & gzipped
 - Polymer: 48.80 KB minified & gzipped
-- ZinoJS: 3.1 KB minified & gzipped
+- ZinoJS: 2.7 KB minified & gzipped
 
 Features
 --------
