@@ -87,7 +87,11 @@
 					added.forEach(function(tag) {
 						tag.querySelectorAll && $('*', tag).concat(tag).forEach(function(subTag) {
 							if (tagLibrary[subTag.tagName]) {
-								exports['mount'](subTag);
+								try {
+									exports['mount'](subTag);
+								} catch (e) {
+									throw new Error('Unable to mount tag ' + subTag.tagName + ': ' + e.message);
+								}
 							}
 						});
 					});
@@ -95,7 +99,11 @@
 					removed.forEach(function(tag) {
 						tag.querySelectorAll && $('*', tag).concat(tag).forEach(function(subTag) {
 							if (tagLibrary[subTag.tagName]) {
-								tagLibrary[subTag.tagName].functions['unmount'].call(subTag);
+								try {
+									tagLibrary[subTag.tagName].functions['unmount'].call(subTag);
+								} catch (e) {
+									throw new Error('Unable to unmount tag ' + subTag.tagName + ': ' + e.message);
+								}
 							}
 						});
 					});
@@ -258,7 +266,11 @@
 							);
 
 							if (typeof condition === 'function') {
-								result += condition(parsed.content);
+								try {
+									result += condition(parsed.content);
+								} catch (e) {
+									throw new Error('Unable to run condition function ' + parsed.content + ' while parsing template: ' + e.message);
+								}
 							} else {
 								result += parsed.content;
 							}
@@ -321,6 +333,7 @@
 					events = typeof events !== 'number' ? events : this;
 					el['getHost'] = function() { return tag; };
 					for (var each in events) {
+						checkParams([events[each]], ['function'], 'event ' + each + ' for tag ' + tag.tagName);
 						el.addEventListener(each, events[each].bind(el), false);
 					}
 				},
@@ -373,13 +386,18 @@
 			$('div', content)[0][innerHTML] = code.content;
 			tag.replaceChild(content, tag.firstChild);
 
-			if (tagDescription.functions['render'].call(tag) !== false && !tag.getAttribute('__ready')) {
-				tag[oldSetAttribute]('__ready', true);
-				isNew = true;
+			try {
+				if (tagDescription.functions['render'].call(tag) !== false && !tag.getAttribute('__ready')) {
+					tag[oldSetAttribute]('__ready', true);
+					isNew = true;
+				}
+			} catch(e) {
+				throw new Error('Error while calling render function of ' + tag.tagName + ': ' + e.message, e.fileName, e.lineNumber);
 			}
 			restoreFocus(path);
 
 			// attach events
+			checkParams([events], ['object'], 'event definition for tag ' + tag.tagName);
 			for (var all in events) {
 				if (all !== ':host' && all !== tag.tagName) {
 					$(all, tag).forEach(attachEvent, events[all]);
@@ -437,7 +455,7 @@
 				});
 			} catch(e) {
 				// browser does not support overriding innerHTML
-				console.error(e, 'Please use `element.body` instead of `element.innerHTML`');
+				console.error(e, 'Your browser does not support overriding innerHTML. Please use `element.body` instead of `element.innerHTML`.');
 			}
 			tag['setAttribute'] = function(attr, val) {
 				tag[oldSetAttribute](attr, val);
@@ -450,7 +468,11 @@
 			}
 
 			// fire the mount event callback
-			tagDescription.functions['mount'].call(tag);
+			try {
+				tagDescription.functions['mount'].call(tag);
+			} catch (e) {
+				throw new Error('Unable to call mount() for tag ' + tag.tagName + ': ' + e.message, e.fileName, e.lineNumber);
+			}
 
 			// render the tag's content
 			renderInstance(tagDescription, tag);
@@ -553,6 +575,14 @@
 			[].forEach.call(el, function(el) {
 				!el[oldSetAttribute] && initializeInstance(el, props);
 			});
+		},
+
+		checkParams = function(args, types, api) {
+			for (var all in args) {
+				if (types[all] && typeof args[all] !== types[all]) {
+					throw new Error('API mismatch while using ' + api + ': Parameter ' + all + ' was supposed to be ' + types[all] + ' but ' + (typeof args[all]) + ' was given.');
+				}
+			}
 		};
 
 	// initialize all tags that are supposed to be pre-loaded via link tag
@@ -569,6 +599,7 @@
 
 	// export the dynamic tag loading & mounting functions
 	exports['import'] = function(url, cb, props) {
+		checkParams(arguments, ['string'], 'Zino.import: URL expected');
 		cb = cb || function(){};
 		fetch(url, function(code) {
 			var tag = getTagFromCode(code);
@@ -578,6 +609,7 @@
 		}, true);
 	};
 	exports['mount'] = function(el, url, props) {
+			checkParams(arguments, ['object'], 'Zino.mount: DOM node expected');
 			if (url && typeof url === 'string') {
 				exports.import(url, null, props);
 			} else {
@@ -586,6 +618,7 @@
 		};
 	exports['mountAll'] = function(startEl) {
 			startEl = startEl || doc.body;
+			checkParams(arguments, ['object'], 'Zino.mountAll: DOM node expected');
 
 			Object.keys(tagLibrary).forEach(function(tag) {
 				initializeInstances($(tag, startEl));
@@ -593,14 +626,17 @@
 		};
 	// event handling
 	exports['trigger'] = function(event, data) {
+			checkParams(arguments, ['string'], 'Zino.trigger');
 			this.dispatchEvent(new CustomEvent(event, {detail: data}));
 		}.bind(win);
 	exports['on'] = function(event, cb) {
+			checkParams(arguments, ['string'], 'Zino.on');
 			this.addEventListener(event, function(e) {
 				cb(e.detail);
 			}, false);
 		}.bind(win);
 	exports['one'] = function(event, cb) {
+			checkParams(arguments, ['string'], 'Zino.one');
 			var _this = this,
 				remove = function(e) {
 					cb(e.detail);
@@ -609,6 +645,7 @@
 			_this.addEventListener(event, remove, false);
 		}.bind(win);
 	exports['off'] = function(event, cb) {
+			checkParams(arguments, ['string'], 'Zino.off');
 			this.removeEventListener(event, cb);
 		}.bind(win);
 	// some util functions
