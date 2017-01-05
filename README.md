@@ -338,7 +338,7 @@ Let's style our `comment-form` component with that in mind:
 
 As mentioned above, the element styles will not apply to any element outside our component. However, styles from the outer scope might leak in here, if you defined any. In order to prevent any leakage of styles into the innerts of your components and to resolve the above-mentioned intrinsic problems of CSS, the safest way is to use Javascript-based CSS.
 
-Let's see how this works. Out comment-box component should never leak it's own style to included components, so therefore, we define the styling within the script tag rather than the style tag as before. This looks like that:
+Let's see how this works. Our comment-box component should never leak it's own style to included components, so therefore, we define the styling within the script tag rather than the style tag as before. This looks like that:
 
 		render: function() {
 			...
