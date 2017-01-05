@@ -8,44 +8,45 @@
 	<comment-form></comment-form>
 
 	<script>
-	({
-		props: {
-			comments: []
-		},
+	(function() {
+		// pre-load and register the required sub tags
+		Zino.import('dist/comment.html');
+		Zino.import('dist/comment-form.html');
 
-		mount: function() {
-			// listen for comments-changed events
-			Zino.on('comments-changed', this.changeHandler = function(comments) {
-				// update our internal state
-				this.setState('comments', comments);
-			}.bind(this));
-
-			// notify the store that we need the latest data
-			Zino.trigger('comments-initialize');
-		},
-
-		unmount: function() {
-			Zino.off('comments-changed', this.changeHandler);
-		},
-
-		render: function() {
-			Zino.mount('comment', this.querySelectorAll('comment'), 'dist/comment.html');
-			Zino.mount('comment-form', this.querySelectorAll('comment-form'), 'dist/comment-form.html');
-		},
-
-		styles: {
-			commentList: {
-				listStyleType: 'none',
-				margin: 0,
-				padding: 0
+		return {
+			props: {
+				comments: []
 			},
 
-			entry: {
-				paddingBottom: '0.5em',
-				paddingTop: '0.5em',
-				borderBottom: '1px solid #6ac'
+			mount: function() {
+				// listen for comments-changed events
+				Zino.on('comments-changed', this.changeHandler = function(comments) {
+					// update our internal state
+					this.setState('comments', comments);
+				}.bind(this));
+
+				// notify the store that we need the latest data
+				Zino.trigger('comments-initialize');
+			},
+
+			unmount: function() {
+				Zino.off('comments-changed', this.changeHandler);
+			},
+
+			styles: {
+				commentList: {
+					listStyleType: 'none',
+					margin: 0,
+					padding: 0
+				},
+
+				entry: {
+					paddingBottom: '0.5em',
+					paddingTop: '0.5em',
+					borderBottom: '1px solid #6ac'
+				}
 			}
-		}
-	})
+		};
+	}())
 	</script>
 </comment-box>

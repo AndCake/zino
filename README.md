@@ -286,6 +286,20 @@ Last but not least, we need to tell our comment-box to actually mount our commen
 	}
 	...
 
+As an easier alternative to Zino.mount within the render function, Zino detects changes to the DOM and mounts required
+components all by itself, given the fact that the components are imported. You can import a component by using the `Zino.import(url)` function. By using this, you could change the above example into this:
+
+	...
+	mount: function() {
+		...
+
+		Zino.import('dist/comment.html');
+		Zino.import('dist/comment-form.html');
+	}
+	...
+
+So in our mount function, we just tell Zino that our comment-box component relies on two other components which are to be found at the given locations. No render function required for mounting those dependencies.
+
 Now, the last part of our tutorial goes into showing how to style our components. Obviously the components can be styled by just using a global stylesheet. However, doing so will get you all the problems that are [intrinsically part of CSS at scale](https://speakerdeck.com/vjeux/react-css-in-js).
 
 Instead, you can use component-specific styling, which can be added by including a CSS file into the component. Alternatively, you can use the style tag directly, to put small amounts of component-specific CSS code. Doing either of those will turn the CSS into component-specific CSS by prefixing it accordingly.
@@ -465,6 +479,14 @@ There are certain default properties that do exist for every component implicitl
 			// this will extract the A-tag's title attribute
 			element.div[0].a.title
 
+	* body
+		- an attribute of the custom element allowing read/write access to it's content. Essentially the same as using innerHTML. When using for write-access, the tag is automatically re-rendered.
+
+		- Example:
+
+			// somewhere on the page
+			document.querySelector('my-custom-tag').body = 'this is my new content';
+
 	* props
 		- an object used to define the initial internal state of the component. You can read the state by using `this.props.<prop-name>`, however, never write a value to the state using this syntax. Instead use `this.setState('<prop-name>', <prop-value>);`, else there will be no automatic re-rendering of the component upon state-change.
 
@@ -538,6 +560,13 @@ ZinoJS itself
 -------------
 
 ZinoJS exports a set of functions in order to interact with it. Those functions are available in the Zino scope.
+
+	- import(url[, callback[, props])
+		- url - URL to load the element from, if not loaded yet
+		- callback - callback function to call when the tag has been loaded (optional)
+		- props - initially set properties (optional)
+
+		Imports a component from the provided URL so that it can be rendered whenever added to the DOM. It will automatically be mounted.
 
 	- mount(tagName, element[, url][, props])
 		- tagName - name of the tag to be mounted

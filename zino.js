@@ -19,6 +19,10 @@
 
 	Exports:
 
+		- import(url[, callback[, props]])
+			- url - URL to load the element from, if not loaded yet
+			- callback - callback function to call when the tag has been loaded
+
 		- mount(tagName, element[, url][, props])
 			- tagName - name of the tag to be mounted
 			- element - the DOM element to be mounted
@@ -78,23 +82,22 @@
 
 		tagObserver = new MutationObserver(function(records) {
 			records.forEach(function(record) {
-				var tag, added = record.addedNodes, removed = record.removedNodes;
+				var added = record.addedNodes, removed = record.removedNodes;
 				if (added.length > 0) {
-					for (var all in added) {
-						tag = added[all];
-						if (tagLibrary[tag.tagName] && !tag[oldSetAttribute]) {
-							// mount the tag
-							exports['mount'](tag);
-						}
-					}
-				} else if (removed.length > 0) {
-					records.forEach(function(record) {
-						for (var i in removed) {
-							tag = removed[i];
-							if (tagLibrary[tag.tagName]) {
-								tagLibrary[tag.tagName].functions['unmount'].call(tag);
+					added.forEach(function(tag) {
+						tag.querySelectorAll && $('*', tag).concat(tag).forEach(function(subTag) {
+							if (tagLibrary[subTag.tagName]) {
+								exports['mount'](subTag);
 							}
-						}
+						});
+					});
+				} else if (removed.length > 0) {
+					removed.forEach(function(tag) {
+						tag.querySelectorAll && $('*', tag).concat(tag).forEach(function(subTag) {
+							if (tagLibrary[subTag.tagName]) {
+								tagLibrary[subTag.tagName].functions['unmount'].call(subTag);
+							}
+						});
 					});
 				}
 			});
@@ -417,6 +420,13 @@
 			tag[originalInnerHTML] = tag[innerHTML];
 			tag[innerHTML] = '<div class="-shadow-root"></div>';
 			tag[oldSetAttribute] = tag[oldSetAttribute] || tag.setAttribute;
+			Object.defineProperty(tag, 'body', {
+				set: function(val) {
+					tag[originalInnerHTML] = val;
+					renderInstance(tagDescription, tag);
+				},
+				get: function() { return tag[originalInnerHTML]; }
+			});
 			try {
 				Object.defineProperty(tag, innerHTML, {
 					set: function(val) {
@@ -425,7 +435,10 @@
 					},
 					get: function() { return tag[originalInnerHTML]; }
 				});
-			} catch(e) { console.error(e); }
+			} catch(e) {
+				// browser does not support overriding innerHTML
+				console.error(e, 'Please use `element.body` instead of `element.innerHTML`');
+			}
 			tag['setAttribute'] = function(attr, val) {
 				tag[oldSetAttribute](attr, val);
 				renderInstance(tagDescription, tag);
@@ -554,13 +567,19 @@
 		childList: true
 	});
 
-	// export the mount function to enable dynamic mounting
+	// export the dynamic tag loading & mounting functions
+	exports['import'] = function(url, cb, props) {
+		cb = cb || function(){};
+		fetch(url, function(code) {
+			var tag = getTagFromCode(code);
+			registerTag(tag, false);
+			initializeInstances(doc.body.querySelectorAll(tag.tagName), props);
+			cb();
+		}, true);
+	};
 	exports['mount'] = function(el, url, props) {
 			if (url && typeof url === 'string') {
-				fetch(url, function(code) {
-					registerTag(getTagFromCode(code), false);
-					initializeInstances(el, props);
-				}, true);
+				exports.import(url, null, props);
 			} else {
 				initializeInstances(el, url);
 			}
