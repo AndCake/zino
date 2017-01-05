@@ -287,7 +287,7 @@ Last but not least, we need to tell our comment-box to actually mount our commen
 	...
 
 As an easier alternative to Zino.mount within the render function, Zino detects changes to the DOM and mounts required
-components all by itself, given the fact that the components are imported. You can import a component by using the `Zino.import(url)` function. By using this, you could change the above example into this:
+components all by itself, if at that time the components are imported. You can import a component by using the `Zino.import(url)` function. By using this, you could change the above example into this:
 
 	...
 	mount: function() {
