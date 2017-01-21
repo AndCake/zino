@@ -23,7 +23,7 @@ module.exports = function(grunt) {
 				tasks: ['zino']
 			},
 			zino: {
-				files: ['zino.js'],
+				files: ['./src/*.js'],
 				tasks: ['build']
 			}
 		},
@@ -78,9 +78,36 @@ module.exports = function(grunt) {
 				},
 				files: [{'zino.min.js.gz': 'zino.min.js'}]
 			}
+		},
+		assemble: {
+			files: ['src/*.js'],
+			targetDir: './'
 		}
 	});
 
-	grunt.registerTask('build', ['uglify', 'compress']);
+	grunt.registerTask('assemble', 'assembles all components used by the library', function() {
+		var files = grunt.file.expand(grunt.config.get(this.name).files),
+			path = require('path'),
+			targetDir = path.dirname(grunt.config.get(this.name).targetDir);
+
+		files.forEach(function(file) {
+			var data = grunt.file.read(file),
+				changed = false;
+			data = data.replace(/\brequire\s*\(\s*['"]([^'"]+)['"]\s*\)/gm, function(match, fileName) {
+				if (grunt.file.exists(path.dirname(file) + '/' + fileName + '.js')) {
+					changed = true;
+					return grunt.file.read(path.dirname(file) + '/' + fileName + '.js');
+				} else {
+					return match;
+				}
+			});
+			if (changed) {
+				grunt.file.write(targetDir + '/' + path.basename(file), data);
+				console.log('Assembled file ' + path.basename(file));
+			}
+		});
+	});
+
+	grunt.registerTask('build', ['assemble', 'uglify', 'compress']);
 	grunt.registerTask('default', ['build', 'zino', 'connect', 'watch']);
 };
