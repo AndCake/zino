@@ -8,7 +8,7 @@
 	({
 		events: {
 			form: {
-				submit: function(e) {
+				submit: function addComment(e) {
 					e.preventDefault();
 					Zino.trigger('comments-added', {
 						author: this.author.value,

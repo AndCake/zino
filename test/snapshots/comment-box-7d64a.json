@@ -1,0 +1,27 @@
+<h1>Comments</h1>
+	<ul style="list-style-type:none;margin:0;padding:0;">
+		
+	</ul>
+	<comment-form></comment-form>
+{
+  "data": {
+    "props": {
+      "comments": []
+    },
+    "styles": {
+      "commentList": {
+        "listStyleType": "none",
+        "margin": 0,
+        "padding": 0
+      },
+      "entry": {
+        "paddingBottom": "0.5em",
+        "paddingTop": "0.5em",
+        "borderBottom": "1px solid #6ac"
+      }
+    },
+    "body": ""
+  },
+  "events": [],
+  "tagName": "comment-box"
+}

@@ -2,7 +2,7 @@
   "name": "zinojs",
   "version": "1.0.0",
   "description": "Mixture of Polymer and ReactJS-like microframework",
-  "main": "zino.js",
+  "main": "zino-tester.js",
   "dependencies": {},
   "devDependencies": {
     "cheerio": "^0.22.0",
@@ -19,6 +19,7 @@
     "readline-sync": "^1.4.5"
   },
   "scripts": {
+	"install": "grunt build",
     "test": "mocha"
   },
   "author": "Robert Kunze <r.kunze@mobizcorp.de>",

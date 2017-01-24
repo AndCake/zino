@@ -1,0 +1,18 @@
+<button class="special-button" type="button">
+		ZinoJS
+	</button>
+{
+  "data": {
+    "props": {},
+    "body": "ZinoJS",
+    "page": "https://bitbucket.org/rkunze/zinojs"
+  },
+  "events": [
+    {
+      "button": [
+        "click = [function]changePage"
+      ]
+    }
+  ],
+  "tagName": "btn"
+}

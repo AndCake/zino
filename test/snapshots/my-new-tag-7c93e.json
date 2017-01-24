@@ -1,0 +1,14 @@
+<div>This is some content: mhehehe</div>
+	<p>Counting: 0</p>
+{
+  "data": {
+    "props": {
+      "test": 0,
+      "tasks": []
+    },
+    "body": "",
+    "test": "mhehehe"
+  },
+  "events": [],
+  "tagName": "my-new-tag"
+}

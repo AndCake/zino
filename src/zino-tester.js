@@ -85,15 +85,26 @@
         matchesSnapshot = (html, data) => {
             var result = renderTag(html, data),
                 resultString = '',
-                filename = './test/snapshots/' + result.tagName + '-' + sha1(html).substr(0, 5) + '.json';
+                filename = './test/snapshots/' + result.tagName + '-' + sha1(html + JSON.stringify(data)).substr(0, 5) + '.json',
 
-            delete result.registry;
+				events = result.registry.tag && result.registry.tag.events || {};
+
+			events = Object.keys(events).map(function(el) {
+				var obj = {};
+					if (events[el]) {
+						obj[el] = Object.keys(events[el]).map(function(event) {
+							return event + ' = [' + typeof events[el][event] + ']' + events[el][event].name;
+						});
+					}
+					return obj;
+				});
 
             if (!fs.existsSync(path.dirname(filename))) {
                 fs.mkdirSync(path.dirname(filename));
             }
 
-            resultString = JSON.stringify(result);
+
+            resultString = result.html.trim() + '\n' + JSON.stringify({data: result.data, events: events, tagName: result.tagName}, null, 2);
 
             if (!fs.existsSync(filename)) {
                 fs.writeFileSync(filename, resultString);

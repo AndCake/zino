@@ -1,0 +1,25 @@
+<ul>
+		
+		<li><input type="text" name="task" value="" placeholder="Enter a task..."></li>
+	</ul>
+{
+  "data": {
+    "props": {
+      "tasks": []
+    },
+    "body": ""
+  },
+  "events": [
+    {
+      "input": [
+        "change = [function]addTodo"
+      ]
+    },
+    {
+      "li": [
+        "click = [function]removeTodo"
+      ]
+    }
+  ],
+  "tagName": "todo-list"
+}
