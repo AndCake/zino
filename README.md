@@ -8,14 +8,14 @@ Comparison
 
 - ReactJS: 43.8 KB minified & gzipped
 - Polymer: 48.80 KB minified & gzipped
-- ZinoJS: 2.7 KB minified & gzipped
+- ZinoJS: 3.7 KB minified & gzipped
 
 Features
 --------
 
 - define custom components in a human-readable way
 - event handling
-- Flux support - just define your stores
+- Flux support - simply define your stores
 - lifecycle events
 - no extra HTML elements/root elements
 - uses Mustache-like Syntax to keep components clean
@@ -130,7 +130,7 @@ comment.html:
 		<p>{{body}}</p>
 	</comment>
 
-Here we use the attribute we passed the author over with by also just using it the Mustache-way. If you remember, in the comment-box component, we were handing the actual comment not as an attribute into the comment tag, but actually as the tag's body. That why here we refer to it by using the `body` variable.
+Here we use the attribute we passed the author over with by also just using it the Mustache-way. If you remember, in the comment-box component, we were handing the actual comment not as an attribute into the comment tag, but actually as the tag's body. That's why here we refer to it by using the `body` variable.
 
 If you try to run the above, you won't see very much yet. That's because there is no data to be shown. so let's add some real data to our comment-box component:
 
@@ -169,7 +169,7 @@ Obviously it is not good only being able to have one comment at a time. Therefor
 					author: 'Leeroy Jenkins'
 					comment: 'Yeehaa! This is my first comment with Zino!'
 				}, {
-					author: 'Jonny Walker',
+					author: 'Johnny Walker',
 					comment: 'I\'m second with my fifty cents.'
 				}]
 			}
@@ -257,7 +257,7 @@ Now let's write our component for adding a new entry. Create the file comment-fo
 		</script>
 	</comment-form>
 
-So what does this mean? With the events property we can register any kind of event for any part of our component. I won't register events to anything outside the component. So in this case, we select the form element, but any kind of CSS selector would work, there. For example, instead of 'form', we could also use '.comment-form' as the key in our object.
+So what does this mean? With the events property we can register any kind of event for any part of our component. It won't register events to anything outside the component. So in this case, we select the form element, but any kind of CSS selector would work, there. For example, instead of 'form', we could also use '.comment-form' as the key in our object.
 
 Within the event's form object, we have defined the submit property, which is a function that handles the event, once it occurs. Within this function, we simply tell our store what the new comment's author and content are, the store will deal with the rest.
 
