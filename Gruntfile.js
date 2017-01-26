@@ -64,7 +64,7 @@ module.exports = function(grunt) {
 					keep_fargs: false,
 					passes: 2
 				},
-				sourceMap: true,
+				sourceMap: false,
 				screwIE8: true
 			},
 			main: {

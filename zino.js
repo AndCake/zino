@@ -77,8 +77,6 @@
 	var tagLibrary = {},
 		urlLibrary = {},
 		innerHTML = 'innerHTML',
-		originalInnerHTML = '__i',
-		oldSetAttribute = '__s',
 
 		setProps = function(name, value) {
 			if (typeof name === 'object') {
@@ -97,7 +95,6 @@
 						tag.querySelectorAll && $('*', tag).concat(tag).forEach(function(subTag) {
 							if (tagLibrary[subTag.tagName]) {
 								try {
-									debugger;
 									exports.mount(subTag);
 								} catch (e) {
 									throw new Error('Unable to mount tag ' + subTag.tagName + ': ' + e.message);
@@ -171,10 +168,8 @@
 		getAttributes = (function(module) {
 	'use strict';
 
-	var originalInnerHTML = '__i';
-
 	return module.exports = function(tag) {
-		var attrs = {props: tag.props, element: tag.element, styles: tag.styles, body: tag[originalInnerHTML]};
+		var attrs = {props: tag.props, element: tag.element, styles: tag.styles, body: tag['__i']};
 
 		[].slice.call(tag.attributes).forEach(function(attribute) {
 			attrs[attribute.name] || (attrs[attribute.name] = attribute.value);
@@ -416,7 +411,7 @@
 
 			try {
 				if (tagDescription.functions.render.call(tag) !== false && !tag.getAttribute('__ready')) {
-					tag[oldSetAttribute]('__ready', true);
+					tag['__s']('__ready', true);
 					isNew = true;
 				}
 			} catch(e) {
@@ -437,7 +432,23 @@
 
 		initializeInstance = function(tag, props) {
 			var tagDescription = tagLibrary[tag.tagName],
-				baseAttrs = {};
+
+				getBaseAttrs = function(obj) {
+					var baseAttrs = {};
+					[].forEach.call(obj.children, function (el) {
+						var name = el.nodeName.toLowerCase();
+						if (baseAttrs[name]) {
+							if (!baseAttrs[name].isArray) {
+								baseAttrs[name] = [baseAttrs[name]];
+								baseAttrs[name].isArray = true;
+							}
+							baseAttrs[name].push(el);
+						} else {
+							baseAttrs[name] = el;
+						}
+					});
+					return baseAttrs;
+				};
 
 			for (var all in tagDescription.functions) {
 				if (['events', 'mount', 'unmount'].indexOf(all) < 0) {
@@ -449,49 +460,45 @@
 				}
 			}
 
-			[].forEach.call(tag.children, function (el) {
-				var name = el.nodeName.toLowerCase();
-				if (baseAttrs[name]) {
-					if (!baseAttrs[name].isArray) {
-						baseAttrs[name] = [baseAttrs[name]];
-						baseAttrs[name].isArray = true;
-					}
-					baseAttrs[name].push(el);
-				} else {
-					baseAttrs[name] = el;
-				}
-			});
-
-			tag.element = baseAttrs;
-			tag[oldSetAttribute] = tag[oldSetAttribute] || tag.setAttribute;
+			tag['__s'] = tag['__s'] || tag.setAttribute;
+			tag['__i'] = '';
 			if (tag.firstElementChild && tag.firstElementChild.className === '-shadow-root') {
-				tag.originalInnerHTML = '';
+				var sibling = tag.firstElementChild.nextSibling, copy;
+				while (sibling && sibling.className !== '-original-root') { sibling = sibling.nextSibling; }
+				if (sibling) {
+					tag['__i'] = sibling.innerHTML;
+					copy = sibling.cloneNode(true);
+					sibling.parentNode.removeChild(sibling);
+					tag.element = getBaseAttrs(copy);
+				}
+
 				tag.isRendered = true;
 			} else {
-				tag[originalInnerHTML] = tag.innerHTML;
+				tag['__i'] = tag.innerHTML;
 				tag.innerHTML = '<div class="-shadow-root"></div>';
+				tag.element = getBaseAttrs(tag);
 			}
 			Object.defineProperty(tag, 'body', {
 				set: function(val) {
-					tag[originalInnerHTML] = val;
+					tag['__i'] = val;
 					renderInstance(tagDescription, tag);
 				},
-				get: function() { return tag[originalInnerHTML]; }
+				get: function() { return tag['__i']; }
 			});
 			try {
 				Object.defineProperty(tag, 'innerHTML', {
 					set: function(val) {
-						tag[originalInnerHTML] = val;
+						tag['__i'] = val;
 						renderInstance(tagDescription, tag);
 					},
-					get: function() { return tag[originalInnerHTML]; }
+					get: function() { return tag['__i']; }
 				});
 			} catch(e) {
 				// browser does not support overriding innerHTML
 				console.error(e, 'Your browser does not support overriding innerHTML. Please use `element.body` instead of `element.innerHTML`.');
 			}
 			tag.setAttribute = function(attr, val) {
-				tag[oldSetAttribute](attr, val);
+				tag['__s'](attr, val);
 				renderInstance(tagDescription, tag);
 			};
 
@@ -565,6 +572,7 @@
 				};
 
 			Zino = typeof window === 'undefined' ? global.Zino : merge({}, window.Zino, {import: window.Zino.import.bind({path: path})});
+
 			scripts.forEach(function(script) {
 				if (script.src) {
 					script.id = tagName + '-external-script';
@@ -611,7 +619,7 @@
 
 			if (initializeAll !== false) {
 				$(code.tagName).forEach(function(tag) {
-					!tag[oldSetAttribute] && initializeInstance(tag);
+					!tag['__s'] && initializeInstance(tag);
 				});
 			}
 		},
@@ -619,7 +627,7 @@
 		initializeInstances = function(el, props) {
 			if (!(el instanceof NodeList)) el = [el];
 			[].forEach.call(el, function(el) {
-				!el[oldSetAttribute] && initializeInstance(el, props);
+				!el['__s'] && initializeInstance(el, props);
 			});
 		},
 

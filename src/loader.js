@@ -36,6 +36,7 @@
 				};
 
 			Zino = typeof window === 'undefined' ? global.Zino : merge({}, window.Zino, {import: window.Zino.import.bind({path: path})});
+
 			scripts.forEach(function(script) {
 				if (script.src) {
 					script.id = tagName + '-external-script';

@@ -81,6 +81,7 @@
 				};
 
 			Zino = typeof window === 'undefined' ? global.Zino : merge({}, window.Zino, {import: window.Zino.import.bind({path: path})});
+
 			scripts.forEach(function(script) {
 				if (script.src) {
 					script.id = tagName + '-external-script';
@@ -130,10 +131,8 @@
             data = (function(module) {
 	'use strict';
 
-	var originalInnerHTML = '__i';
-
 	return module.exports = function(tag) {
-		var attrs = {props: tag.props, element: tag.element, styles: tag.styles, body: tag[originalInnerHTML]};
+		var attrs = {props: tag.props, element: tag.element, styles: tag.styles, body: tag['__i']};
 
 		[].slice.call(tag.attributes).forEach(function(attribute) {
 			attrs[attribute.name] || (attrs[attribute.name] = attribute.value);
