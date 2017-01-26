@@ -97,7 +97,6 @@
 						tag.querySelectorAll && $('*', tag).concat(tag).forEach(function(subTag) {
 							if (tagLibrary[subTag.tagName]) {
 								try {
-									debugger;
 									exports.mount(subTag);
 								} catch (e) {
 									throw new Error('Unable to mount tag ' + subTag.tagName + ': ' + e.message);
