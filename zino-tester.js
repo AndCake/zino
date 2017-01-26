@@ -69,8 +69,9 @@
 			}).join('\n');
 		},
 
-		handleScripts: function(tagName, scripts, externalAction, setProps, merge) {
-			var functions = {
+		handleScripts: function(tagName, scripts, externalAction, setProps, merge, path) {
+			var Zino,
+				functions = {
 					'props': {},
 					'mount': emptyFunc,
 					'unmount': emptyFunc,
@@ -79,6 +80,7 @@
 					'setState': setProps
 				};
 
+			Zino = typeof window === 'undefined' ? global.Zino : merge({}, window.Zino, {import: window.Zino.import.bind({path: path})});
 			scripts.forEach(function(script) {
 				if (script.src) {
 					script.id = tagName + '-external-script';

@@ -406,10 +406,14 @@
 				div = doc.createElement('div'),
 				isNew = false;
 
-			div.className = '-shadow-root';
-			content.appendChild(div);
-			$('div', content)[0][innerHTML] = code;
-			tag.replaceChild(content, tag.firstChild);
+			if (!tag.isRendered) {
+				div.className = '-shadow-root';
+				content.appendChild(div);
+				$('div', content)[0][innerHTML] = code;
+				tag.replaceChild(content, tag.firstChild);
+			} else {
+				delete tag.isRendered;
+			}
 
 			try {
 				if (tagDescription.functions['render'].call(tag) !== false && !tag.getAttribute('__ready')) {
@@ -460,9 +464,14 @@
 			});
 
 			tag.element = baseAttrs;
-			tag[originalInnerHTML] = tag[innerHTML];
-			tag[innerHTML] = '<div class="-shadow-root"></div>';
 			tag[oldSetAttribute] = tag[oldSetAttribute] || tag.setAttribute;
+			if (tag.firstElementChild && tag.firstElementChild.className === '-shadow-root') {
+				tag.originalInnerHTML = '';
+				tag.rendered = true;
+			} else {
+				tag[originalInnerHTML] = tag.innerHTML;
+				tag.innerHTML = '<div class="-shadow-root"></div>';
+			}
 			Object.defineProperty(tag, 'body', {
 				set: function(val) {
 					tag[originalInnerHTML] = val;
@@ -471,7 +480,7 @@
 				get: function() { return tag[originalInnerHTML]; }
 			});
 			try {
-				Object.defineProperty(tag, innerHTML, {
+				Object.defineProperty(tag, 'innerHTML', {
 					set: function(val) {
 						tag[originalInnerHTML] = val;
 						renderInstance(tagDescription, tag);
@@ -482,7 +491,7 @@
 				// browser does not support overriding innerHTML
 				console.error(e, 'Your browser does not support overriding innerHTML. Please use `element.body` instead of `element.innerHTML`.');
 			}
-			tag['setAttribute'] = function(attr, val) {
+			tag.setAttribute = function(attr, val) {
 				tag[oldSetAttribute](attr, val);
 				renderInstance(tagDescription, tag);
 			};
@@ -536,8 +545,9 @@
 			}).join('\n');
 		},
 
-		handleScripts: function(tagName, scripts, externalAction, setProps, merge) {
-			var functions = {
+		handleScripts: function(tagName, scripts, externalAction, setProps, merge, path) {
+			var Zino,
+				functions = {
 					'props': {},
 					'mount': emptyFunc,
 					'unmount': emptyFunc,
@@ -546,6 +556,7 @@
 					'setState': setProps
 				};
 
+			Zino = typeof window === 'undefined' ? global.Zino : merge({}, window.Zino, {import: window.Zino.import.bind({path: path})});
 			scripts.forEach(function(script) {
 				if (script.src) {
 					script.id = tagName + '-external-script';
@@ -585,8 +596,9 @@
 			doc.head.appendChild(style);
 
 			tagLibrary[code.tagName] = {
-				functions: loader.handleScripts(code.tagName, $('script', code), doc.head.appendChild, setProps, merge),
-				code: code[innerHTML]
+				functions: loader.handleScripts(code.tagName, $('script', code), doc.head.appendChild, setProps, merge, code.path),
+				code: code[innerHTML],
+				path: code.path
 			};
 
 			if (initializeAll !== false) {
@@ -614,7 +626,9 @@
 	// initialize all tags that are supposed to be pre-loaded via link tag
 	$('link[rel="zino-tag"]').forEach(function(tag) {
 		fetch(tag.href, function(code) {
-			registerTag(getTagFromCode(code));
+			var code = getTagFromCode(code);
+			if (code) code.path = tag.href.replace(/\/[^/]+$/g, '');
+			registerTag(code);
 		}, true);
 	});
 
@@ -627,7 +641,7 @@
 	exports['import'] = function(url, cb, props) {
 		checkParams(arguments, ['string'], 'Zino.import: URL expected');
 		cb = cb || function(){};
-		fetch(url, function(code) {
+		fetch(((this.path && this.path + '/') || '') + url, function(code) {
 			var tag = getTagFromCode(code);
 			registerTag(tag, false);
 			initializeInstances(doc.body.querySelectorAll(tag.tagName), props);
