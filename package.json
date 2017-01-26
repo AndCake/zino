@@ -3,9 +3,10 @@
   "version": "1.0.0",
   "description": "Mixture of Polymer and ReactJS-like microframework",
   "main": "zino-tester.js",
-  "dependencies": {},
+  "dependencies": {
+    "cheerio": "^0.22.0"
+  },
   "devDependencies": {
-    "cheerio": "^0.22.0",
     "colors": "^1.1.2",
     "fast-diff": "^1.1.1",
     "grunt": "^1.0.1",

@@ -397,7 +397,7 @@
 	$('link[rel="zino-tag"]').forEach(function(tag) {
 		fetch(tag.href, function(code) {
 			code = getTagFromCode(code);
-			if (code) code.path = tag.href.replace(/\/[^/]+$/g, '');
+			if (code) code.path = tag.href.replace(/[^\/]+$/g, '');
 			registerTag(code);
 		}, true);
 	});
@@ -409,10 +409,12 @@
 
 	// export the dynamic tag loading & mounting functions
 	exports.import = function(url, cb, props) {
+		var me = this;
 		checkParams(arguments, ['string'], 'Zino.import: URL expected');
 		cb = cb || function(){};
-		fetch(((this.path && this.path + '/') || '') + url, function(code) {
+		fetch((me.path || '') + url, function(code) {
 			var tag = getTagFromCode(code);
+			if (tag) tag.path = (me.path || '') + url.replace(/[^\/]+$/g, '');
 			registerTag(tag, false);
 			initializeInstances(doc.body.querySelectorAll(tag.tagName), props);
 			cb();
