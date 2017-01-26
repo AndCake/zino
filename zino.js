@@ -82,9 +82,9 @@
 
 		setProps = function(name, value) {
 			if (typeof name === 'object') {
-				merge(this['props'], name);
+				merge(this.props, name);
 			} else {
-				this['props'][name] = value;
+				this.props[name] = value;
 			}
 			renderInstance(tagLibrary[this.tagName], this);
 		},
@@ -93,11 +93,12 @@
 			records.forEach(function(record) {
 				var added = record.addedNodes, removed = record.removedNodes;
 				if (added.length > 0) {
-					added.forEach(function(tag) {
+					[].forEach.call(added, function(tag) {
 						tag.querySelectorAll && $('*', tag).concat(tag).forEach(function(subTag) {
 							if (tagLibrary[subTag.tagName]) {
 								try {
-									exports['mount'](subTag);
+									debugger;
+									exports.mount(subTag);
 								} catch (e) {
 									throw new Error('Unable to mount tag ' + subTag.tagName + ': ' + e.message);
 								}
@@ -105,11 +106,11 @@
 						});
 					});
 				} else if (removed.length > 0) {
-					removed.forEach(function(tag) {
+					[].forEach.call(removed, function(tag) {
 						tag.querySelectorAll && $('*', tag).concat(tag).forEach(function(subTag) {
 							if (tagLibrary[subTag.tagName]) {
 								try {
-									tagLibrary[subTag.tagName].functions['unmount'].call(subTag);
+									tagLibrary[subTag.tagName].functions.unmount.call(subTag);
 								} catch (e) {
 									throw new Error('Unable to unmount tag ' + subTag.tagName + ': ' + e.message);
 								}
@@ -187,7 +188,7 @@
 	// PARSER.JS
 	'use strict';
 	var syntax = /\{\{\s*([^\}]+)\s*\}\}\}?/g,
-		gdata = {},
+		merge = 0,
 
 		getValue = function(name, data) {
 			var parts = ['.'],
@@ -210,39 +211,37 @@
 			return obj !== undefined && obj !== null ? obj : '';
 		},
 
-		renderStyle = function(name) {
-			var value = getValue(name, gdata),
-				style = '',
-				replaced = function(g) { return '-' + g.toLowerCase(); },
-
-				transformValue = function(val) {
-					if (typeof val === 'number' && val !== 0) {
-						return val + 'px';
-					}
-					if (typeof val === 'function') {
-						return transformValue(val.apply(data));
-					}
-					return val;
-				};
-
-			if (typeof value === 'object') {
-				for (var all in value) {
-					style += all.replace(/[A-Z]/g, replaced) + ':' + transformValue(value[all]) + ';';
-				}
-			}
-			return style;
-		},
-
-		merge = 0,
-
 		parse = function parseTemplate(code, data, depth, startIdx) {
 			var result = '',
 				lastPos = startIdx || 0,
-				match, key, condition, parsed;
+				match, key, condition, parsed,
+
+				renderStyle = function(name) {
+					var value = getValue(name, data),
+						style = '',
+						replaced = function(g) { return '-' + g.toLowerCase(); },
+
+						transformValue = function(val) {
+							if (typeof val === 'number' && val !== 0) {
+								return val + 'px';
+							}
+							if (typeof val === 'function') {
+								return transformValue(val.apply(data));
+							}
+							return val;
+						};
+
+					if (typeof value === 'object') {
+						for (var all in value) {
+							style += all.replace(/[A-Z]/g, replaced) + ':' + transformValue(value[all]) + ';';
+						}
+					}
+
+					return style;
+				};
 
 			depth = depth || 0;
 			startIdx = startIdx || 0;
-			gdata = data;
 
 			// reset regexp so that recursion works
 			if (!code.match(syntax)) {
@@ -354,11 +353,11 @@
 
 		// renders an element instance from scratch
 		renderInstance = function(tagDescription, tag) {
-			var events = tagDescription.functions['events'] || [],
+			var events = tagDescription.functions.events || [],
 
 				attachEvent = function(el, events) {
 					events = typeof events !== 'number' ? events : this;
-					el['getHost'] = function() { return tag; };
+					el.getHost = function() { return tag; };
 					for (var each in events) {
 						checkParams([events[each]], ['function'], 'event ' + each + ' for tag ' + tag.tagName);
 						el.addEventListener(each, events[each].bind(el), false);
@@ -399,7 +398,7 @@
 					return el || tag;
 				},
 
-				path = doc.activeElement.nodeName === 'INPUT' && getFocus(doc.activeElement),
+				path = doc.activeElement && doc.activeElement.nodeName === 'INPUT' && getFocus(doc.activeElement),
 
 				code = parser(tagDescription.code, getAttributes(tag), merge),
 				content = doc.createDocumentFragment(),
@@ -416,7 +415,7 @@
 			}
 
 			try {
-				if (tagDescription.functions['render'].call(tag) !== false && !tag.getAttribute('__ready')) {
+				if (tagDescription.functions.render.call(tag) !== false && !tag.getAttribute('__ready')) {
 					tag[oldSetAttribute]('__ready', true);
 					isNew = true;
 				}
@@ -467,7 +466,7 @@
 			tag[oldSetAttribute] = tag[oldSetAttribute] || tag.setAttribute;
 			if (tag.firstElementChild && tag.firstElementChild.className === '-shadow-root') {
 				tag.originalInnerHTML = '';
-				tag.rendered = true;
+				tag.isRendered = true;
 			} else {
 				tag[originalInnerHTML] = tag.innerHTML;
 				tag.innerHTML = '<div class="-shadow-root"></div>';
@@ -498,12 +497,12 @@
 
 			// pre-set props, if given
 			if (props) {
-				tag['props'] = merge(tagDescription.functions['props'], props);
+				tag.props = merge(tagDescription.functions.props, props);
 			}
 
 			// fire the mount event callback
 			try {
-				tagDescription.functions['mount'].call(tag);
+				tagDescription.functions.mount.call(tag);
 			} catch (e) {
 				throw new Error('Unable to call mount() for tag ' + tag.tagName + ': ' + e.message, e.fileName, e.lineNumber);
 			}
@@ -516,6 +515,15 @@
 			var frag = doc.createDocumentFragment();
 			frag.appendChild(doc.createElement('div'));
 			frag.firstChild.innerHTML = code;
+			code = code.replace(/<([^>]+)>/g, function(g, m) {
+				var tagName = m.split(' ')[0];
+				if (tagName[0] === '/') tagName = tagName.substr(1);
+				if (tagName === frag.firstChild.firstElementChild.tagName.toLowerCase() || tagName.toLowerCase() === 'link') {
+					return '';
+				}
+				return g;
+			}).replace(/<style[^>]*>(?:[^\s]|[^\S])*?<\/style>/g, '').replace(/<script[^>]*>(?:[^\s]|[^\S])*?<\/script>/g, '');
+			frag.firstChild.firstElementChild.code = code;
 			return frag.firstChild.firstElementChild;
 		},
 
@@ -597,7 +605,7 @@
 
 			tagLibrary[code.tagName] = {
 				functions: loader.handleScripts(code.tagName, $('script', code), doc.head.appendChild, setProps, merge, code.path),
-				code: code[innerHTML],
+				code: code.code,
 				path: code.path
 			};
 
@@ -626,7 +634,7 @@
 	// initialize all tags that are supposed to be pre-loaded via link tag
 	$('link[rel="zino-tag"]').forEach(function(tag) {
 		fetch(tag.href, function(code) {
-			var code = getTagFromCode(code);
+			code = getTagFromCode(code);
 			if (code) code.path = tag.href.replace(/\/[^/]+$/g, '');
 			registerTag(code);
 		}, true);
@@ -638,7 +646,7 @@
 	});
 
 	// export the dynamic tag loading & mounting functions
-	exports['import'] = function(url, cb, props) {
+	exports.import = function(url, cb, props) {
 		checkParams(arguments, ['string'], 'Zino.import: URL expected');
 		cb = cb || function(){};
 		fetch(((this.path && this.path + '/') || '') + url, function(code) {
@@ -648,7 +656,7 @@
 			cb();
 		}, true);
 	};
-	exports['mount'] = function(el, url, props) {
+	exports.mount = function(el, url, props) {
 			checkParams(arguments, ['object'], 'Zino.mount: DOM node expected');
 			if (url && typeof url === 'string') {
 				exports.import(url, null, props);
@@ -656,7 +664,7 @@
 				initializeInstances(el, url);
 			}
 		};
-	exports['mountAll'] = function(startEl) {
+	exports.mountAll = function(startEl) {
 			startEl = startEl || doc.body;
 			checkParams(arguments, ['object'], 'Zino.mountAll: DOM node expected');
 
@@ -665,7 +673,7 @@
 			});
 		};
 	// event handling
-	exports['trigger'] = function(eventName, data) {
+	exports.trigger = function(eventName, data) {
 			var eventObj;
 			checkParams(arguments, ['string'], 'Zino.trigger');
 			try {
@@ -676,13 +684,13 @@
 			}
 			this.dispatchEvent(eventObj);
 		}.bind(win);
-	exports['on'] = function(eventName, cb) {
+	exports.on = function(eventName, cb) {
 			checkParams(arguments, ['string'], 'Zino.on');
 			this.addEventListener(eventName, function(e) {
 				cb(e.detail);
 			}, false);
 		}.bind(win);
-	exports['one'] = function(eventName, cb) {
+	exports.one = function(eventName, cb) {
 			checkParams(arguments, ['string'], 'Zino.one');
 			var _this = this,
 				remove = function(e) {
@@ -691,10 +699,10 @@
 				};
 			_this.addEventListener(eventName, remove, false);
 		}.bind(win);
-	exports['off'] = function(event, cb) {
+	exports.off = function(event, cb) {
 			checkParams(arguments, ['string'], 'Zino.off');
 			this.removeEventListener(event, cb);
 		}.bind(win);
 	// some util functions
-	exports['fetch'] = fetch;
-}(this.exports || (window['Zino'] = (window['Zino'] || {})), window, document));
+	exports.fetch = fetch;
+}(this.exports || (window.Zino = (window.Zino || {})), window, document));

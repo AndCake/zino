@@ -2,7 +2,7 @@
 	// PARSER.JS
 	'use strict';
 	var syntax = /\{\{\s*([^\}]+)\s*\}\}\}?/g,
-		gdata = {},
+		merge = 0,
 
 		getValue = function(name, data) {
 			var parts = ['.'],
@@ -25,39 +25,37 @@
 			return obj !== undefined && obj !== null ? obj : '';
 		},
 
-		renderStyle = function(name) {
-			var value = getValue(name, gdata),
-				style = '',
-				replaced = function(g) { return '-' + g.toLowerCase(); },
-
-				transformValue = function(val) {
-					if (typeof val === 'number' && val !== 0) {
-						return val + 'px';
-					}
-					if (typeof val === 'function') {
-						return transformValue(val.apply(data));
-					}
-					return val;
-				};
-
-			if (typeof value === 'object') {
-				for (var all in value) {
-					style += all.replace(/[A-Z]/g, replaced) + ':' + transformValue(value[all]) + ';';
-				}
-			}
-			return style;
-		},
-
-		merge = 0,
-
 		parse = function parseTemplate(code, data, depth, startIdx) {
 			var result = '',
 				lastPos = startIdx || 0,
-				match, key, condition, parsed;
+				match, key, condition, parsed,
+
+				renderStyle = function(name) {
+					var value = getValue(name, data),
+						style = '',
+						replaced = function(g) { return '-' + g.toLowerCase(); },
+
+						transformValue = function(val) {
+							if (typeof val === 'number' && val !== 0) {
+								return val + 'px';
+							}
+							if (typeof val === 'function') {
+								return transformValue(val.apply(data));
+							}
+							return val;
+						};
+
+					if (typeof value === 'object') {
+						for (var all in value) {
+							style += all.replace(/[A-Z]/g, replaced) + ':' + transformValue(value[all]) + ';';
+						}
+					}
+
+					return style;
+				};
 
 			depth = depth || 0;
 			startIdx = startIdx || 0;
-			gdata = data;
 
 			// reset regexp so that recursion works
 			if (!code.match(syntax)) {
