@@ -297,8 +297,8 @@
 				tag.isRendered = true;
 			} else {
 				tag['__i'] = tag.innerHTML;
-				tag.innerHTML = '<div class="-shadow-root"></div>';
 				tag.element = getBaseAttrs(tag);
+				tag.innerHTML = '<div class="-shadow-root"></div>';
 			}
 			Object.defineProperty(tag, 'body', {
 				set: function(val) {
