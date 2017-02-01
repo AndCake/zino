@@ -284,6 +284,12 @@
 						throw 'Unexpected end of block ' + match[1].substr(1);
 					}
 					return {lastIndex: match[0].length + match.index, content: result};
+				} else if (match[1][0] === '>') {
+					// keep imports as is
+					result += match[0];
+				} else if (match[1][0] === '!') {
+					// comment - don't do anything
+					result += '';
 				} else if (match[1][0] === '%') {
 					// interpret given values separated by comma as styling
 					result += key.split(/\s*,\s*/).map(renderStyle).join(';');
