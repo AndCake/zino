@@ -145,7 +145,7 @@ In our comment-box.html, let's add a script tag to define our state:
 				},
 
 				render: function() {
-					Zino.mount('comment', this.querySelectorAll('comment'), 'dist/comment.html');
+					Zino.mount(this.querySelectorAll('comment'), 'dist/comment.html');
 				}
 			})
 		</script>
@@ -281,8 +281,8 @@ Last but not least, we need to tell our comment-box to actually mount our commen
 
 	...
 	render: function() {
-		Zino.mount('comment', this.querySelectorAll('comment'), 'dist/comment.html');
-		Zino.mount('comment-form', this.querySelectorAll('comment-form'), 'dist/comment-form.html');		
+		Zino.mount(this.querySelectorAll('comment'), 'dist/comment.html');
+		Zino.mount(this.querySelectorAll('comment-form'), 'dist/comment-form.html');
 	}
 	...
 
@@ -568,8 +568,7 @@ ZinoJS exports a set of functions in order to interact with it. Those functions 
 
 		Imports a component from the provided URL so that it can be rendered whenever added to the DOM. It will automatically be mounted.
 
-	- mount(tagName, element[, url][, props])
-		- tagName - name of the tag to be mounted
+	- mount(element[, url][, props])
 		- element - the DOM element to be mounted
 		- url - URL to load the element from, if not loaded yet (optional)
 		- props - initially set properties (optional)
@@ -583,18 +582,18 @@ ZinoJS exports a set of functions in order to interact with it. Those functions 
 			(function() {
 				var myNewComponent = document.createElement('my-component');
 				document.body.appendChild(myNewComponent);
-				Zino.mount('my-component', myNewComponent);
+				Zino.mount(myNewComponent);
 
 				// render a component that has not been loaded statically
 				var myOtherComponent = document.createElement('my-other-component');
 				document.body.appendChild(myOtherComponent);
-				Zino.mount('my-other-component', myOtherComponent, "./my-other-component.html");
+				Zino.mount(myOtherComponent, "./my-other-component.html");
 
 				// hand over some props
 				var myData = ["test", 1, 2];
 				var myComponent = document.createElement('my-component');
 				document.body.appendChild(myComponent);
-				Zino.mount('my-component', myComponent, myData);
+				Zino.mount(myComponent, myData);
 			}());
 			</script>
 
@@ -648,7 +647,7 @@ Zino offers snapshot testing for making sure that tests can be written very easi
 	describe('btn link component', () => {
 		z.importTag('src/btn.html');
 
-		it('renders empty, when used empty', () => z.matchesSnapshot('<btn page="https://bitbucket.org/rkunze/zinojs">ZinoJS</btn>'));
+		it('receives the URL and renders the text properly', () => z.matchesSnapshot('<btn page="https://bitbucket.org/rkunze/zinojs">ZinoJS</btn>'));
 	})
 
 The first time, this test is executed, Zino creates a snapshot file that looks like this:
