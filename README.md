@@ -741,7 +741,7 @@ Zino offers snapshot testing for making sure that tests can be written very easi
 	describe('btn link component', () => {
 		z.importTag('src/btn.html');
 
-		it('renders empty, when used empty', () => z.matchesSnapshot('<btn page="https://bitbucket.org/rkunze/zinojs">ZinoJS</btn>'));
+		it('receives the URL and renders the text properly', () => z.matchesSnapshot('<btn page="https://bitbucket.org/rkunze/zinojs">ZinoJS</btn>'));
 	})
 
 The first time, this test is executed, Zino creates a snapshot file that looks like this:
