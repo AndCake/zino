@@ -105,6 +105,12 @@
 					[].forEach.call(removed, function(tag) {
 						tag.querySelectorAll && $('*', tag).concat(tag).forEach(function(subTag) {
 							if (tagLibrary[subTag.tagName]) {
+								[].forEach.call(subTag.attributes, function(attr) {
+									// cleanup saved data
+									if (attr.name.indexOf('data-') >= 0 && Zino.__data) {
+										delete Zino.__data[attr.value];
+									}
+								});
 								try {
 									tagLibrary[subTag.tagName].functions.unmount.call(subTag);
 								} catch (e) {
@@ -299,13 +305,7 @@
 				tag.element = getBaseAttrs(tag);
 				tag.innerHTML = '<div class="-shadow-root"></div>';
 			}
-			tag.__g = tag.__g || tag.getAttribute;
-			tag.getAttribute = function(name) {
-				var val = tag.__g(name) || '';
-				if (name.indexOf('data-') >= 0 && val.substr(0, 2) === '--') {
-					return tag.__data[val.replace(/^--|--$/g, '')];
-				}
-			};
+
 			Object.defineProperty(tag, 'body', {
 				set: function(val) {
 					tag['__i'] = val;

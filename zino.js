@@ -23,13 +23,12 @@
 			- url - URL to load the element from, if not loaded yet
 			- callback - callback function to call when the tag has been loaded
 
-		- mount(tagName, element[, url][, props])
-			- tagName - name of the tag to be mounted
+		- mount(element[, url][, props])
 			- element - the DOM element to be mounted
 			- url - URL to load the element from, if not loaded yet (optional)
 			- props - initially set properties (optional)
 
-			Mounts the given element as the given tag name, optionally, loaded from the
+			Mounts the given element, optionally, loaded from the
 			server, if it has not been loaded already.
 
 		- mountAll([baseElement])
@@ -106,6 +105,12 @@
 					[].forEach.call(removed, function(tag) {
 						tag.querySelectorAll && $('*', tag).concat(tag).forEach(function(subTag) {
 							if (tagLibrary[subTag.tagName]) {
+								[].forEach.call(subTag.attributes, function(attr) {
+									// cleanup saved data
+									if (attr.name.indexOf('data-') >= 0 && Zino.__data) {
+										delete Zino.__data[attr.value];
+									}
+								});
 								try {
 									tagLibrary[subTag.tagName].functions.unmount.call(subTag);
 								} catch (e) {
@@ -173,10 +178,12 @@
 			props = {};
 
 		[].slice.call(tag.attributes).forEach(function(attribute) {
-			var isComplex = attribute.name.indexOf('data-') >= 0 && attribute.value.substr(0, 2) === '--' && Zino.transferData;
-			attrs[attribute.name] || (attrs[attribute.name] = isComplex ? Zino.transferData[attribute.value.replace(/^--|--$/g, '')] : attribute.value);
+			var isComplex = attribute.name.indexOf('data-') >= 0 && attribute.value.substr(0, 2) === '--' && Zino.__data;
+			attrs[attribute.name] || (attrs[attribute.name] = isComplex ? Zino.__data[attribute.value.replace(/^--|--$/g, '')] : attribute.value);
 			if (isComplex) {
-				props[attribute.name.replace(/^data-/g, '')] = attrs[attribute.name];
+				props[attribute.name.replace(/^data-/g, '').replace(/(\w)-(\w)/g, function(g, m1, m2) {
+					return m1 + m2.toUpperCase();
+				})] = attrs[attribute.name];
 			}
 		});
 
@@ -213,7 +220,7 @@
 			return obj !== undefined && obj !== null ? obj : '';
 		},
 
-		parse = function parseTemplate(code, data, depth, startIdx) {
+		parse = function parseTemplate(code, data, depth, startIdx, tag) {
 			var result = '',
 				lastPos = startIdx || 0,
 				match, key, condition, parsed,
@@ -244,6 +251,7 @@
 
 			depth = depth || 0;
 			startIdx = startIdx || 0;
+			tag = tag || {};
 
 			// reset regexp so that recursion works
 			if (!code.match(syntax)) {
@@ -335,8 +343,8 @@
 					result += key.split(/\s*,\s*/).map(renderStyle).join(';');
 				} else if (match[1][0] === '+') {
 					var id = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {var r = Math.random()*16|0;return (c=='x'?r:r&0x3|0x8).toString(16);});
-					if (!Zino.transferData) Zino.transferData = {};
-					Zino.transferData[id] = getValue(key, data);
+					if (!Zino.__data) Zino.__data = {};
+					Zino.__data[id] = getValue(key, data);
 					result += '--' + id + '--';
 				} else if (match[1][0] === '{') {
 					// unescaped content
@@ -356,9 +364,9 @@
 		};
 
 	// parses mustache-like template code
-	return module.exports = function(code, data, mergeFn) {
+	return module.exports = function(code, data, mergeFn, tag) {
 		merge = mergeFn || function(){};
-		var result = parse(code, data);
+		var result = parse(code, data, null, null, tag);
 		return result && result.content || '';
 	};
 }(typeof window === 'undefined' ? module : {}))
@@ -413,7 +421,7 @@
 
 				path = doc.activeElement && doc.activeElement.nodeName === 'INPUT' && getFocus(doc.activeElement),
 
-				code = parser(tagDescription.code, getAttributes(tag), merge),
+				code = parser(tagDescription.code, getAttributes(tag), merge, tag),
 				content = doc.createDocumentFragment(),
 				div = doc.createElement('div'),
 				isNew = false;
@@ -496,13 +504,7 @@
 				tag.element = getBaseAttrs(tag);
 				tag.innerHTML = '<div class="-shadow-root"></div>';
 			}
-			tag.__g = tag.__g || tag.getAttribute;
-			tag.getAttribute = function(name) {
-				var val = tag.__g(name) || '';
-				if (name.indexOf('data-') >= 0 && val.substr(0, 2) === '--') {
-					return Zino.transferData[val.replace(/^--|--$/g, '')];
-				}
-			};
+
 			Object.defineProperty(tag, 'body', {
 				set: function(val) {
 					tag['__i'] = val;

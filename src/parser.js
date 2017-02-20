@@ -148,8 +148,8 @@
 					result += key.split(/\s*,\s*/).map(renderStyle).join(';');
 				} else if (match[1][0] === '+') {
 					var id = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {var r = Math.random()*16|0;return (c=='x'?r:r&0x3|0x8).toString(16);});
-					if (!tag.__data) tag.__data = {};
-					tag.__data[id] = getValue(key, data);
+					if (!Zino.__data) Zino.__data = {};
+					Zino.__data[id] = getValue(key, data);
 					result += '--' + id + '--';
 				} else if (match[1][0] === '{') {
 					// unescaped content
