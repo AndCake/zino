@@ -23,13 +23,12 @@
 			- url - URL to load the element from, if not loaded yet
 			- callback - callback function to call when the tag has been loaded
 
-		- mount(tagName, element[, url][, props])
-			- tagName - name of the tag to be mounted
+		- mount(element[, url][, props])
 			- element - the DOM element to be mounted
 			- url - URL to load the element from, if not loaded yet (optional)
 			- props - initially set properties (optional)
 
-			Mounts the given element as the given tag name, optionally, loaded from the
+			Mounts the given element, optionally, loaded from the
 			server, if it has not been loaded already.
 
 		- mountAll([baseElement])
@@ -217,7 +216,7 @@
 
 				path = doc.activeElement && doc.activeElement.nodeName === 'INPUT' && getFocus(doc.activeElement),
 
-				code = parser(tagDescription.code, getAttributes(tag), merge),
+				code = parser(tagDescription.code, getAttributes(tag), merge, tag),
 				content = doc.createDocumentFragment(),
 				div = doc.createElement('div'),
 				isNew = false;
@@ -300,6 +299,13 @@
 				tag.element = getBaseAttrs(tag);
 				tag.innerHTML = '<div class="-shadow-root"></div>';
 			}
+			tag.__g = tag.__g || tag.getAttribute;
+			tag.getAttribute = function(name) {
+				var val = tag.__g(name) || '';
+				if (name.indexOf('data-') >= 0 && val.substr(0, 2) === '--') {
+					return tag.__data[val.replace(/^--|--$/g, '')];
+				}
+			};
 			Object.defineProperty(tag, 'body', {
 				set: function(val) {
 					tag['__i'] = val;
@@ -325,9 +331,7 @@
 			};
 
 			// pre-set props, if given
-			if (props) {
-				tag.props = merge(tagDescription.functions.props, props);
-			}
+			tag.props = merge({}, tagDescription.functions.props, getAttributes(tag, true), props || {});
 
 			// fire the mount event callback
 			try {

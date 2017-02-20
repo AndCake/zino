@@ -3,13 +3,14 @@
 		{{#props.tasks}}
 			<li data-index="{{.index}}">{{.}}</li>
 		{{/props.tasks}}
-		<li><input type="text" name="task" value="" placeholder="Enter a task..."/></li>
+		<li><input type="text" name="task" value="{{props.list.0.me}}" placeholder="Enter a task..."/></li>
 	</ul>
 
 	<script>
 	({
 		props: {
-			tasks: []
+			tasks: [],
+			list: [{}]
 		},
 
 		events: {

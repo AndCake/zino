@@ -131,12 +131,19 @@
             data = (function(module) {
 	'use strict';
 
-	return module.exports = function(tag) {
-		var attrs = {props: tag.props, element: tag.element, styles: tag.styles, body: tag['__i']};
+	return module.exports = function(tag, propsOnly) {
+		var attrs = {props: tag.props, element: tag.element, styles: tag.styles, body: tag['__i']},
+			props = {};
 
 		[].slice.call(tag.attributes).forEach(function(attribute) {
-			attrs[attribute.name] || (attrs[attribute.name] = attribute.value);
+			var isComplex = attribute.name.indexOf('data-') >= 0 && attribute.value.substr(0, 2) === '--' && Zino.transferData;
+			attrs[attribute.name] || (attrs[attribute.name] = isComplex ? Zino.transferData[attribute.value.replace(/^--|--$/g, '')] : attribute.value);
+			if (isComplex) {
+				props[attribute.name.replace(/^data-/g, '')] = attrs[attribute.name];
+			}
 		});
+
+		if (propsOnly) return props;
 
 		return attrs;
 	};
@@ -293,6 +300,11 @@
 				} else if (match[1][0] === '%') {
 					// interpret given values separated by comma as styling
 					result += key.split(/\s*,\s*/).map(renderStyle).join(';');
+				} else if (match[1][0] === '+') {
+					var id = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {var r = Math.random()*16|0;return (c=='x'?r:r&0x3|0x8).toString(16);});
+					if (!Zino.transferData) Zino.transferData = {};
+					Zino.transferData[id] = getValue(key, data);
+					result += '--' + id + '--';
 				} else if (match[1][0] === '{') {
 					// unescaped content
 					result += getValue(key, data);

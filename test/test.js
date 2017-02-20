@@ -61,9 +61,11 @@
 
 		describe('todo-list', () => {
 			z.importTag('examples/dist/todolist.html');
+			z.importTag('examples/dist/second-tag.html');
 
 			it('renders empty', () => z.matchesSnapshot('<todo-list></todo-list>'));
 			it('renders todos', () => z.matchesSnapshot('<todo-list></todo-list>', {props: {tasks: ['Task 1']}}));
+			it('accepts list data', () => z.matchesSnapshot('<todo-list></todo-list>', {props: {list: [{me: 'hallo'}]}}));
 		})
 
 		describe('btn component', () => {
@@ -72,4 +74,4 @@
 			it('renders empty, when used empty', () => z.matchesSnapshot('<btn page="https://bitbucket.org/rkunze/zinojs">ZinoJS</btn>'));
 		});
 	});
-}());
+})();
