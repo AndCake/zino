@@ -456,7 +456,7 @@ Option 1 works like this:
 		</script>
 	</my-tag>
 
-Option 2 uses the `+` symbol to indicate that a complex object needs to be transferred and kept. This also works transparently for complex data that is transferred as part of a loop.
+Option 1 uses the `+` symbol to indicate that a complex object needs to be transferred and kept. This also works transparently for complex data that is transferred as part of a loop.
 
 Please note that data attribute names that contain dashes (in the above case `data-my-complex-data`) are automatically converted to camel-case, so in the above example, the data attribute will be accessible within the component `my-sub-component` as `props.myComplexData`.
 
@@ -504,7 +504,7 @@ Option 2 looks like this:
 		</script>
 	</my-tag>
 
-Please note, that option 1 is more complicated when used in a loop where you have to transmit a loop value separately for every instance since you have to manually assign the correct value to the props via `mount()`.
+Please note, that option 2 is more complicated when used in a loop where you have to transmit a loop value separately for every instance since you have to manually assign the correct value to the props via `mount()`.
 
 
 
