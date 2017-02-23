@@ -414,6 +414,100 @@ Both techniques, the script-based styling and normal CSS styling can also be com
 
 you can also apply the localized version of the CSS by using the grunt-zino task to re-integrate it back into the component on build time, thereby enabling you to manage your styles outside.
 
+Sometimes you need to transmit complex objects between the different components. In order to achieve this, there are two ways:
+
+1. you can transfer the data as an HTML data attribute.
+1. you can call mount(el, props) transfer new props while mounting a tag
+
+Option 1 works like this:
+
+	<my-tag>
+		<my-sub-component data-my-complex-data="{{+props.complexSourceData}}"></my-sub-component>
+		{{#props.data}}
+			<my-sub-component data-entry="{{+.}}"></my-sub-component>
+		{{/props.data}}
+		<script>
+		(function() {
+			// make sure our sub component is known
+			Zino.import('path/to/my-sub-component.html');
+			return {
+				props: {
+					complexSourceData: {
+						test: [1, 2, 3],
+						obj: {a: 'Test'},
+						fn: function(){}
+					},
+					data: [{
+						id: '123',
+						subItems: [1, 2, 3],
+						callback: function() {
+							// ...
+						}
+					}, {
+						id: '456',
+						subItems: [4, 5, 6],
+						callback: function() {
+							// ...
+						}
+					}]
+				}
+			};
+		}())
+		</script>
+	</my-tag>
+
+Option 1 uses the `+` symbol to indicate that a complex object needs to be transferred and kept. This also works transparently for complex data that is transferred as part of a loop.
+
+Please note that data attribute names that contain dashes (in the above case `data-my-complex-data`) are automatically converted to camel-case, so in the above example, the data attribute will be accessible within the component `my-sub-component` as `props.myComplexData`.
+
+Option 2 looks like this:
+
+	<my-tag>
+		<my-sub-component></my-sub-component>
+		{{#props.data}}
+			<my-sub-component idx="{{.index}}"></my-sub-component>
+		{{/props.data}}
+		<script>
+		(function() {
+			// make sure our component is known
+			Zino.import('path/to/my-sub-component.html');
+
+			return {
+				props: {
+					data: [{
+						id: '123',
+						subItems: [1, 2, 3],
+						callback: function() {
+							// ...
+						}
+					}, {
+						id: '456',
+						subItems: [4, 5, 6],
+						callback: function() {
+							// ...
+						}
+					}]
+				},
+				// have to do it in render since the my-sub-component is created there
+				render: function() {
+					var _this = this;
+					Zino.mount(this.querySelector('my-sub-component'), {myComplexData: [1, {a: 'Test'}, function(){}]});
+
+					// for our looped instances
+					[].forEach.call(this.querySelectorAll('my-sub-component[idx]'), function(component) {
+						// we need to mount every instance separately due to the changing data
+						Zino.mount(component, {entry: _this.props.data[parseInt(component.getAttribute('idx'), 10)]});
+					});
+				}
+			};
+		}());
+		</script>
+	</my-tag>
+
+Please note, that option 2 is more complicated when used in a loop where you have to transmit a loop value separately for every instance since you have to manually assign the correct value to the props via `mount()`.
+
+
+
 API Documentation
 =================
 

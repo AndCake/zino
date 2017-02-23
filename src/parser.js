@@ -25,7 +25,7 @@
 			return obj !== undefined && obj !== null ? obj : '';
 		},
 
-		parse = function parseTemplate(code, data, depth, startIdx) {
+		parse = function parseTemplate(code, data, depth, startIdx, tag) {
 			var result = '',
 				lastPos = startIdx || 0,
 				match, key, condition, parsed,
@@ -56,6 +56,7 @@
 
 			depth = depth || 0;
 			startIdx = startIdx || 0;
+			tag = tag || {};
 
 			// reset regexp so that recursion works
 			if (!code.match(syntax)) {
@@ -136,9 +137,20 @@
 						throw 'Unexpected end of block ' + match[1].substr(1);
 					}
 					return {lastIndex: match[0].length + match.index, content: result};
+				} else if (match[1][0] === '>') {
+					// keep imports as is
+					result += match[0];
+				} else if (match[1][0] === '!') {
+					// comment - don't do anything
+					result += '';
 				} else if (match[1][0] === '%') {
 					// interpret given values separated by comma as styling
 					result += key.split(/\s*,\s*/).map(renderStyle).join(';');
+				} else if (match[1][0] === '+') {
+					var id = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {var r = Math.random()*16|0;return (c=='x'?r:r&0x3|0x8).toString(16);});
+					if (!Zino.__data) Zino.__data = {};
+					Zino.__data[id] = getValue(key, data);
+					result += '--' + id + '--';
 				} else if (match[1][0] === '{') {
 					// unescaped content
 					result += getValue(key, data);
@@ -157,9 +169,9 @@
 		};
 
 	// parses mustache-like template code
-	return module.exports = function(code, data, mergeFn) {
+	return module.exports = function(code, data, mergeFn, tag) {
 		merge = mergeFn || function(){};
-		var result = parse(code, data);
+		var result = parse(code, data, null, null, tag);
 		return result && result.content || '';
 	};
 }(typeof window === 'undefined' ? module : {}))

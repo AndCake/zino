@@ -5,7 +5,10 @@
 {
   "data": {
     "props": {
-      "tasks": []
+      "tasks": [],
+      "list": [
+        {}
+      ]
     },
     "body": ""
   },
