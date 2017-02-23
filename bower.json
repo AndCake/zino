@@ -2,7 +2,7 @@
   "name": "ZinoJS",
   "version": "0.0.1",
   "authors": [
-    "Robert Kunze <r.kunze@mobizcorp.de>"
+    "Robert Kunze <quixotic.worx@gmail.com>"
   ],
   "description": "Micro component framework",
   "main": "zino.js",
@@ -14,7 +14,7 @@
     "micro",
     "framework"
   ],
-  "license": "MIT",
+  "license": "LGPL-3.0",
   "homepage": "https://bitbucket.org/rkunze/zinojs",
   "ignore": [
     "**/.*",
