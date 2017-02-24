@@ -247,7 +247,7 @@ Now let's write our component for adding a new entry. Create the file comment-fo
 		({
 			events: {
 				'form': {
-					submit: function(e) {
+					submit: function addComment(e) {
 						e.preventDefault();
 						Zino.trigger('comments-added', {
 							author: this.author.value,
@@ -360,10 +360,10 @@ Let's see how to apply these styles to elements in our component:
 	<comment-box>
 		<h1>Comments</h1>
 		<!-- apply the commentList style to the UL -->
-		<ul style={{%styles.commentList}}>
+		<ul style="{{%styles.commentList}}">
 			{{#props.comments}}
 				<!-- apply the entry style to the LI -->
-				<li style={{%styles.entry}}><comment author="{{author}}">{{comment}}</comment></li>
+				<li style="{{%styles.entry}}"><comment author="{{author}}">{{comment}}</comment></li>
 			{{/props.comments}}
 		</ul>
 		<comment-form></comment-form>
@@ -481,13 +481,14 @@ Option 2 looks like this:
 				},
 				// have to do it in render since the my-sub-component is created there
 				render: function() {
-					this.querySelector('my-sub-component').setProps({myComplexData: [1, {a: 'Test'}, function(){}]});
+					var me = this;
+					this.querySelector('my-sub-component').onready = function() { this.setProps({myComplexData: [1, {a: 'Test'}, function(){}]}); }
 
 					// for our looped instances
 					[].forEach.call(this.querySelectorAll('my-sub-component[idx]'), function(component) {
 						// we need to mount every instance separately due to the changing data
-						component.setProps({entry: this.props.data[parseInt(component.getAttribute('idx'), 10)]});
-					}.bind(this));
+						component.onready = function() { this.setProps({entry: me.props.data[parseInt(component.getAttribute('idx'), 10)]}); };
+					});
 				}
 			};
 		}());
