@@ -9,18 +9,9 @@
         path = require('path'),
         sha1 = data => require('crypto').createHash('sha1').update(data).digest('hex'),
 
-        merge = function() {
-            var args = arguments,
-			    target = args[0];
-
-		    for (var i = 1; i < args.length; i += 1) {
-			    for (var all in args[i]) {
-				    target[all] = args[i][all];
-			    }
-		    }
-
-		    return target;
-        },
+        utils = require('utils'),
+		merge = utils.merge,
+		emptyFunc = utils.emptyFunc,
 
         loadedTags = {};
 
@@ -30,7 +21,6 @@
                 tag = {},
                 $ = cheerio.load(tagContent),
                 tagRoot = $.root().children().first(),
-                emptyFunc = () => {},
                 scripts = $('script').map(function() { return {text: $(this).text()}}).get();
 
             global.Zino = {

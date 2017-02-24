@@ -37,15 +37,15 @@
 
 		<script>
 			function doit() {
+				Zino.import('dist/second-tag.html');
 				var st = document.createElement('second-tag'),
 					name = prompt('Name:');
 
 				st.setAttribute('me', 'hallo');
 				document.body.appendChild(st);
-
-				Zino.mount(st, 'dist/second-tag.html', {
-					name: name
-				});
+				st.onready = function() {
+					this.setProps({name: name});
+				};
 			};
 		</script>
 	</body>

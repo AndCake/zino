@@ -23,19 +23,6 @@
 			- url - URL to load the element from, if not loaded yet
 			- callback - callback function to call when the tag has been loaded
 
-		- mount(element[, url][, props])
-			- element - the DOM element to be mounted
-			- url - URL to load the element from, if not loaded yet (optional)
-			- props - initially set properties (optional)
-
-			Mounts the given element, optionally, loaded from the
-			server, if it has not been loaded already.
-
-		- mountAll([baseElement])
-			- baseElement - DOM element to start mounting from (optional, default = document.body)
-
-			Mounts all loaded tags on the page, starting from the given position
-
 		- trigger(event[, data])
 			- event - name of the event to trigger
 			- data - data to send with the event (optional)
@@ -74,62 +61,14 @@
 	'use strict';
 
 	var tagLibrary = {},
-		urlLibrary = {},
-		innerHTML = 'innerHTML',
 
-		setProps = function(name, value) {
-			if (typeof name === 'object') {
-				merge(this.props, name);
-			} else {
-				this.props[name] = value;
-			}
-			renderInstance(tagLibrary[this.tagName], this);
-		},
-
-		tagObserver = new MutationObserver(function(records) {
-			records.forEach(function(record) {
-				var added = record.addedNodes, removed = record.removedNodes;
-				if (added.length > 0) {
-					[].forEach.call(added, function(tag) {
-						tag.querySelectorAll && $('*', tag).concat(tag).forEach(function(subTag) {
-							if (tagLibrary[subTag.tagName]) {
-								try {
-									exports.mount(subTag);
-								} catch (e) {
-									throw new Error('Unable to mount tag ' + subTag.tagName + ': ' + e.message);
-								}
-							}
-						});
-					});
-				} else if (removed.length > 0) {
-					[].forEach.call(removed, function(tag) {
-						tag.querySelectorAll && $('*', tag).concat(tag).forEach(function(subTag) {
-							if (tagLibrary[subTag.tagName]) {
-								[].forEach.call(subTag.attributes, function(attr) {
-									// cleanup saved data
-									if (attr.name.indexOf('data-') >= 0 && Zino.__data) {
-										delete Zino.__data[attr.value];
-									}
-								});
-								try {
-									tagLibrary[subTag.tagName].functions.unmount.call(subTag);
-								} catch (e) {
-									throw new Error('Unable to unmount tag ' + subTag.tagName + ': ' + e.message);
-								}
-							}
-						});
-					});
-				}
-			});
-		}),
-
-		// returns an array of elements that match the given selector in the given context
-		$ = function(selector, context) {
-			return [].slice.call((context || doc).querySelectorAll(selector));
-		},
+		// read utilities
+		utils = (function(module) {
+	var urlLibrary = {};
+	return module.exports = {
 
 		// merges any objects given into the function
-		merge = function() {
+		merge: function() {
 			var args = arguments,
 				target = args[0];
 
@@ -142,8 +81,13 @@
 			return target;
 		},
 
+		// returns an array of elements that match the given selector in the given context
+		domQuery: function(selector, context) {
+			return [].slice.call((context || doc).querySelectorAll(selector));
+		},
+
 		// simplified GET AJAX request
-		fetch = function(url, callback, cache) {
+		fetch: function(url, callback, cache) {
 			if (cache && urlLibrary[url] && !urlLibrary[url].cb) {
 				return callback(urlLibrary[url]);
 			} else if (typeof urlLibrary[url] === 'object') {
@@ -168,6 +112,39 @@
 			};
 			req.send();
 		},
+
+		error: function(method, tag, parentException) {
+			if (parentException) {
+				throw new Error('Error while calling ' + method + ' function of ' + tag + ': ' + parentException.message, parentException.fileName, parentException.lineNumber);
+			} else {
+				parentException = tag;
+				throw new Error(method + ': ' + parentException.message, parentException.fileName, parentException.lineNumber);
+			}
+		},
+
+		checkParams: function(args, types, api) {
+			for (var all in args) {
+				if (types[all] && typeof args[all] !== types[all]) {
+					throw new Error('API mismatch while using ' + api + ': Parameter ' + all + ' was supposed to be ' + types[all] + ' but ' + (typeof args[all]) + ' was given.');
+				}
+			}
+		},
+
+		safeAccess: function(obj) {
+			return obj || {};
+		},
+
+		emptyFunc: function(){}
+	};
+}(typeof window === 'undefined' ? module : {}))
+,
+		$ = utils.domQuery,
+		merge = utils.merge,
+		fetch = utils.fetch,
+		_ = utils.safeAccess,
+		emptyFunc = utils.emptyFunc,
+		checkParams = utils.checkParams,
+		error = utils.error,
 
 		// retrieves all attributes that can be used for rendering
 		getAttributes = (function(module) {
@@ -371,194 +348,6 @@
 	};
 }(typeof window === 'undefined' ? module : {}))
 ,
-
-		// renders an element instance from scratch
-		renderInstance = function(tagDescription, tag) {
-			var events = tagDescription.functions.events || [],
-
-				attachEvent = function(el, events) {
-					events = typeof events !== 'number' ? events : this;
-					el.getHost = function() { return tag; };
-					for (var each in events) {
-						checkParams([events[each]], ['function'], 'event ' + each + ' for tag ' + tag.tagName);
-						el.addEventListener(each, events[each].bind(el), false);
-					}
-				},
-
-				getFocus = function(el) {
-					var selector;
-
-					if (!el) {
-						return null;
-					}
-					selector = 	el.nodeName +
-						(el.id && ('#' + el.id) || '') +
-						(el.name && ('[name=' + el.name + ']') || '') +
-						(el.className && ('.' + el.className) || '');
-
-					if (el.parentNode !== tag && el.parentNode) {
-						return {
-							selector: getFocus(el.parentNode).selector + ' > ' + selector,
-							value: el.value
-						};
-					}
-					return {
-						selector: selector,
-						value: el.value
-					};
-				},
-				restoreFocus = function(path) {
-					var el;
-					if (path) {
-						el = $(path.selector, tag)[0];
-						if (el) {
-							el.value = path.value || '';
-							el.focus();
-						}
-					}
-					return el || tag;
-				},
-
-				path = doc.activeElement && doc.activeElement.nodeName === 'INPUT' && getFocus(doc.activeElement),
-
-				code = parser(tagDescription.code, getAttributes(tag), merge, tag),
-				content = doc.createDocumentFragment(),
-				div = doc.createElement('div'),
-				isNew = false;
-
-			if (!tag.isRendered) {
-				div.className = '-shadow-root';
-				content.appendChild(div);
-				$('div', content)[0][innerHTML] = code;
-				tag.replaceChild(content, tag.firstChild);
-			} else {
-				delete tag.isRendered;
-			}
-
-			try {
-				if (tagDescription.functions.render.call(tag) !== false && !tag.getAttribute('__ready')) {
-					tag['__s']('__ready', true);
-					isNew = true;
-				}
-			} catch(e) {
-				throw new Error('Error while calling render function of ' + tag.tagName + ': ' + e.message, e.fileName, e.lineNumber);
-			}
-			restoreFocus(path);
-
-			// attach events
-			checkParams([events], ['object'], 'event definition for tag ' + tag.tagName);
-			for (var all in events) {
-				if (all !== ':host' && all !== tag.tagName) {
-					$(all, tag).forEach(attachEvent, events[all]);
-				} else if (isNew) {
-					attachEvent(tag, events[all]);
-				}
-			}
-		},
-
-		initializeInstance = function(tag, props) {
-			var tagDescription = tagLibrary[tag.tagName],
-
-				getBaseAttrs = function(obj) {
-					var baseAttrs = {};
-					[].forEach.call(obj.children, function (el) {
-						var name = el.nodeName.toLowerCase();
-						if (baseAttrs[name]) {
-							if (!baseAttrs[name].isArray) {
-								baseAttrs[name] = [baseAttrs[name]];
-								baseAttrs[name].isArray = true;
-							}
-							baseAttrs[name].push(el);
-						} else {
-							baseAttrs[name] = el;
-						}
-					});
-					return baseAttrs;
-				};
-
-			for (var all in tagDescription.functions) {
-				if (['events', 'mount', 'unmount'].indexOf(all) < 0) {
-					if (typeof tagDescription.functions[all] !== 'function') {
-						tag[all] = tagDescription.functions[all];
-					} else {
-						tag[all] = tagDescription.functions[all].bind(tag);
-					}
-				}
-			}
-
-			tag['__s'] = tag['__s'] || tag.setAttribute;
-			tag['__i'] = '';
-			if (tag.firstElementChild && tag.firstElementChild.className === '-shadow-root') {
-				var sibling = tag.firstElementChild.nextSibling, copy;
-				while (sibling && sibling.className !== '-original-root') { sibling = sibling.nextSibling; }
-				if (sibling) {
-					tag['__i'] = sibling.innerHTML;
-					copy = sibling.cloneNode(true);
-					sibling.parentNode.removeChild(sibling);
-					tag.element = getBaseAttrs(copy);
-				}
-
-				tag.isRendered = true;
-			} else {
-				tag['__i'] = tag.innerHTML;
-				tag.element = getBaseAttrs(tag);
-				tag.innerHTML = '<div class="-shadow-root"></div>';
-			}
-
-			Object.defineProperty(tag, 'body', {
-				set: function(val) {
-					tag['__i'] = val;
-					renderInstance(tagDescription, tag);
-				},
-				get: function() { return tag['__i']; }
-			});
-			try {
-				Object.defineProperty(tag, 'innerHTML', {
-					set: function(val) {
-						tag['__i'] = val;
-						renderInstance(tagDescription, tag);
-					},
-					get: function() { return tag['__i']; }
-				});
-			} catch(e) {
-				// browser does not support overriding innerHTML
-				console.error(e, 'Your browser does not support overriding innerHTML. Please use `element.body` instead of `element.innerHTML`.');
-			}
-			tag.setAttribute = function(attr, val) {
-				tag['__s'](attr, val);
-				renderInstance(tagDescription, tag);
-			};
-
-			// pre-set props, if given
-			tag.props = merge({}, tagDescription.functions.props, getAttributes(tag, true), props || {});
-
-			// fire the mount event callback
-			try {
-				tagDescription.functions.mount.call(tag);
-			} catch (e) {
-				throw new Error('Unable to call mount() for tag ' + tag.tagName + ': ' + e.message, e.fileName, e.lineNumber);
-			}
-
-			// render the tag's content
-			renderInstance(tagDescription, tag);
-		},
-
-		getTagFromCode = function(code) {
-			var frag = doc.createDocumentFragment();
-			frag.appendChild(doc.createElement('div'));
-			frag.firstChild.innerHTML = code;
-			code = code.replace(/<([^>]+)>/g, function(g, m) {
-				var tagName = m.split(' ')[0];
-				if (tagName[0] === '/') tagName = tagName.substr(1);
-				if (tagName === frag.firstChild.firstElementChild.tagName.toLowerCase() || tagName.toLowerCase() === 'link') {
-					return '';
-				}
-				return g;
-			}).replace(/<style[^>]*>(?:[^\s]|[^\S])*?<\/style>/g, '').replace(/<script[^>]*>(?:[^\s]|[^\S])*?<\/script>/g, '');
-			frag.firstChild.firstElementChild.code = code;
-			return frag.firstChild.firstElementChild;
-		},
-
 		loader = (function(module) {
 	'use strict';
 
@@ -620,47 +409,269 @@
 }(typeof window === 'undefined' ? module : {}))
 ,
 
+		setProps = function(name, value) {
+			if (typeof name === 'object') {
+				merge(this.props, name);
+			} else {
+				this.props[name] = value;
+			}
+			renderInstance(tagLibrary[this.tagName], this);
+		},
+
+		tagObserver = new MutationObserver(function(records) {
+			records.forEach(function(record) {
+				var added = record.addedNodes, removed = record.removedNodes;
+				if (added.length > 0) {
+					[].forEach.call(added, function(tag) {
+						tag.querySelectorAll && $('*', tag).concat(tag).forEach(function(subTag) {
+							if (tagLibrary[subTag.tagName]) {
+								try {
+									initializeInstance(subTag);
+								} catch (e) {
+									error('Unable to mount tag ' + subTag.tagName, e);
+								}
+							}
+						});
+					});
+				} else if (removed.length > 0) {
+					[].forEach.call(removed, function(tag) {
+						tag.querySelectorAll && $('*', tag).concat(tag).forEach(function(subTag) {
+							if (tagLibrary[subTag.tagName]) {
+								[].forEach.call(subTag.attributes, function(attr) {
+									// cleanup saved data
+									if (attr.name.indexOf('data-') >= 0 && Zino.__data) {
+										delete Zino.__data[attr.value];
+									}
+								});
+								try {
+									tagLibrary[subTag.tagName].functions.unmount.call(subTag);
+								} catch (e) {
+									error('Unable to unmount tag ' + subTag.tagName, e);
+								}
+							}
+						});
+					});
+				}
+			});
+		}),
+
+		// renders an element instance from scratch
+		renderInstance = function(tagDescription, tag) {
+			var events = tagDescription.functions.events || [],
+
+				attachEvent = function(el, events) {
+					events = typeof events !== 'number' ? events : this;
+					el.getHost = function() { return tag; };
+					for (var each in events) {
+						checkParams([events[each]], ['function'], 'event ' + each + ' for tag ' + tag.tagName);
+						el.addEventListener(each, events[each].bind(el), false);
+					}
+				},
+
+				getFocus = function(el, /*private*/selector) {
+					if (!el) {
+						return null;
+					}
+					selector = 	el.nodeName +
+						(el.id && ('#' + el.id) || '') +
+						(el.name && ('[name=' + el.name + ']') || '') +
+						(el.className && ('.' + el.className.replace(/\s/g, '.')) || '');
+
+					return {
+						selector: el.parentNode && el.parentNode !== tag ? getFocus(el.parentNode).selector + ' > ' + selector : selector,
+						value: el.value
+					};
+				},
+				restoreFocus = function(path, /*private*/el) {
+					if (path) {
+						el = $(path.selector, tag)[0];
+						if (el) {
+							el.value = path.value || '';
+							el.focus();
+						}
+					}
+					return el || tag;
+				},
+
+				path = _(doc.activeElement).nodeName === 'INPUT' && getFocus(doc.activeElement),
+
+				code = parser(tagDescription.code, getAttributes(tag), merge, tag),
+				content = doc.createDocumentFragment(),
+				div = doc.createElement('div'),
+				isNew = false;
+
+			if (!tag.isRendered) {
+				div.className = '-shadow-root';
+				content.appendChild(div);
+				$('div', content)[0].innerHTML = code;
+				tag.replaceChild(content, tag.firstChild);
+			} else {
+				delete tag.isRendered;
+			}
+
+			try {
+				if (tagDescription.functions.render.call(tag) !== false && !tag.getAttribute('__ready')) {
+					tag['__s']('__ready', true);
+					if (typeof tag.onready === 'function') {
+						try {
+							tag.onready.apply(tag);
+						} catch(e) {
+							error('onready', tag.tagName, e);
+						};
+					}
+					isNew = true;
+				}
+			} catch(e) {
+				error('render', tag.tagName, e);
+			}
+			restoreFocus(path);
+
+			// attach events
+			checkParams([events], ['object'], 'event definition for tag ' + tag.tagName);
+			for (var all in events) {
+				if (all !== ':host' && all !== tag.tagName) {
+					$(all, tag).forEach(attachEvent, events[all]);
+				} else if (isNew) {
+					attachEvent(tag, events[all]);
+				}
+			}
+		},
+
+		initializeInstance = function(tag, props) {
+			var tagDescription = tagLibrary[tag.tagName],
+				firstEl,
+
+				getBaseAttrs = function(obj) {
+					var baseAttrs = {};
+					[].forEach.call(obj.children, function (el) {
+						var name = el.nodeName.toLowerCase();
+						if (baseAttrs[name]) {
+							if (!baseAttrs[name].isArray) {
+								baseAttrs[name] = [baseAttrs[name]];
+								baseAttrs[name].isArray = true;
+							}
+							baseAttrs[name].push(el);
+						} else {
+							baseAttrs[name] = el;
+						}
+					});
+					return baseAttrs;
+				};
+			if (tag['__s']) return;
+
+			for (var all in tagDescription.functions) {
+				if (['events', 'mount', 'unmount'].indexOf(all) < 0) {
+					if (typeof tagDescription.functions[all] !== 'function') {
+						tag[all] = tagDescription.functions[all];
+					} else {
+						tag[all] = tagDescription.functions[all].bind(tag);
+					}
+				}
+			}
+
+			tag['__s'] = tag['__s'] || tag.setAttribute;
+			tag['__i'] = '';
+			firstEl = tag.firstElementChild;
+			if (_(firstEl).className === '-shadow-root') {
+				var sibling = firstEl.nextSibling, copy;
+				while (sibling && sibling.className !== '-original-root') { sibling = sibling.nextSibling; }
+				if (sibling) {
+					tag['__i'] = sibling.innerHTML;
+					copy = sibling.cloneNode(true);
+					sibling.parentNode.removeChild(sibling);
+					tag.element = getBaseAttrs(copy);
+				}
+
+				tag.isRendered = true;
+			} else {
+				tag['__i'] = tag.innerHTML;
+				tag.element = getBaseAttrs(tag);
+				tag.innerHTML = '<div class="-shadow-root"></div>';
+			}
+
+			Object.defineProperty(tag, 'body', {
+				set: function(val) {
+					tag['__i'] = val;
+					renderInstance(tagDescription, tag);
+				},
+				get: function() { return tag['__i']; }
+			});
+			try {
+				Object.defineProperty(tag, 'innerHTML', {
+					set: function(val) {
+						tag['__i'] = val;
+						renderInstance(tagDescription, tag);
+					},
+					get: function() { return tag['__i']; }
+				});
+			} catch(e) {
+				// browser does not support overriding innerHTML
+				console.warn(e, 'Your browser does not support overriding innerHTML. Please use `element.body` instead of `element.innerHTML`.');
+			}
+			tag.setAttribute = function(attr, val) {
+				tag['__s'](attr, val);
+				renderInstance(tagDescription, tag);
+			};
+
+			// pre-set props, if given
+			tag.props = merge({}, tagDescription.functions.props, getAttributes(tag, true), props || {});
+
+			// fire the mount event callback
+			try {
+				tagDescription.functions.mount.call(tag);
+			} catch (e) {
+				error('mount', tag.tagName, e);
+			}
+
+			// render the tag's content
+			renderInstance(tagDescription, tag);
+		},
+
+		getTagFromCode = function(code) {
+			var frag = doc.createDocumentFragment(),
+				firstEl;
+			frag.appendChild(doc.createElement('div'));
+			frag.firstChild.innerHTML = code;
+			firstEl = frag.firstChild.firstElementChild;
+			code = code.replace(/<([^>]+)>/g, function(g, m) {
+				var tagName = m.split(' ')[0];
+				if (tagName[0] === '/') tagName = tagName.substr(1);
+				if (tagName === firstEl.tagName.toLowerCase() || tagName.toLowerCase() === 'link') {
+					return '';
+				}
+				return g;
+			}).replace(/<style[^>]*>(?:[^\s]|[^\S])*?<\/style>/g, '').replace(/<script[^>]*>(?:[^\s]|[^\S])*?<\/script>/g, '');
+			firstEl.code = code;
+			return firstEl;
+		},
+
 		registerTag = function(code, initializeAll) {
-			if (tagLibrary[code.tagName]) {
+			var name = code.tagName;
+			if (tagLibrary[name]) {
 				return;
 			}
 
 			($('link', code) || []).forEach(function(link) {
 				if (link.type === 'stylesheet') {
-					link.id = code.tagName + '-external-styles';
+					link.id = name + '-external-styles';
 					doc.head.appendChild(link);
 				}
 			});
 			var style = doc.createElement('style');
-			style.id = code.tagName + '-styles';
-			style.innerHTML = loader.handleStyles(code.tagName, $('style', code));
+			style.id = name + '-styles';
+			style.innerHTML = loader.handleStyles(name, $('style', code));
 			doc.head.appendChild(style);
 
-			tagLibrary[code.tagName] = {
-				functions: loader.handleScripts(code.tagName, $('script', code), doc.head.appendChild, setProps, merge, code.path),
+			tagLibrary[name] = {
+				functions: loader.handleScripts(name, $('script', code), doc.head.appendChild, setProps, merge, code.path),
 				code: code.code,
 				path: code.path
 			};
 
 			if (initializeAll !== false) {
-				$(code.tagName).forEach(function(tag) {
+				$(name).forEach(function(tag) {
 					!tag['__s'] && initializeInstance(tag);
 				});
-			}
-		},
-
-		initializeInstances = function(el, props) {
-			if (!(el instanceof NodeList)) el = [el];
-			[].forEach.call(el, function(el) {
-				!el['__s'] && initializeInstance(el, props);
-			});
-		},
-
-		checkParams = function(args, types, api) {
-			for (var all in args) {
-				if (types[all] && typeof args[all] !== types[all]) {
-					throw new Error('API mismatch while using ' + api + ': Parameter ' + all + ' was supposed to be ' + types[all] + ' but ' + (typeof args[all]) + ' was given.');
-				}
 			}
 		};
 
@@ -682,31 +693,17 @@
 	exports.import = function(url, cb, props) {
 		var me = this;
 		checkParams(arguments, ['string'], 'Zino.import: URL expected');
-		cb = cb || function(){};
+		cb = cb || emptyFunc;
 		fetch((me.path || '') + url, function(code) {
 			var tag = getTagFromCode(code);
 			if (tag) tag.path = (me.path || '') + url.replace(/[^\/]+$/g, '');
 			registerTag(tag, false);
-			initializeInstances(doc.body.querySelectorAll(tag.tagName), props);
+			$(tag.tagName).forEach(function(el) {
+				initializeInstance(el, props);
+			});
 			cb();
 		}, true);
 	};
-	exports.mount = function(el, url, props) {
-			checkParams(arguments, ['object'], 'Zino.mount: DOM node expected');
-			if (url && typeof url === 'string') {
-				exports.import(url, null, props);
-			} else {
-				initializeInstances(el, url);
-			}
-		};
-	exports.mountAll = function(startEl) {
-			startEl = startEl || doc.body;
-			checkParams(arguments, ['object'], 'Zino.mountAll: DOM node expected');
-
-			Object.keys(tagLibrary).forEach(function(tag) {
-				initializeInstances($(tag, startEl));
-			});
-		};
 	// event handling
 	exports.trigger = function(eventName, data) {
 			var eventObj;
@@ -720,13 +717,13 @@
 			this.dispatchEvent(eventObj);
 		}.bind(win);
 	exports.on = function(eventName, cb) {
-			checkParams(arguments, ['string'], 'Zino.on');
+			checkParams(arguments, ['string', 'function'], 'Zino.on');
 			this.addEventListener(eventName, function(e) {
 				cb(e.detail);
 			}, false);
 		}.bind(win);
 	exports.one = function(eventName, cb) {
-			checkParams(arguments, ['string'], 'Zino.one');
+			checkParams(arguments, ['string', 'function'], 'Zino.one');
 			var _this = this,
 				remove = function(e) {
 					cb(e.detail);
@@ -735,7 +732,7 @@
 			_this.addEventListener(eventName, remove, false);
 		}.bind(win);
 	exports.off = function(event, cb) {
-			checkParams(arguments, ['string'], 'Zino.off');
+			checkParams(arguments, ['string', 'function'], 'Zino.off');
 			this.removeEventListener(event, cb);
 		}.bind(win);
 	// some util functions

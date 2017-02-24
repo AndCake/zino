@@ -14,9 +14,10 @@ module.exports = function(grunt) {
 	require('load-grunt-tasks')(grunt);
 
 	grunt.initConfig({
-		watch: {
+		chokidar: {
 			options: {
-				livereload: true
+				livereload: true,
+				spawn: false
 			},
 			examples: {
 				files: ['examples/src/*.html'],
@@ -109,5 +110,5 @@ module.exports = function(grunt) {
 	});
 
 	grunt.registerTask('build', ['assemble', 'uglify', 'compress']);
-	grunt.registerTask('default', ['build', 'zino', 'connect', 'watch']);
+	grunt.registerTask('default', ['build', 'zino', 'connect', 'chokidar']);
 };

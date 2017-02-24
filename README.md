@@ -8,7 +8,7 @@ Comparison
 
 - ReactJS: 43.8 KB minified & gzipped
 - Polymer: 48.80 KB minified & gzipped
-- ZinoJS: 3.7 KB minified & gzipped
+- ZinoJS: 4.3 KB minified & gzipped
 
 Features
 --------
@@ -138,20 +138,19 @@ In our comment-box.html, let's add a script tag to define our state:
 
 	...
 		<script>
-			({
-				props: {
-					author: 'Leeroy Jenkins',
-					comment: 'Yeehaa! This is my first comment with Zino!'
-				},
-
-				render: function() {
-					Zino.mount(this.querySelectorAll('comment'), 'dist/comment.html');
-				}
-			})
+			(function () {
+				Zino.import('dist/comment.html');
+				return {
+					props: {
+						author: 'Leeroy Jenkins',
+						comment: 'Yeehaa! This is my first comment with Zino!'
+					}
+				};
+			}())
 		</script>
 	</comment-box>
 
-So what did we do? First, in props, we define the different data-variables we want to use in our component. The render function is called every time the tag is rendered. Since we want to dynamically add our comment component, we have to mount it after using it.
+So what did we do? First, we added a function that returns our props which define the different data-variables we want to use in our component. Zino.import() is called in order to tell Zino that our component relies on another component. It will automatically mount and render it. Sometimes you don't need to import anything if a component doesn't use other components. In these cases, you can just define the JSON object we returned above instead of wrapping it into a function.
 
 Obviously it is not good only being able to have one comment at a time. Therefore, let's turn our comments into an array in our props:
 
@@ -163,16 +162,17 @@ Obviously it is not good only being able to have one comment at a time. Therefor
 	</ul>
 	...
 	<script>
-		({
-			props: {
-				comments: [{
-					author: 'Leeroy Jenkins'
-					comment: 'Yeehaa! This is my first comment with Zino!'
-				}, {
-					author: 'Johnny Walker',
-					comment: 'I\'m second with my fifty cents.'
-				}]
-			}
+		...
+			return {
+				props: {
+					comments: [{
+						author: 'Leeroy Jenkins'
+						comment: 'Yeehaa! This is my first comment with Zino!'
+					}, {
+						author: 'Johnny Walker',
+						comment: 'I\'m second with my fifty cents.'
+					}]
+				}
 			...
 
 So by employing the typical Mustache syntax, we iterate over the comments from our internal props and render them. Obviously this is still not optimal, since we actually might want to retrieve the data from a database.
@@ -206,31 +206,34 @@ As you can see, the store mainly deals with handling our actual comment data. Zi
 
 	...
 	<script>
-	({
-		props: {
-			comments: []
-		},
+		...
+			return {
+				props: {
+					comments: []
+				},
 
-		mount: function() {
-			// listen for comments-changed events
-			Zino.on('comments-changed', this.changeHandler = function(comments) {
-				// update our internal state
-				this.setState('comments', comments);
-			}.bind(this));
+				mount: function() {
+					// listen for comments-changed events
+					Zino.on('comments-changed', this.changeHandler = function(comments) {
+						// update our internal state
+						this.setProps('comments', comments);
+					}.bind(this));
 
-			// notify the store that we need the latest data
-			Zino.trigger('comments-initialize');
-		},
-		unmount: function() {
-			Zino.off('comments-changed', this.changeHandler);
-		},
+					// notify the store that we need the latest data
+					Zino.trigger('comments-initialize');
+				},
+				unmount: function() {
+					// make sure we clean up after us
+					Zino.off('comments-changed', this.changeHandler);
+				}
+			};
+		...
 
-		render: function() {
-			...
-
-The mount() and unmount() functions are called once our component is mounted/added to the page or unmounted/removed from the page. On those, we tell our dispatcher, that we want to be notified of any changes to the comments in our store. If there is one, we simply update our internal component state but using this.setState(). Every time you call setState and therefore change the internal state of the component, it triggers a re-render of the component, thereby displaying our updated comment list.
+The mount() and unmount() functions are called once our component is mounted/added to the page or unmounted/removed from the page. On those, we tell our dispatcher, that we want to be notified of any changes to the comments in our store. If there is one, we simply update our internal component state but using this.setProps(). Every time you call setProps and therefore change the internal state of the component, it triggers a re-render of the component, thereby displaying our updated comment list.
 
 Last but not least, by triggering the comments-initialize action, we tell our store to send us everything he has for this action.
+
+Sometimes you might want to change something of the component after it has been rendered. For this, there is the property `render`. It works similar to `mount` and `unmount`, so is also a callback. Since it is called after every time the component is rendered, having complex logic there should be avoided.
 
 Now let's write our component for adding a new entry. Create the file comment-form.html:
 
@@ -243,7 +246,7 @@ Now let's write our component for adding a new entry. Create the file comment-fo
 		<script>
 		({
 			events: {
-				form: {
+				'form': {
 					submit: function(e) {
 						e.preventDefault();
 						Zino.trigger('comments-added', {
@@ -257,7 +260,7 @@ Now let's write our component for adding a new entry. Create the file comment-fo
 		</script>
 	</comment-form>
 
-So what does this mean? With the events property we can register any kind of event for any part of our component. It won't register events to anything outside the component. So in this case, we select the form element, but any kind of CSS selector would work, there. For example, instead of 'form', we could also use '.comment-form' as the key in our object.
+So what does this mean? Since we don't use other components, we simply use object syntax to define what the properties of our component are. With the events property we can register any kind of event for any part of our component. It won't register events to anything outside the component. So in this case, we select the form element, but any kind of CSS selector would work, there. For example, instead of 'form', we could also use '.comment-form' as the key in our object.
 
 Within the event's form object, we have defined the submit property, which is a function that handles the event, once it occurs. Within this function, we simply tell our store what the new comment's author and content are, the store will deal with the rest.
 
@@ -280,25 +283,12 @@ For our store to actually support this action, we need to extend it with the fol
 Last but not least, we need to tell our comment-box to actually mount our comment-form component:
 
 	...
-	render: function() {
-		Zino.mount(this.querySelectorAll('comment'), 'dist/comment.html');
-		Zino.mount(this.querySelectorAll('comment-form'), 'dist/comment-form.html');
-	}
-	...
-
-As an easier alternative to Zino.mount within the render function, Zino detects changes to the DOM and mounts required
-components all by itself, if at that time the components are imported. You can import a component by using the `Zino.import(url)` function. By using this, you could change the above example into this:
-
-	...
-	mount: function() {
-		...
-
+	(function() {
 		Zino.import('dist/comment.html');
 		Zino.import('dist/comment-form.html');
-	}
-	...
 
-So in our mount function, we just tell Zino that our comment-box component relies on two other components which are to be found at the given locations. No render function required for mounting those dependencies.
+		return {
+			...
 
 Now, the last part of our tutorial goes into showing how to style our components. Obviously the components can be styled by just using a global stylesheet. However, doing so will get you all the problems that are [intrinsically part of CSS at scale](https://speakerdeck.com/vjeux/react-css-in-js).
 
@@ -338,26 +328,27 @@ Let's style our `comment-form` component with that in mind:
 
 As mentioned above, the element styles will not apply to any element outside our component. However, styles from the outer scope might leak in here, if you defined any. In order to prevent any leakage of styles into the innerts of your components and to resolve the above-mentioned intrinsic problems of CSS, the safest way is to use Javascript-based CSS.
 
-Let's see how this works. Our comment-box component should never leak it's own style to included components, so therefore, we define the styling within the script tag rather than the style tag as before. This looks like that:
+Let's see how this works. Our comment-box component should never leak it's own style to included components, so therefore, we define the styling within the script tag at the `style` property rather than the style tag as before. This looks like that:
 
-		render: function() {
-			...
-		},
-
-		styles: {
-			commentList: {
-				listStyleType: 'none',
-				margin: 0,
-				padding: 0
+			unmount: function() {
+				...
 			},
 
-			entry: {
-				marginBottom: '0.5em',
-				paddingTop: '0.5em',
-				borderBottom: '1px solid #6ac'
+			styles: {
+				commentList: {
+					listStyleType: 'none',
+					margin: 0,
+					padding: 0
+				},
+
+				entry: {
+					marginBottom: '0.5em',
+					paddingTop: '0.5em',
+					borderBottom: '1px solid #6ac'
+				}
 			}
-		}
-	})
+		};
+	}())
 	</script>
 
 You can see, that the normal CSS rules are simply transformed into JSON objects and properties. All dashed properties are - for the sake of a simplified writing - camel-cased instead. Additionally, number values are converted to pixel values for you and functions are automatically evaluated at render-time.
@@ -383,8 +374,8 @@ The style attribute is used for it. It makes more sense defining the style attri
 We also have the option of combining multiple defined styles into one style for a tag. We're going to do this in our comment component:
 
 	<comment>
-		<h2 style={{%styles.reset, styles.author}}>"{{author}}" says:</h2>
-		<p style={{%styles.reset, styles.comment}}>{{body}}</p>
+		<h2 style="{{%styles.reset, styles.author}}">"{{author}}" says:</h2>
+		<p style="{{%styles.reset, styles.comment}}">{{body}}</p>
 
 		<script>
 		({
@@ -408,16 +399,16 @@ We also have the option of combining multiple defined styles into one style for 
 		</script>
 	</comment>
 
-Both techniques, the script-based styling and normal CSS styling can also be combined. By employing the normal
+Both techniques, the script-based styling and normal CSS styling can also be combined. Additionally, by employing the normal
 
 	<link rel="stylesheet" href="mystylesheet.css"/>
 
-you can also apply the localized version of the CSS by using the grunt-zino task to re-integrate it back into the component on build time, thereby enabling you to manage your styles outside.
+you can also apply the localized version of the CSS by using the [grunt-zino](https://bitbucket.org/rkunze/grunt-zino) task to re-integrate it back into the component on build time, thereby enabling you to manage your styles outside.
 
 Sometimes you need to transmit complex objects between the different components. In order to achieve this, there are two ways:
 
 1. you can transfer the data as an HTML data attribute.
-1. you can call mount(el, props) transfer new props while mounting a tag
+1. you can call el.setProps(props) to transfer new props to an already mounted tag
 
 Option 1 works like this:
 
@@ -456,7 +447,7 @@ Option 1 works like this:
 		</script>
 	</my-tag>
 
-Option 2 uses the `+` symbol to indicate that a complex object needs to be transferred and kept. This also works transparently for complex data that is transferred as part of a loop.
+Option 1 uses the `+` symbol to indicate that a complex object needs to be transferred and kept. This also works transparently for complex data that is transferred as part of a loop.
 
 Please note that data attribute names that contain dashes (in the above case `data-my-complex-data`) are automatically converted to camel-case, so in the above example, the data attribute will be accessible within the component `my-sub-component` as `props.myComplexData`.
 
@@ -490,21 +481,20 @@ Option 2 looks like this:
 				},
 				// have to do it in render since the my-sub-component is created there
 				render: function() {
-					var _this = this;
-					Zino.mount(this.querySelector('my-sub-component'), {myComplexData: [1, {a: 'Test'}, function(){}]});
+					this.querySelector('my-sub-component').setProps({myComplexData: [1, {a: 'Test'}, function(){}]});
 
 					// for our looped instances
 					[].forEach.call(this.querySelectorAll('my-sub-component[idx]'), function(component) {
 						// we need to mount every instance separately due to the changing data
-						Zino.mount(component, {entry: _this.props.data[parseInt(component.getAttribute('idx'), 10)]});
-					});
+						component.setProps({entry: this.props.data[parseInt(component.getAttribute('idx'), 10)]});
+					}.bind(this));
 				}
 			};
 		}());
 		</script>
 	</my-tag>
 
-Please note, that option 1 is more complicated when used in a loop where you have to transmit a loop value separately for every instance since you have to manually assign the correct value to the props via `mount()`.
+Please note, that option 2 is more complicated when used in a loop where you have to transmit a loop value separately for every instance since you have to manually assign the correct value to the props via `setProps()`.
 
 
 
@@ -649,6 +639,28 @@ and attributes of that tag via the DOM API. Example:
 		this.attributes.myattr.value === '1' // true
 	}
 
+Once a component is initialized, meaning mounted and rendered, an optional onready function notifies you that this happened. Example:
+
+		// somewhere in your code
+		...
+
+		// import the component we want to add to the DOM
+		Zino.import('my-tag');
+
+		// create the component's element
+		var myNewTag = document.createElement('my-tag');
+		myNewTag.setAttribute('myattr', 1);
+
+		// register the onready handler
+		myNewTag.onready = function() {
+			// call setProps on myNewTag once the component is ready
+			this.setProps('prop1', 'value1');
+		}
+
+		// attach the component to the DOM
+		document.body.appendChild(myNewTag
+
+		...
 
 ZinoJS itself
 -------------
@@ -661,41 +673,6 @@ ZinoJS exports a set of functions in order to interact with it. Those functions 
 		- props - initially set properties (optional)
 
 		Imports a component from the provided URL so that it can be rendered whenever added to the DOM. It will automatically be mounted.
-
-	- mount(element[, url][, props])
-		- element - the DOM element to be mounted
-		- url - URL to load the element from, if not loaded yet (optional)
-		- props - initially set properties (optional)
-
-		Mounts the given element as the given tag name, optionally, loaded from the
-		server, if it has not been loaded already. This is especially useful, if you want to render a component dynamically, meaning after the page load. By providing props as part of this call, you can transmit complex Javascript objects, which would not be possible through normal tag attributes.
-
-		Example:
-
-			<script>
-			(function() {
-				var myNewComponent = document.createElement('my-component');
-				document.body.appendChild(myNewComponent);
-				Zino.mount(myNewComponent);
-
-				// render a component that has not been loaded statically
-				var myOtherComponent = document.createElement('my-other-component');
-				document.body.appendChild(myOtherComponent);
-				Zino.mount(myOtherComponent, "./my-other-component.html");
-
-				// hand over some props
-				var myData = ["test", 1, 2];
-				var myComponent = document.createElement('my-component');
-				document.body.appendChild(myComponent);
-				Zino.mount(myComponent, myData);
-			}());
-			</script>
-
-
-	- mountAll([baseElement])
-		- baseElement - DOM element to start mounting from (optional, default = document.body)
-
-		Mounts all loaded tags on the page, starting from the given position
 
 	- trigger(event[, data])
 		- event - name of the event to trigger
