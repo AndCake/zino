@@ -679,14 +679,36 @@ ZinoJS exports a set of functions in order to interact with it. Those functions 
 		- event - name of the event to trigger
 		- data - data to send with the event (optional)
 
-		Triggers the given event
+		Triggers the given event. When bound to some object, it will trigger the event on that object.
+
+		Example:
+
+			// for simple case
+			Zino.trigger('update-data', {id: 2, text: 'My changed data'});
+
+			// for a specific element
+			var myElement = document.querySelector('my-element');
+			Zino.trigger.call(myElement, 'my-custom-event', {some: 'data'});
 
 	- on(event, callback)
 		- event - name of the event to listen for
 		- callback - callback function to call when the event is triggered
 
 		Listens for the given event and calls the callback for every occurrence.
-		Any data sent with the trigger will be directly given into the callback.
+		Any data sent with the trigger will be directly given into the callback. When bound to some object, it will listen for the event on that object only.
+
+		Example:
+
+			// for a simple case
+			Zino.on('update-data', function(data) {
+				// do something with the data
+			});
+
+			// for a specific element
+			var myElement = document.querySelector('my-element');
+			Zino.on.call(myElement, 'my-custom-event', function(data) {
+				// do something with the data
+			});
 
 	- one(event, callback)
 		- event - name of the event to listen for
@@ -694,13 +716,13 @@ ZinoJS exports a set of functions in order to interact with it. Those functions 
 
 		Listens for the given event and calls the callback only for the first
 		occurrence. Any data sent with the trigger will be directly given into
-		the callback.
+		the callback. When bound to some object, it will listen for the event on that object only.
 
 	- off(event, callback)
 		- event - name of the event to listen for
 		- callback - function to remove as event listener
 
-		Removes the event listener for the given event
+		Removes the event listener for the given event. When bound to some object, it will remove the event handler on that object only.
 
 	- fetch(url, callback)
 		- url - from where to fetch some content/data?

@@ -175,6 +175,9 @@
 	'use strict';
 	var syntax = /\{\{\s*([^\}]+)\s*\}\}\}?/g,
 		merge = 0,
+		identity = function(a) { return a; },
+		uuid = function(c) {var r = Math.random()*16|0;return (c=='x'?r:r&0x3|0x8).toString(16);},
+		partial = identity,
 
 		getValue = function(name, data) {
 			var parts = ['.'],
@@ -258,36 +261,25 @@
 					parsed = '';
 
 					if (condition) {
-						if (typeof condition === 'object') {
-							for (var all in condition) {
-								if (all === 'isArray') continue;
-								parsed = parseTemplate(
-										code,
-										merge({
-											'.index': all,
-											'.length': condition.length,
-											'.': condition[all]
-										}, data, condition[all]),
-										depth + 1,
-										match.index + match[0].length
-									);
-								result += parsed.content;
-							}
-						} else {
+						if (typeof condition !== 'object') {
+							condition = [condition];
+						}
+						for (var all in condition) {
+							if (all === 'isArray') continue;
+							var el = condition[all];
 							parsed = parseTemplate(
-								code,
-								merge({
-									'.index': 0,
-									'.length': 1,
-									'.': condition
-								}, data, condition),
-								depth + 1,
-								match.index + match[0].length
-							);
-
-							if (typeof condition === 'function') {
+									code,
+									merge({
+										'.index': all,
+										'.length': condition.length,
+										'.': el
+									}, data, el),
+									depth + 1,
+									match.index + match[0].length
+								);
+							if (typeof el === 'function') {
 								try {
-									result += condition(parsed.content);
+									result += el(parsed.content);
 								} catch (e) {
 									throw 'Unable to run condition function ' + parsed.content + ' while parsing template: ' + e.message;
 								}
@@ -310,8 +302,7 @@
 					}
 					return {lastIndex: match[0].length + match.index, content: result};
 				} else if (match[1][0] === '>') {
-					// keep imports as is
-					result += match[0];
+					result += partial(key, data);
 				} else if (match[1][0] === '!') {
 					// comment - don't do anything
 					result += '';
@@ -319,7 +310,7 @@
 					// interpret given values separated by comma as styling
 					result += key.split(/\s*,\s*/).map(renderStyle).join(';');
 				} else if (match[1][0] === '+') {
-					var id = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {var r = Math.random()*16|0;return (c=='x'?r:r&0x3|0x8).toString(16);});
+					var id = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, uuid);
 					if (!Zino.__data) Zino.__data = {};
 					Zino.__data[id] = getValue(key, data);
 					result += '--' + id + '--';
@@ -341,11 +332,15 @@
 		};
 
 	// parses mustache-like template code
-	return module.exports = function(code, data, mergeFn, tag) {
+	module.exports = function(code, data, mergeFn, tag) {
 		merge = mergeFn || function(){};
 		var result = parse(code, data, null, null, tag);
 		return result && result.content || '';
 	};
+	module.exports.loadPartial = function(fn) {
+		partial = fn || identity;
+	};
+	return module.exports;
 }(typeof window === 'undefined' ? module : {}))
 ,
 		loader = (function(module) {

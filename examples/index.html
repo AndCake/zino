@@ -42,10 +42,10 @@
 					name = prompt('Name:');
 
 				st.setAttribute('me', 'hallo');
-				document.body.appendChild(st);
 				st.onready = function() {
 					this.setProps({name: name});
 				};
+				document.body.appendChild(st);
 			};
 		</script>
 	</body>

@@ -30,8 +30,6 @@
                 one: emptyFunc,
                 import: emptyFunc,
                 fetch: emptyFunc,
-                mount: emptyFunc,
-                mountAll: emptyFunc
             };
             tag = require('loader').handleScripts(tagRoot.get(0).tagName, scripts, emptyFunc, emptyFunc, merge);
             $('script, style, link').remove();
