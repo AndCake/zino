@@ -63,19 +63,19 @@
 	var tagLibrary = {},
 
 		// read utilities
-		utils = require('utils'),
-		$ = utils.domQuery,
-		merge = utils.merge,
-		fetch = utils.fetch,
-		_ = utils.safeAccess,
-		emptyFunc = utils.emptyFunc,
+		utils 		= require('utils'),
+		$ 			= utils.domQuery,
+		merge 		= utils.merge,
+		fetch 		= utils.fetch,
+		_ 			= utils.safeAccess,
+		emptyFunc 	= utils.emptyFunc,
 		checkParams = utils.checkParams,
-		error = utils.error,
+		error 		= utils.error,
 
 		// retrieves all attributes that can be used for rendering
-		getAttributes = require('attributes'),
-		parser = require('parser'),
-		loader = require('loader'),
+		getAttributes 	= require('attributes'),
+		parser 			= require('parser'),
+		loader 			= require('loader'),
 
 		setProps = function(name, value) {
 			if (typeof name === 'object') {
@@ -163,7 +163,7 @@
 
 				path = _(doc.activeElement).nodeName === 'INPUT' && getFocus(doc.activeElement),
 
-				code = parser(tagDescription.code, getAttributes(tag), merge, tag),
+				code = parser(tagDescription.code, getAttributes(tag), merge),
 				content = doc.createDocumentFragment(),
 				div = doc.createElement('div'),
 				isNew = false;

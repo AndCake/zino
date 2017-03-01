@@ -7,11 +7,11 @@
 			var args = arguments,
 				target = args[0];
 
-			for (var i = 1; i < args.length; i += 1) {
-				for (var all in args[i]) {
-					target[all] = args[i][all];
+			[].slice.call(args, 1).forEach(function(arg) {
+				for (var all in arg) {
+					target[all] = arg[all];
 				}
-			}
+			});
 
 			return target;
 		},

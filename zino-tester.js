@@ -18,11 +18,11 @@
 			var args = arguments,
 				target = args[0];
 
-			for (var i = 1; i < args.length; i += 1) {
-				for (var all in args[i]) {
-					target[all] = args[i][all];
+			[].slice.call(args, 1).forEach(function(arg) {
+				for (var all in arg) {
+					target[all] = arg[all];
 				}
-			}
+			});
 
 			return target;
 		},
@@ -217,16 +217,18 @@
             }, instance, data));
 
             return {
-                html: (function(module) {
+                html: (function(module, Zino) {
 	// PARSER.JS
 	'use strict';
 	var syntax = /\{\{\s*([^\}]+)\s*\}\}\}?/g,
 		merge = 0,
 		identity = function(a) { return a; },
-		uuid = function(c) {var r = Math.random()*16|0;return (c=='x'?r:r&0x3|0x8).toString(16);},
+		uuid = function(c) { var r = Math.random() * 16 | 0; return (c == 'x' ? r : r & 0x3 | 0x8).toString(16); },
 		partial = identity,
+		isFn = function(obj) { return typeof obj === 'function'; },
+		isObj = function(obj) { return typeof obj === 'object'; },
 
-		getValue = function(name, data) {
+		getValue = function(name, data, noRun) {
 			var parts = ['.'],
 				obj = data;
 
@@ -240,36 +242,34 @@
 				obj = obj[parts.shift()];
 			}
 
-
-			if (typeof obj === 'function') {
+			if (!noRun && isFn(obj)) {
 				obj = obj.apply(data);
 			}
 			return obj !== undefined && obj !== null ? obj : '';
 		},
 
-		parse = function parseTemplate(code, data, depth, startIdx, tag) {
+		parse = function(code, data, depth, startIdx) {
 			var result = '',
 				lastPos = startIdx || 0,
-				match, key, condition, parsed,
+				match, key, condition, parsed, len, ch,
 
 				renderStyle = function(name) {
 					var value = getValue(name, data),
 						style = '',
-						replaced = function(g) { return '-' + g.toLowerCase(); },
 
-						transformValue = function(val) {
+						transform = function(val) {
 							if (typeof val === 'number' && val !== 0) {
 								return val + 'px';
 							}
-							if (typeof val === 'function') {
-								return transformValue(val.apply(data));
+							if (isFn(val)) {
+								return transform(val.apply(data));
 							}
 							return val;
 						};
 
-					if (typeof value === 'object') {
+					if (isObj(value)) {
 						for (var all in value) {
-							style += all.replace(/[A-Z]/g, replaced) + ':' + transformValue(value[all]) + ';';
+							style += all.replace(/[A-Z]/g, function(g) { return '-' + g.toLowerCase(); }) + ':' + transform(value[all]) + ';';
 						}
 					}
 
@@ -278,7 +278,6 @@
 
 			depth = depth || 0;
 			startIdx = startIdx || 0;
-			tag = tag || {};
 
 			// reset regexp so that recursion works
 			if (!code.match(syntax)) {
@@ -294,37 +293,39 @@
 				}
 
 				result += code.substr(lastPos, match.index - lastPos);
-				key = match[1].substr(1);
+				ch = match[1][0];
+				key = match[1].substr(1).trim();
+				len = match[0].length;
 
-				if (match[1][0] === '#' || match[1][0] === '^') {
+				if ('#^@'.indexOf(ch) >= 0) {
 					// begin of block
-					condition = getValue(key, data);
-					if (match[1][0] === '^' && (!condition || condition && condition.length <= 0)) {
+					condition = getValue(key, data, true);
+					if (ch === '^' && (!condition || condition && condition.length <= 0)) {
 						condition = true;
-					} else if (match[1][0] === '^') {
+					} else if (ch === '^') {
 						condition = false;
 					}
 
 					parsed = '';
 
 					if (condition) {
-						if (typeof condition !== 'object') {
+						if (!isObj(condition)) {
 							condition = [condition];
 						}
 						for (var all in condition) {
 							if (all === 'isArray') continue;
 							var el = condition[all];
-							parsed = parseTemplate(
+							parsed = parse(
 									code,
-									merge({
+									merge({}, data, el, {
 										'.index': all,
 										'.length': condition.length,
 										'.': el
-									}, data, el),
+									}),
 									depth + 1,
-									match.index + match[0].length
+									match.index + len
 								);
-							if (typeof el === 'function') {
+							if (isFn(el)) {
 								try {
 									result += el(parsed.content);
 								} catch (e) {
@@ -336,32 +337,32 @@
 						}
 					}
 
-					if (typeof parsed !== 'object') {
-						parsed = parseTemplate(code, data, depth + 1, match.index + match[0].length);
+					if (!isObj(parsed)) {
+						parsed = parse(code, data, depth + 1, match.index + len);
 					}
 
 					lastPos = parsed.lastIndex;
 					continue;
-				} else if (match[1][0] === '/') {
+				} else if (ch === '/') {
 					// end of block
 					if (depth <= 0) {
 						throw 'Unexpected end of block ' + match[1].substr(1);
 					}
-					return {lastIndex: match[0].length + match.index, content: result};
-				} else if (match[1][0] === '>') {
+					return {lastIndex: len + match.index, content: result};
+				} else if (ch === '>') {
 					result += partial(key, data);
-				} else if (match[1][0] === '!') {
+				} else if (ch === '!') {
 					// comment - don't do anything
 					result += '';
-				} else if (match[1][0] === '%') {
+				} else if (ch === '%') {
 					// interpret given values separated by comma as styling
 					result += key.split(/\s*,\s*/).map(renderStyle).join(';');
-				} else if (match[1][0] === '+') {
+				} else if (ch === '+') {
 					var id = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, uuid);
 					if (!Zino.__data) Zino.__data = {};
 					Zino.__data[id] = getValue(key, data);
 					result += '--' + id + '--';
-				} else if (match[1][0] === '{') {
+				} else if (ch === '{') {
 					// unescaped content
 					result += getValue(key, data);
 				} else {
@@ -369,7 +370,7 @@
 					result += ('' + getValue(match[1], data) || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
 				}
 
-				lastPos = match.index + match[0].length;
+				lastPos = match.index + len;
 			}
 			result += code.substr(lastPos);
 			return {
@@ -379,16 +380,19 @@
 		};
 
 	// parses mustache-like template code
-	module.exports = function(code, data, mergeFn, tag) {
+	module.exports = function(code, data, mergeFn) {
 		merge = mergeFn || function(){};
-		var result = parse(code, data, null, null, tag);
+		var result = parse(code, data);
 		return result && result.content || '';
 	};
 	module.exports.loadPartial = function(fn) {
 		partial = fn || identity;
 	};
+	module.exports.setZino = function(zino) {
+		Zino = zino;
+	};
 	return module.exports;
-}(typeof window === 'undefined' ? module : {}))
+}.apply(null, typeof window === 'undefined' ? [module, {}] : [{}, window.Zino]))
 (loadedTags[tagName].tagContent, data, merge),
                 data,
                 tagName,
