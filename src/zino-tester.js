@@ -56,7 +56,7 @@
             }
             loadedTags[tagName].tag.__i = tag.html();
 
-            loadedTags[tagName].tag.mount.call(merge(instance, loadedTags[tagName].tag));
+            loadedTags[tagName].tag.mount.call(merge({}, instance, loadedTags[tagName].tag, data));
             data = require('attributes')(merge({
                 attributes: Object.keys(tag.get(0).attribs).map(attr => ({name: attr, value: tag.get(0).attribs[attr]}))
             }, instance, data));
