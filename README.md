@@ -31,6 +31,16 @@ Features
 - faster to download
 - use CSS in JS the React way or define an automatically scoped fully-fledged stylesheet or mix both
 
+Browser Support
+---------------
+
+ * IE11+
+ * Edge
+ * Firefox 14+
+ * Chrome 18+
+ * Mac & iOS Safari 6.1+
+ * Android Browser 4.4+
+
 Getting started
 ---------------
 
