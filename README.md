@@ -212,8 +212,9 @@ In praxis, this means that first, we create our store by creating a new file, ca
 		});
 	}());
 
-As you can see, the store mainly deals with handling our actual comment data. Zino.trigger() and Zino.on() are used to communicate with the dispatcher. Just load the comment-store.js in our index.html:
+As you can see, the store mainly deals with handling our actual comment data. Zino.trigger() and Zino.on() are used to communicate with the dispatcher. Just load the `comment-store.js` in our index.html:
 
+        <script src="comment-store.js"></script>
 
 and we're ready to use it. Now let's update our component to make use of the store:
 
