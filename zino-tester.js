@@ -179,45 +179,7 @@
         renderTag = (html, data) => {
             var tag = cheerio.load(html),
                 tagName,
-                instance = {};
-
-            tag = tag.root().children().first();
-            tagName = tag.get(0).tagName;
-
-            if (!loadedTags[tagName]) {
-                throw new Error(tagName + ' is not imported. Please import it before using it.');
-            }
-            loadedTags[tagName].tag.__i = tag.html();
-
-            loadedTags[tagName].tag.mount.call(merge(instance, loadedTags[tagName].tag));
-            data = (function(module) {
-	'use strict';
-
-	return module.exports = function(tag, propsOnly) {
-		var attrs = {props: tag.props, element: tag.element, styles: tag.styles, body: tag['__i']},
-			props = {};
-
-		[].slice.call(tag.attributes).forEach(function(attribute) {
-			var isComplex = attribute.name.indexOf('data-') >= 0 && attribute.value.substr(0, 2) === '--' && Zino.__data;
-			attrs[attribute.name] || (attrs[attribute.name] = isComplex ? Zino.__data[attribute.value.replace(/^--|--$/g, '')] : attribute.value);
-			if (isComplex) {
-				props[attribute.name.replace(/^data-/g, '').replace(/(\w)-(\w)/g, function(g, m1, m2) {
-					return m1 + m2.toUpperCase();
-				})] = attrs[attribute.name];
-			}
-		});
-
-		if (propsOnly) return props;
-
-		return attrs;
-	};
-}(typeof window === 'undefined' ? module : {}))
-(merge({
-                attributes: Object.keys(tag.get(0).attribs).map(attr => ({name: attr, value: tag.get(0).attribs[attr]}))
-            }, instance, data));
-
-            return {
-                html: (function(module, Zino) {
+				parser = (function(module, Zino) {
 	// PARSER.JS
 	'use strict';
 	var syntax = /\{\{\s*([^\}]+)\s*\}\}\}?/g,
@@ -358,9 +320,10 @@
 					// interpret given values separated by comma as styling
 					result += key.split(/\s*,\s*/).map(renderStyle).join(';');
 				} else if (ch === '+') {
-					var id = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, uuid);
+					var value = getValue(key, data);
+					var id = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, uuid.bind({data:value}));
 					if (!Zino.__data) Zino.__data = {};
-					Zino.__data[id] = getValue(key, data);
+					Zino.__data[id] = value;
 					result += '--' + id + '--';
 				} else if (ch === '{') {
 					// unescaped content
@@ -391,9 +354,55 @@
 	module.exports.setZino = function(zino) {
 		Zino = zino;
 	};
+	module.exports.setUUID = function(fn) {
+		uuid = fn;
+	};
 	return module.exports;
 }.apply(null, typeof window === 'undefined' ? [module, {}] : [{}, window.Zino]))
-(loadedTags[tagName].tagContent, data, merge),
+,
+                instance = {};
+
+            tag = tag.root().children().first();
+            tagName = tag.get(0).tagName;
+
+            if (!loadedTags[tagName]) {
+                throw new Error(tagName + ' is not imported. Please import it before using it.');
+            }
+            loadedTags[tagName].tag.__i = tag.html();
+
+			loadedTags[tagName].tag.mount.call(merge(instance, loadedTags[tagName].tag, data));
+			data = (function(module) {
+	'use strict';
+
+	return module.exports = function(tag, propsOnly) {
+		var attrs = {props: tag.props, element: tag.element, styles: tag.styles, body: tag['__i']},
+			props = {};
+
+		[].slice.call(tag.attributes).forEach(function(attribute) {
+			var isComplex = attribute.name.indexOf('data-') >= 0 && attribute.value.substr(0, 2) === '--' && Zino.__data;
+			attrs[attribute.name] || (attrs[attribute.name] = isComplex ? Zino.__data[attribute.value.replace(/^--|--$/g, '')] : attribute.value);
+			if (isComplex) {
+				props[attribute.name.replace(/^data-/g, '').replace(/(\w)-(\w)/g, function(g, m1, m2) {
+					return m1 + m2.toUpperCase();
+				})] = attrs[attribute.name];
+			}
+		});
+
+		if (propsOnly) return props;
+
+		return attrs;
+	};
+}(typeof window === 'undefined' ? module : {}))
+(merge({
+				attributes: Object.keys(tag.get(0).attribs).map(attr => ({name: attr, value: tag.get(0).attribs[attr]}))
+			}, instance, data));
+
+			parser.setUUID(function(g, idx) {
+				return sha1(JSON.stringify(this.data))[idx];
+			});
+
+            return {
+                html: parser(loadedTags[tagName].tagContent, data, merge),
                 data,
                 tagName,
                 registry: loadedTags[tagName]

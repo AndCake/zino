@@ -10,7 +10,7 @@
 			form: {
 				submit: function addComment(e) {
 					e.preventDefault();
-					Zino.trigger('comments-added', {
+					Zino.trigger('add-comment', {
 						author: this.author.value,
 						comment: this.comment.value
 					});

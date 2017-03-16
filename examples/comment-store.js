@@ -17,7 +17,7 @@
 	});
 
 	// when receiving the notification about an added comment
-	Zino.on('comments-added', function(comment) {
+	Zino.on('add-comment', function(comment) {
 		// add it to the list of comments
 		comments.push(comment);
 

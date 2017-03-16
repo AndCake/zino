@@ -46,6 +46,7 @@
         renderTag = (html, data) => {
             var tag = cheerio.load(html),
                 tagName,
+				parser = require('parser'),
                 instance = {};
 
             tag = tag.root().children().first();
@@ -56,13 +57,17 @@
             }
             loadedTags[tagName].tag.__i = tag.html();
 
-            loadedTags[tagName].tag.mount.call(merge({}, instance, loadedTags[tagName].tag, data));
-            data = require('attributes')(merge({
-                attributes: Object.keys(tag.get(0).attribs).map(attr => ({name: attr, value: tag.get(0).attribs[attr]}))
-            }, instance, data));
+			loadedTags[tagName].tag.mount.call(merge(instance, loadedTags[tagName].tag, data));
+			data = require('attributes')(merge({
+				attributes: Object.keys(tag.get(0).attribs).map(attr => ({name: attr, value: tag.get(0).attribs[attr]}))
+			}, instance, data));
+
+			parser.setUUID(function(g, idx) {
+				return sha1(JSON.stringify(this.data))[idx];
+			});
 
             return {
-                html: require('parser')(loadedTags[tagName].tagContent, data, merge),
+                html: parser(loadedTags[tagName].tagContent, data, merge),
                 data,
                 tagName,
                 registry: loadedTags[tagName]

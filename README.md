@@ -249,7 +249,7 @@ Now let's write our component for adding a new entry. Create the file comment-fo
 				'form': {
 					submit: function addComment(e) {
 						e.preventDefault();
-						Zino.trigger('comments-added', {
+						Zino.trigger('add-comment', {
 							author: this.author.value,
 							comment: this.comment.value
 						});
@@ -268,7 +268,7 @@ For our store to actually support this action, we need to extend it with the fol
 
 		...
 		// when receiving the notification about an added comment
-		Zino.on('comments-added', function(comment) {
+		Zino.on('add-comment', function(comment) {
 			// add it to the list of comments
 			comments.push(comment);
 
@@ -659,7 +659,7 @@ Once a component is initialized, meaning mounted and rendered, an optional onrea
 		}
 
 		// attach the component to the DOM
-		document.body.appendChild(myNewTag
+		document.body.appendChild(myNewTag);
 
 		...
 

@@ -11,7 +11,7 @@
 	// initialize our todo list
 	var todos = JSON.parse(localStorage.getItem('todos') || 'false') || [];
 
-	Zino.on('todo-added', function(todo) {
+	Zino.on('add-todo', function(todo) {
 		// add new entry
 		todos.push(todo);
 		// send to database
@@ -20,7 +20,7 @@
 		Zino.trigger('todos-changed', todos);
 	});
 
-	Zino.on('todo-removed', function(todoIdx) {
+	Zino.on('remove-todo', function(todoIdx) {
 		// remove the given entry
 		todos.splice(todoIdx, 1);
 		// send the result to the database

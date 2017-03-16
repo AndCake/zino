@@ -17,7 +17,7 @@
 			input: {
 				change: function addTodo(e) {
 					if (this.value) {
-						Zino.trigger('todo-added', this.value);
+						Zino.trigger('add-todo', this.value);
 					}
 					setTimeout(function() {
 						this.value = '';
@@ -27,7 +27,7 @@
 			li: {
 				click: function removeTodo(e) {
 					if (this.getAttribute('data-index')) {
-						Zino.trigger('todo-removed', parseInt(this.getAttribute('data-index')));
+						Zino.trigger('remove-todo', parseInt(this.getAttribute('data-index')));
 					}
 				}
 			}

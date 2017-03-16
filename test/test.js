@@ -73,5 +73,11 @@
 
 			it('renders empty, when used empty', () => z.matchesSnapshot('<btn page="https://bitbucket.org/rkunze/zinojs">ZinoJS</btn>'));
 		});
+
+		describe('second-tag component', () => {
+			z.importTag('examples/dist/second-tag.html');
+
+			it('renders complex content', () => z.matchesSnapshot('<second-tag me="test"></second-tag>'));
+		});
 	});
 })();

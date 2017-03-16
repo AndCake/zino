@@ -311,9 +311,10 @@
 					// interpret given values separated by comma as styling
 					result += key.split(/\s*,\s*/).map(renderStyle).join(';');
 				} else if (ch === '+') {
-					var id = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, uuid);
+					var value = getValue(key, data);
+					var id = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, uuid.bind({data:value}));
 					if (!Zino.__data) Zino.__data = {};
-					Zino.__data[id] = getValue(key, data);
+					Zino.__data[id] = value;
 					result += '--' + id + '--';
 				} else if (ch === '{') {
 					// unescaped content
@@ -343,6 +344,9 @@
 	};
 	module.exports.setZino = function(zino) {
 		Zino = zino;
+	};
+	module.exports.setUUID = function(fn) {
+		uuid = fn;
 	};
 	return module.exports;
 }.apply(null, typeof window === 'undefined' ? [module, {}] : [{}, window.Zino]))
