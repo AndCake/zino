@@ -31,6 +31,16 @@ Features
 - faster to download
 - use CSS in JS the React way or define an automatically scoped fully-fledged stylesheet or mix both
 
+Browser Support
+---------------
+
+ * IE11+
+ * Edge
+ * Firefox 14+
+ * Chrome 18+
+ * Mac & iOS Safari 6.1+
+ * Android Browser 4.4+
+
 Getting started
 ---------------
 
@@ -202,7 +212,11 @@ In praxis, this means that first, we create our store by creating a new file, ca
 		});
 	}());
 
-As you can see, the store mainly deals with handling our actual comment data. Zino.trigger() and Zino.on() are used to communicate with the dispatcher. Now let's update our component to make use of the store:
+As you can see, the store mainly deals with handling our actual comment data. Zino.trigger() and Zino.on() are used to communicate with the dispatcher. Just load the `comment-store.js` in our index.html:
+
+        <script src="comment-store.js"></script>
+
+and we're ready to use it. Now let's update our component to make use of the store:
 
 	...
 	<script>
