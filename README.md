@@ -746,6 +746,110 @@ ZinoJS exports a set of functions in order to interact with it. Those functions 
 		into the callback function as `data`. If an error occurs, the `err` parameter
 		will be filled with the server's response status code.
 
+## Mustache-enhancements
+
+The Mustache syntax is the base building block of Zino. However, some additional syntax had to be introduced in order to enable more complex use-cases. 
+
+### `{{%<obj1>[, <obj2>][, <obj3...>]}}`
+
+The % means that the template engine is supposed to use the provided object data in order to render CSS properties. 
+This is best used inside a style attribute of an HTML tag. By providing multiple objects, the result is merged from
+left to right in order to determine the resulting properties that actually apply.
+
+obj1, obj2, objn are objects or functions that evaluate to a JS object containing CSS properties and their values. If a value is of type function, 
+it will be called in order to determine it's value. If it's a string, it will be taken as is. If it is a number, it will be appended with the default 
+unit (except if the number is 0). Every function call is bound to the data that is available inside the code fragment, so that it is available via the keyword `this`.
+    
+**Example:**
+
+    ...
+    <div style="{{%styles.reset, styles.baseStyle, styles.border}}">Test content</div>
+    ...
+    <script>
+        ({
+            props: {
+               borderColor: 'green';
+            },
+            styles: {
+                reset: {
+                   margin: 0,
+                   padding: 0,
+                   border: '0 solid black'
+                },
+                baseStyle: {
+                   fontFamily: 'Arial, Helvetica, sans-serif'
+                   fontSize: 12,
+                   color: function() {
+                      return Math.random() > 0.5 ? 'red' : 'blue';
+                   }
+                },
+                border: function() {
+                   return {
+                       border: this.props.borderColor
+                   };
+                }
+            }
+        })
+    </script>
+
+### `{{+<obj>}}`
+
+The + means that the object that is provided in the curly braces will be kept as is and not transformed into a string nor anything else. That way it is possible to transfer data between components. When rendering it, a UUID will be generated for the object to uniquely identify it. That information is used by Zino in order to map the UUID back to it's original data structure in order to access it's properties at a later point in time (e.g. in an inner component). It should always be used in conjunction with the data attribute. The data attribute's name is then directly used a a prop with the provided data.
+
+**Example:**
+
+    // in my-component.html:
+    ...
+    <my-sub-component data-entry="{{+props.entryData}}"></my-sub-component>
+    ...
+    <script>
+      ({
+          props: {
+              entryData: {
+                  callback: function() { ... },
+                  nums: 'Test value',
+                  isValid: false
+              }
+          }
+      })
+    </script>
+    
+    // will render to:
+    <my-sub-component data-entry="--c30e6a46-562f-4cf0-6054-fcd78045a9be--">...</my-sub-component>
+
+    // in my-sub-component the value props.entry will then contain the data from the parent component's props.entryData
+    
+### Block-specific enhancements
+
+When rendering mustache blocks, Zino enhances the data inside the block with additional attributes. Those are:
+
+ - `.index` - contains the index of the current entry in the array for this block (starts with 0)
+ - `.` - contains the current entry itself in the array for this block
+ - `.length` - contains the amount of entries in the array for this block
+
+**Example:**
+
+    <ul>
+    {{#props.list}}
+        <li data-position="{{.index}} of {{.length}}">{{.}}</li>
+    {{/props.list}}
+    </ul>
+    <script>
+    ({
+        props: {
+            list: ['test', 'value', 12, false]
+        }
+    })
+    </script>
+
+    // will generate
+    <ul>
+        <li data-position="0 of 4">test</li>
+        <li data-position="1 of 4">value</li>
+        <li data-position="2 of 4">12</li>
+        <li data-position="3 of 4">false</li>
+    </ul>
+
 # Testing
 
 Zino offers snapshot testing for making sure that tests can be written very easily and tested equally quickly. Consider this simple [button link example](https://bitbucket.org/rkunze/zinojs/src/master/examples/src/btn.html):
