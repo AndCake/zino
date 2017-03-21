@@ -221,7 +221,7 @@
 
 						transform = function(val) {
 							if (typeof val === 'number' && val !== 0) {
-								return val + 'px';
+								return val + (data.styles && data.styles.defaultUnit || 'px');
 							}
 							if (isFn(val)) {
 								return transform(val.apply(data));
