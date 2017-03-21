@@ -157,7 +157,7 @@
 		[].slice.call(tag.attributes).forEach(function(attribute) {
 			var isComplex = attribute.name.indexOf('data-') >= 0 && attribute.value.substr(0, 2) === '--' && Zino.__data;
 			attrs[attribute.name] || (attrs[attribute.name] = isComplex ? Zino.__data[attribute.value.replace(/^--|--$/g, '')] : attribute.value);
-			if (isComplex) {
+			if (attribute.name.indexOf('data-') >= 0) {
 				props[attribute.name.replace(/^data-/g, '').replace(/(\w)-(\w)/g, function(g, m1, m2) {
 					return m1 + m2.toUpperCase();
 				})] = attrs[attribute.name];
@@ -635,19 +635,9 @@
 		},
 
 		getTagFromCode = function(code) {
-			var frag = doc.createDocumentFragment(),
-				firstEl;
-			frag.appendChild(doc.createElement('div'));
-			frag.firstChild.innerHTML = code;
-			firstEl = frag.firstChild.firstElementChild;
-			code = code.replace(/<([^>]+)>/g, function(g, m) {
-				var tagName = m.split(' ')[0];
-				if (tagName[0] === '/') tagName = tagName.substr(1);
-				if (tagName === firstEl.tagName.toLowerCase() || tagName.toLowerCase() === 'link') {
-					return '';
-				}
-				return g;
-			}).replace(/<style[^>]*>(?:[^\s]|[^\S])*?<\/style>/g, '').replace(/<script[^>]*>(?:[^\s]|[^\S])*?<\/script>/g, '');
+			var dom = new DOMParser().parseFromString(code, 'text/html');
+			var firstEl = dom.body.firstElementChild;
+			code = code.replace(new RegExp('<\\/?' + firstEl.tagName + '[^>]*>', 'ig'), '').replace(/<(style|script)[^>]*>(?:[^\s]|[^\S])*?<\/\1>/g, '');
 			firstEl.code = code;
 			return firstEl;
 		},

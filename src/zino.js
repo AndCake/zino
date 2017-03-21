@@ -300,19 +300,9 @@
 		},
 
 		getTagFromCode = function(code) {
-			var frag = doc.createDocumentFragment(),
-				firstEl;
-			frag.appendChild(doc.createElement('div'));
-			frag.firstChild.innerHTML = code;
-			firstEl = frag.firstChild.firstElementChild;
-			code = code.replace(/<([^>]+)>/g, function(g, m) {
-				var tagName = m.split(' ')[0];
-				if (tagName[0] === '/') tagName = tagName.substr(1);
-				if (tagName === firstEl.tagName.toLowerCase() || tagName.toLowerCase() === 'link') {
-					return '';
-				}
-				return g;
-			}).replace(/<style[^>]*>(?:[^\s]|[^\S])*?<\/style>/g, '').replace(/<script[^>]*>(?:[^\s]|[^\S])*?<\/script>/g, '');
+			var dom = new DOMParser().parseFromString(code, 'text/html');
+			var firstEl = dom.body.firstElementChild;
+			code = code.replace(new RegExp('<\\/?' + firstEl.tagName + '[^>]*>', 'ig'), '').replace(/<(style|script)[^>]*>(?:[^\s]|[^\S])*?<\/\1>/g, '');
 			firstEl.code = code;
 			return firstEl;
 		},
