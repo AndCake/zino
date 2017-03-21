@@ -438,25 +438,27 @@
 					});
 				} else if (removed.length > 0) {
 					[].forEach.call(removed, function(tag) {
-						tag.querySelectorAll && $('*', tag).concat(tag).forEach(function(subTag) {
-							if (tagLibrary[subTag.tagName]) {
-								[].forEach.call(subTag.attributes, function(attr) {
-									// cleanup saved data
-									if (attr.name.indexOf('data-') >= 0 && Zino.__data) {
-										delete Zino.__data[attr.value];
-									}
-								});
-								try {
-									tagLibrary[subTag.tagName].functions.unmount.call(subTag);
-								} catch (e) {
-									error('Unable to unmount tag ' + subTag.tagName, e);
-								}
-							}
-						});
+						tag.querySelectorAll && $('*', tag).concat(tag).forEach(unmountTag);
 					});
 				}
 			});
 		}),
+
+		unmountTag = function(subTag) {
+			if (tagLibrary[subTag.tagName]) {
+				[].forEach.call(subTag.attributes, function(attr) {
+					// cleanup saved data
+					if (attr.name.indexOf('data-') >= 0 && Zino.__data) {
+						delete Zino.__data[attr.value];
+					}
+				});
+				try {
+					tagLibrary[subTag.tagName].functions.unmount.call(subTag);
+				} catch (e) {
+					error('Unable to unmount tag ' + subTag.tagName, e);
+				}
+			}
+		},
 
 		// renders an element instance from scratch
 		renderInstance = function(tagDescription, tag) {
@@ -502,6 +504,8 @@
 				content = doc.createDocumentFragment(),
 				div = doc.createElement('div'),
 				isNew = false;
+
+			$('*[__ready]', tag).forEach(unmountTag);
 
 			if (!tag.isRendered) {
 				div.className = '-shadow-root';
