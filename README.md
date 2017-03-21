@@ -748,18 +748,20 @@ ZinoJS exports a set of functions in order to interact with it. Those functions 
 
 ## Mustache-enhancements
 
-The Mustache syntax is the base building block of Zino. However, some additional syntax had to be introduced in order to enable more complex use-cases. 
+The Mustache syntax is the base building block of Zino. However, some additional syntax had to be introduced in order to enable more complex use-cases.
 
 ### `{{%<obj1>[, <obj2>][, <obj3...>]}}`
 
-The % means that the template engine is supposed to use the provided object data in order to render CSS properties. 
+The % means that the template engine is supposed to use the provided object data in order to render CSS properties.
 This is best used inside a style attribute of an HTML tag. By providing multiple objects, the result is merged from
 left to right in order to determine the resulting properties that actually apply.
 
-obj1, obj2, objn are objects or functions that evaluate to a JS object containing CSS properties and their values. If a value is of type function, 
-it will be called in order to determine it's value. If it's a string, it will be taken as is. If it is a number, it will be appended with the default 
-unit (except if the number is 0). Every function call is bound to the data that is available inside the code fragment, so that it is available via the keyword `this`.
-    
+obj1, obj2, objn are objects or functions that evaluate to a JS object containing CSS properties and their values.
+
+ * If it's a string, it will be taken as is.
+ * If it's a number, it will be appended with the default unit (except if the number is 0). The default unit can be configured in the styles object by defining a property called `defaultUnit`.
+ * If it's a function, it will be called in order to determine it's value. Every function call is bound to the data that is available inside the code fragment, so that it is available via the keyword `this`.
+
 **Example:**
 
     ...
@@ -771,6 +773,7 @@ unit (except if the number is 0). Every function call is bound to the data that 
                borderColor: 'green';
             },
             styles: {
+				defaultUnit: 'em',
                 reset: {
                    margin: 0,
                    padding: 0,
@@ -778,19 +781,23 @@ unit (except if the number is 0). Every function call is bound to the data that 
                 },
                 baseStyle: {
                    fontFamily: 'Arial, Helvetica, sans-serif'
-                   fontSize: 12,
+                   fontSize: 2,
                    color: function() {
                       return Math.random() > 0.5 ? 'red' : 'blue';
                    }
                 },
                 border: function() {
                    return {
-                       border: this.props.borderColor
+					   borderSize: Math.random() * 10,
+                       borderColor: this.props.borderColor
                    };
                 }
             }
         })
     </script>
+
+	// will render this:
+	<div style="margin: 0; padding: 0; border: 0 solid black; font-family: Arial, Helvetica, sans-serif; font-size: 2em; color: red; border-size: 6.39484785em; border-color: green;">Test content</div>
 
 ### `{{+<obj>}}`
 
@@ -813,12 +820,12 @@ The + means that the object that is provided in the curly braces will be kept as
           }
       })
     </script>
-    
+
     // will render to:
     <my-sub-component data-entry="--c30e6a46-562f-4cf0-6054-fcd78045a9be--">...</my-sub-component>
 
     // in my-sub-component the value props.entry will then contain the data from the parent component's props.entryData
-    
+
 ### Block-specific enhancements
 
 When rendering mustache blocks, Zino enhances the data inside the block with additional attributes. Those are:
