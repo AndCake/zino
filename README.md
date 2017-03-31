@@ -383,7 +383,8 @@ Let's see how to apply these styles to elements in our component:
 		<comment-form></comment-form>
 		...
 
-The style attribute is used for it. It makes more sense defining the style attribute in order to style an element rather than saying it should be of a specific class.
+The `{{%...}}` is an extension to the Mustache syntax. You can learn more about that over in the Mustache Enhancements section of this documentation. 
+The style attribute is used for styling the element. It makes more logical sense of employing the style attribute in order to style an element rather than saying it should be of a specific class.
 
 We also have the option of combining multiple defined styles into one style for a tag. We're going to do this in our comment component:
 
@@ -417,7 +418,9 @@ Both techniques, the script-based styling and normal CSS styling can also be com
 
 	<link rel="stylesheet" href="mystylesheet.css"/>
 
-you can also apply the localized version of the CSS by using the [grunt-zino](https://bitbucket.org/rkunze/grunt-zino) task to re-integrate it back into the component on build time, thereby enabling you to manage your styles outside.
+you can also apply the localized version of the CSS by using the [grunt-zino](https://bitbucket.org/rkunze/grunt-zino) task to re-integrate it back into the component on build time, thereby enabling you to manage your styles outside and compile them from a CSS post-processor like SASS or LESS.
+
+### Complex data transfer
 
 Sometimes you need to transmit complex objects between the different components. In order to achieve this, there are two ways:
 
