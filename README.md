@@ -127,7 +127,7 @@ So what's happening here? The outermost tag "<comment-box>", tells ZinoJS that t
 
 The variable `props` refers to the internal state of our component. It will have the variable data stored in it. How, this happens, we will get to later.
 
-In line five you might be wondering what's happening with the curly braces: that's the Mustache syntax to render variables. Please read up on it over at the [Mustache website](http://mustachejs.org).
+In line five you might be wondering what's happening with the curly braces: that's the Mustache syntax to render variables. Please read up on it over at the [Mustache website](https://mustache.github.io/mustache.5.html).
 
 By using the <comment> and the <comment-form> tags, we are basically employing the other components we are going to build.
 
