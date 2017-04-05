@@ -302,7 +302,7 @@
 		getTagFromCode = function(code) {
 			var dom = new DOMParser().parseFromString(code, 'text/html');
 			var firstEl = dom.body.firstElementChild;
-			code = code.replace(new RegExp('<\\/?' + firstEl.tagName + '[^>]*>', 'ig'), '').replace(/<(style|script)[^>]*>(?:[^\s]|[^\S])*?<\/\1>/g, '');
+			code = code.replace(new RegExp('<\\/?' + firstEl.tagName + '(?:\s+[^>]+)?>', 'ig'), '').replace(/<(style|script)[^>]*>(?:[^\s]|[^\S])*?<\/\1>/g, '');
 			firstEl.code = code;
 			return firstEl;
 		},
