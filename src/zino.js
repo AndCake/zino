@@ -1,62 +1,5 @@
 // zino.js
-/**
-	This library enables you to use custom tags, similar to web components, without any additional polyfills.
-
-	Importing custom tags on page via:
-
-		<link type="zino/tag" href="..."/>
-
-	Properties
-
-	events
-	props
-	render
-	mount
-	unmount
-	styles
-	setProps
-	...
-
-	Exports:
-
-		- import(url[, callback[, props]])
-			- url - URL to load the element from, if not loaded yet
-			- callback - callback function to call when the tag has been loaded
-
-		- trigger(event[, data])
-			- event - name of the event to trigger
-			- data - data to send with the event (optional)
-
-			Triggers the given event
-
-		- on(event, callback)
-			- event - name of the event to listen for
-			- callback - callback function to call when the event is triggered
-
-			Listens for the given event and calls the callback for every occurrence.
-			Any data sent with the trigger will be directly given into the callback.
-
-		- one(event, callback)
-			- event - name of the event to listen for
-			- callback - callback function to call when the event is triggered
-
-			Listens for the given event and calls the callback only for the first
-			occurrence. Any data sent with the trigger will be directly given into
-			the callback.
-
-		- off(event, callback)
-			- event - name of the event to listen for
-			- callback - function to remove as event listener
-
-			Removes the event listener for the given event
-
-		- fetch(url, callback)
-			- url - from where to fetch some content/data?
-			- callback(data, err) - function to call once successful
-
-			Do a very simple AJAX call (supports only GET). The response body will
-			be handed into the callback function as data. If an error occurs, the err parameter will be filled with the server's response status code.
-*/
+/*This library enables you to use custom tags, similar to web components, without any additional polyfills.*/
 (function(exports, win, doc) {
 	'use strict';
 
@@ -77,6 +20,11 @@
 		parser 			= require('parser'),
 		loader 			= require('loader'),
 
+		/**
+		 * Sets the internal state of the current element and triggers re-rendering.
+		 * @param {String|Object} name  the property name or an object with all property names and their values to be updated
+		 * @param {Mixed} value 		the value of the property to be updated, if an object is provided as name, the value is ignored.
+		 */
 		setProps = function(name, value) {
 			if (typeof name === 'object') {
 				merge(this.props, name);
@@ -125,7 +73,11 @@
 			}
 		},
 
-		// renders an element instance from scratch
+		/**
+		 * renders an element instance from scratch
+		 * @param  {Object} tagDescription 		the element's registry details
+		 * @param  {DOMElement} tag            	the element itself in the current DOM
+		 */
 		renderInstance = function(tagDescription, tag) {
 			var events = tagDescription.functions.events || [],
 
@@ -209,6 +161,12 @@
 			}
 		},
 
+		/**
+		 * augments the element's DOM node with Zino functionality, then mounts and renders the element
+		 * 
+		 * @param  {DOMElement} tag   	the DOM node of the element to be initialized
+		 * @param  {Object} props 		initial state of the element (optional)
+		 */
 		initializeInstance = function(tag, props) {
 			var tagDescription = tagLibrary[tag.tagName],
 				firstEl,
@@ -299,6 +257,12 @@
 			renderInstance(tagDescription, tag);
 		},
 
+		/**
+		 * retrieves DOM tree from some HTML fragment; filters out any recursive mentions of itself, scripts and style elements
+		 * 
+		 * @param  {String} code 	the HTML fragment
+		 * @return {DOMNode}      	the first element child of the HTML fragment
+		 */
 		getTagFromCode = function(code) {
 			var dom = new DOMParser().parseFromString(code, 'text/html');
 			var firstEl = dom.body.firstElementChild;
@@ -307,6 +271,11 @@
 			return firstEl;
 		},
 
+		/**
+		 * registers a tag in the tag library
+		 * @param  {String} code          the HTML fragment containing the tag's definition
+		 * @param  {Boolean} initializeAll whether or not to initialize all existing instances of this tag in the DOM (optional, default value = true)
+		 */
 		registerTag = function(code, initializeAll) {
 			var name = code.tagName;
 			if (tagLibrary[name]) {
@@ -324,11 +293,15 @@
 			style.innerHTML = loader.handleStyles(name, $('style', code));
 			doc.head.appendChild(style);
 
-			tagLibrary[name] = {
-				functions: loader.handleScripts(name, $('script', code), doc.head.appendChild, setProps, merge, code.path),
-				code: code.code,
-				path: code.path
-			};
+			try {
+				tagLibrary[name] = {
+					functions: loader.handleScripts(name, $('script', code), doc.head.appendChild, setProps, merge, code.path),
+					code: code.code,
+					path: code.path
+				};
+			} catch(e) {
+				console.error(e.message);
+			}
 
 			if (initializeAll !== false) {
 				$(name).forEach(function(tag) {
@@ -351,7 +324,12 @@
 		childList: true
 	});
 
-	// export the dynamic tag loading & mounting functions
+	/**
+	 * imports and registers a tag on demand, if it has not been registered already
+	 * @param  {String}   url   the URL to find the tag to be registered at
+	 * @param  {Function} cb    Callback to run once the tag has been registered and all instances been initialized (optional)
+	 * @param  {Object}   props initial state of all existing instances (optional)
+	 */
 	exports.import = function(url, cb, props) {
 		var me = this;
 		checkParams(arguments, ['string'], 'Zino.import: URL expected');
@@ -367,6 +345,11 @@
 		}, true);
 	};
 	// event handling
+	/**
+	 * triggers a custom event on the window scope (if none other is bound to it)
+	 * @param  {String} eventName the custom event's name to trigger
+	 * @param  {Object} data      any data to be transmitted to anyone who is listening
+	 */
 	exports.trigger = function(eventName, data) {
 			var eventObj;
 			checkParams(arguments, ['string'], 'Zino.trigger');
@@ -378,12 +361,22 @@
 			}
 			this.dispatchEvent(eventObj);
 		}.bind(win);
+	/**
+	 * registers an event listener for the provided custom event
+	 * @param  {String}   eventName the custom event's name
+	 * @param  {Function} cb        callback to be called when the custom event was triggered. Any data transmitted in the trigger will be handed into the callback as first argument.
+	 */
 	exports.on = function(eventName, cb) {
 			checkParams(arguments, ['string', 'function'], 'Zino.on');
 			this.addEventListener(eventName, function(e) {
 				cb(e.detail);
 			}, false);
 		}.bind(win);
+	/**
+	 * registers an event listener for the provided custom event but listens only for the first time the event occurs
+	 * @param  {String}   eventName the custom event's name
+	 * @param  {Function} cb        callback to be called when the custom event was triggered. Any data transmitted in the trigger will be handed into the callback as first argument.
+	 */
 	exports.one = function(eventName, cb) {
 			checkParams(arguments, ['string', 'function'], 'Zino.one');
 			var _this = this,
@@ -393,6 +386,11 @@
 				};
 			_this.addEventListener(eventName, remove, false);
 		}.bind(win);
+	/**
+	 * removes a registered event handler for the provided custom event
+	 * @param  {String}   event the custom event's name
+	 * @param  {Function} cb    the event handler to remove
+	 */
 	exports.off = function(event, cb) {
 			checkParams(arguments, ['string', 'function'], 'Zino.off');
 			this.removeEventListener(event, cb);
