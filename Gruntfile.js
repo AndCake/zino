@@ -26,6 +26,10 @@ module.exports = function(grunt) {
 			zino: {
 				files: ['./src/*.js'],
 				tasks: ['build']
+			},
+			karma: {
+				files: ['zino.min.js', 'test/karma/**/*.js', 'examples/dist/**/*.html'],
+				tasks: ['karma:unit:run']
 			}
 		},
 		connect: {
@@ -72,6 +76,14 @@ module.exports = function(grunt) {
 				files: [{'zino.min.js': 'zino.js'}]
 			}
 		},
+		karma: {
+			unit: {
+				configFile: './karma.conf.js',
+				background: true,
+				singleRun: false,
+				autoWatch: false
+			}
+		},
 		compress: {
 			main: {
 				options: {
@@ -110,5 +122,5 @@ module.exports = function(grunt) {
 	});
 
 	grunt.registerTask('build', ['assemble', 'uglify', 'compress']);
-	grunt.registerTask('default', ['build', 'zino', 'connect', 'chokidar']);
+	grunt.registerTask('default', ['build', 'zino', 'connect', 'karma:unit:start', 'chokidar']);
 };

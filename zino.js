@@ -1,8 +1,6 @@
 // zino.js
 /*This library enables you to use custom tags, similar to web components, without any additional polyfills.*/
 (function(exports, win, doc) {
-	'use strict';
-
 	var tagLibrary = {},
 
 		// read utilities
@@ -295,8 +293,6 @@
 }.apply(null, typeof window === 'undefined' ? [module, {}] : [{}, window.Zino]))
 ,
 		loader 			= (function(module) {
-	'use strict';
-
 	var emptyFunc = function(){};
 
 	return module.exports = {
@@ -414,18 +410,7 @@
 		 * @param  {DOMElement} tag            	the element itself in the current DOM
 		 */
 		renderInstance = function(tagDescription, tag) {
-			var events = tagDescription.functions.events || [],
-
-				attachEvent = function(el, events) {
-					events = typeof events !== 'number' ? events : this;
-					el.getHost = function() { return tag; };
-					for (var each in events) {
-						checkParams([events[each]], ['function'], 'event ' + each + ' for tag ' + tag.tagName);
-						el.addEventListener(each, events[each].bind(el), false);
-					}
-				},
-
-				getFocus = function(el, /*private*/selector) {
+			var getFocus = function(el, /*private*/selector) {
 					if (!el) {
 						return null;
 					}
@@ -453,17 +438,13 @@
 				path = _(doc.activeElement).nodeName === 'INPUT' && getFocus(doc.activeElement),
 
 				code = parser(tagDescription.code, getAttributes(tag), merge),
-				content = doc.createDocumentFragment(),
-				div = doc.createElement('div'),
 				isNew = false;
 
+			// unmount sub components
 			$('*[__ready]', tag).forEach(unmountTag);
 
 			if (!tag.isRendered) {
-				div.className = '-shadow-root';
-				content.appendChild(div);
-				$('div', content)[0].innerHTML = code;
-				tag.replaceChild(content, tag.firstChild);
+				tag.firstElementChild.innerHTML = code;
 			} else {
 				delete tag.isRendered;
 			}
@@ -484,16 +465,6 @@
 				error('render', tag.tagName, e);
 			}
 			restoreFocus(path);
-
-			// attach events
-			checkParams([events], ['object'], 'event definition for tag ' + tag.tagName);
-			for (var all in events) {
-				if (all !== ':host' && all !== tag.tagName) {
-					$(all, tag).forEach(attachEvent, events[all]);
-				} else if (isNew) {
-					attachEvent(tag, events[all]);
-				}
-			}
 		},
 
 		/**
@@ -590,6 +561,28 @@
 
 			// render the tag's content
 			renderInstance(tagDescription, tag);
+
+			// attach events through event delegation only
+			var hostEvents = [],
+				events = tagDescription.functions.events || [],
+				attachEvent = function(el, events) {
+					events.forEach(function(eventObj) {
+						Object.keys(eventObj.handlers).forEach(function(event) {
+							el.addEventListener(event, function(e) {
+								if ($(eventObj.selector, el).indexOf(e.target) > -1) {
+									e.target.getHost = function() { return tag; };
+									eventObj.handlers[event].call(e.target, e);
+								}
+							}, false);
+						});
+					});
+				};
+			attachEvent($('.-shadow-root', tag)[0], Object.keys(events).filter(function(all) {
+				var isNotSelf = all !== ':host' && all !== tag.tagName;
+				if (!isNotSelf) hostEvents.push({handlers: events[all], selector: all});
+				return isNotSelf;
+			}).map(function(e) { return {selector: e, handlers: events[e]}}));
+			attachEvent(tag, hostEvents);
 		},
 
 		/**
@@ -713,13 +706,11 @@
 	 * @param  {Function} cb        callback to be called when the custom event was triggered. Any data transmitted in the trigger will be handed into the callback as first argument.
 	 */
 	exports.one = function(eventName, cb) {
-			checkParams(arguments, ['string', 'function'], 'Zino.one');
-			var _this = this,
-				remove = function(e) {
-					cb(e.detail);
-					_this.removeEventListener(eventName, remove);
-				};
-			_this.addEventListener(eventName, remove, false);
+			var _this = this;
+			exports.on.call(_this, eventName, function remove(e) {
+				cb(e);
+				exports.off.call(_this, eventName, remove);
+			});
 		}.bind(win);
 	/**
 	 * removes a registered event handler for the provided custom event

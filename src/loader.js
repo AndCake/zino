@@ -1,6 +1,4 @@
 (function(module) {
-	'use strict';
-
 	var emptyFunc = function(){};
 
 	return module.exports = {

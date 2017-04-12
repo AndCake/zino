@@ -1,6 +1,4 @@
 (function() {
-    'use strict';
-
     var cheerio = require('cheerio'),
         colors = require('colors'),
         diff = require('fast-diff'),

@@ -1,6 +1,4 @@
 (function() {
-    'use strict';
-
     var cheerio = require('cheerio'),
         colors = require('colors'),
         diff = require('fast-diff'),
@@ -106,8 +104,6 @@
                 fetch: emptyFunc,
             };
             tag = (function(module) {
-	'use strict';
-
 	var emptyFunc = function(){};
 
 	return module.exports = {

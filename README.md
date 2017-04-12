@@ -6,9 +6,9 @@ This is a microframework similar to ReactJS and Polymer but without all the bloa
 Comparison
 ----------
 
-- ReactJS: 43.8 KB minified & gzipped
-- Polymer: 48.80 KB minified & gzipped
-- ZinoJS: 4.3 KB minified & gzipped
+- Polymer: 66.3 KB minified & gzipped
+- ReactJS: 45.06 KB minified & gzipped
+- ZinoJS: 4.4 KB minified & gzipped
 
 Features
 --------
@@ -274,7 +274,7 @@ Now let's write our component for adding a new entry. Create the file comment-fo
 		</script>
 	</comment-form>
 
-So what does this mean? Since we don't use other components, we simply use object syntax to define what the properties of our component are. With the events property we can register any kind of event for any part of our component. It won't register events to anything outside the component. So in this case, we select the form element, but any kind of CSS selector would work, there. For example, instead of 'form', we could also use '.comment-form' as the key in our object.
+So what does this mean? Since we don't use other components, we simply use object syntax to define what the properties of our component are. With the events property we can register any kind of event for any part of our component. It won't register events to anything outside the component. So in this case, we select the form element, but any kind of CSS selector would work, there. For example, instead of 'form', we could also use '.comment-form' as the key in our object. All events declared in the events object are registered through event delegation for optimal performance.
 
 Within the event's form object, we have defined the submit property, which is a function that handles the event, once it occurs. Within this function, we simply tell our store what the new comment's author and content are, the store will deal with the rest.
 
