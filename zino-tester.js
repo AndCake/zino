@@ -367,10 +367,10 @@
             loadedTags[tagName].tag.__i = tag.html();
 
 			loadedTags[tagName].tag.mount.call(merge(instance, loadedTags[tagName].tag, data));
-			data = (function(module) {
+			data = (function(module, Zino) {
 	'use strict';
 
-	return module.exports = function(tag, propsOnly) {
+	module.exports = function(tag, propsOnly) {
 		var attrs = {props: tag.props, element: tag.element, styles: tag.styles, body: tag['__i']},
 			props = {};
 
@@ -388,7 +388,11 @@
 
 		return attrs;
 	};
-}(typeof window === 'undefined' ? module : {}))
+	module.exports.setZino = function(zino) {
+		Zino = zino;
+	};
+	return module.exports;
+}).apply(null, typeof window === 'undefined' ? [module, {}] : [{}, window.Zino])
 (merge({
 				attributes: Object.keys(tag.get(0).attribs).map(attr => ({name: attr, value: tag.get(0).attribs[attr]}))
 			}, instance, data));

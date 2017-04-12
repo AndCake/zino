@@ -1,7 +1,7 @@
-(function(module) {
+(function(module, Zino) {
 	'use strict';
 
-	return module.exports = function(tag, propsOnly) {
+	module.exports = function(tag, propsOnly) {
 		var attrs = {props: tag.props, element: tag.element, styles: tag.styles, body: tag['__i']},
 			props = {};
 
@@ -19,4 +19,8 @@
 
 		return attrs;
 	};
-}(typeof window === 'undefined' ? module : {}))
+	module.exports.setZino = function(zino) {
+		Zino = zino;
+	};
+	return module.exports;
+}).apply(null, typeof window === 'undefined' ? [module, {}] : [{}, window.Zino])
