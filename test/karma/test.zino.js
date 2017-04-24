@@ -87,6 +87,7 @@ describe('zino', function () {
 		it('can load a custom element', function(done) {
 			setTimeout(function() {
 				assertNotEmpty(document.querySelectorAll('.-shadow-root'), 'element is rendered');
+				assertNotEmpty(document.querySelectorAll('btn[__ready]'), 'element is ready');
 				done();
 			}, 750);
 		});
