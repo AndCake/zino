@@ -1,0 +1,19 @@
+<comment-form __ready="true"><div class="-shadow-root"><form class="comment-form">
+	 <input type="text" name="author" placeholder="Your name"/>
+	 <textarea name="comment" placeholder="Say something..."></textarea>
+	 <button>Post</button>
+ </form></div></comment-form>
+{
+  "data": {
+    "props": {},
+    "element": {},
+    "body": ""
+  },
+  "events": [
+    {
+      "form": [
+        "[submit function]addComment"
+      ]
+    }
+  ]
+}

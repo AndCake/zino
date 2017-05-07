@@ -1,20 +1,17 @@
 {
-  "name": "zinojs",
-  "version": "0.0.1",
-  "authors": [
-    "Robert Kunze <quixotic.worx@gmail.com>"
-  ],
-  "description": "Micro component framework",
+  "name": "zino",
+  "description": "micro component framework",
   "main": "zino.js",
-  "keywords": [
-    "Web",
-    "Components",
-    "ReactJS",
-    "Polymer",
-    "micro",
-    "framework"
+  "authors": [
+    "Robert Kunze <quixotic.worx@protonmail.com>"
   ],
   "license": "LGPL-3.0",
+  "keywords": [
+    "components",
+    "react",
+    "polymer",
+    "flux"
+  ],
   "homepage": "https://bitbucket.org/rkunze/zinojs",
   "ignore": [
     "**/.*",

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<link href="components/my-new-tag.html" rel="zino-tag"/>
+	<link href="components/todolist.html" rel="zino-tag"/>
+	<link rel="zino-tag" href="components/comment-box.html"/>
+	<link rel="zino-tag" href="components/btn.html"/>
+	<script>
+		var version = navigator.userAgent.match(/Trident\/(\d+)/),
+			loadScript = function(arr) {
+				var script = document.createElement('script');
+				if (typeof arr === 'string') arr = [arr];
+				script.src = arr.shift();
+				script.onload = function() {
+					if (arr.length > 0) loadScript(arr);
+				};
+				document.head.appendChild(script);
+
+			}, loadArray = [];
+		if (version && version[1] === '6') {	// we have an IE 10
+			loadArray = loadArray.concat(['/node_modules/rkgttr-weakmappolyfill/index.umd.js',
+						'/node_modules/rkgttr-mutationobserverpolyfill/index.umd.js']);
+		}
+	</script>
+</head>
+	<body>
+		<my-new-tag test="hallo!"></my-new-tag>
+
+		<btn page="http://www.duckduckgo.com/">Test Content</btn>
+
+		<todo-list></todo-list>
+
+		<comment-box></comment-box>
+
+		<button type="button" onclick="doit()">add hallo!</button>
+
+		<script>
+			function doit() {
+				var name = prompt('Name:');
+				Zino.import('components/second-tag.html');
+
+				var st = document.createElement('second-tag');
+				st.setAttribute('me', 'hallo');
+				st.onready = function() {
+					this.setProps({name: name});
+				};
+				document.body.appendChild(st);
+			};
+
+			loadScript(loadArray.concat(['../zino.min.js', 'components/mystore.js', 'components/comment-store.js']));
+		</script>
+	</body>
+</html>

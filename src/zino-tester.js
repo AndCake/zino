@@ -1,123 +1,85 @@
-(function() {
-    var cheerio = require('cheerio'),
-        colors = require('colors'),
-        diff = require('fast-diff'),
-        readline = require('readline-sync'),
-        fs = require('fs'),
-        path = require('path'),
-        sha1 = data => require('crypto').createHash('sha1').update(data).digest('hex'),
+import * as core from './core';
+import {emptyFunc, merge} from './utils';
+import {parse} from './htmlparser';
+import fs from 'fs';
+import path from 'path';
+import colors from 'colors';
+import diff from 'fast-diff';
+import {createHash} from 'crypto';
+import readline from 'readline-sync';
 
-        utils = require('utils'),
-		merge = utils.merge,
-		emptyFunc = utils.emptyFunc,
+const sha1 = data => createHash('sha1').update(data).digest('hex');
+let fileName = null;
 
-        loadedTags = {};
+merge(global, {
+	Zino: {
+		trigger: emptyFunc,
+		on: emptyFunc,
+		off: emptyFunc,
+		one: emptyFunc,
+		import: emptyFunc,
+		fetch: emptyFunc
+	},
+	setTimeout: emptyFunc,
+	setInterval: emptyFunc
+});
 
-    /* make a tag known in the registry */
-    var importTag = function(tagFile) {
-            var tagContent = fs.readFileSync(tagFile, 'utf-8'),
-                tag = {},
-                $ = cheerio.load(tagContent),
-                tagRoot = $.root().children().first(),
-                scripts = $('script').map(function() { return {text: $(this).text()}}).get();
+export function importTag(tagFile) {
+	let code = fs.readFileSync(tagFile, 'utf-8');
+	core.registerTag(code, tagFile);
+}
 
-            global.Zino = {
-                trigger: emptyFunc,
-                on: emptyFunc,
-                off: emptyFunc,
-                one: emptyFunc,
-                import: emptyFunc,
-                fetch: emptyFunc,
-            };
-            tag = require('loader').handleScripts(tagRoot.get(0).tagName, scripts, emptyFunc, emptyFunc, merge);
-            $('script, style, link').remove();
-            tagContent = tagRoot.html();
+export function clearImports() {
+	core.flushRegisteredTags();
+}
 
-            loadedTags[tagRoot.get(0).tagName] = {
-                tag,
-                tagContent,
-                ref: $,
-                tagFile
-            };
-        },
+export function matchesSnapshot(html, props = {}, name = '') {
+	let code = parse(html);
+	fileName = './test/snapshots/' + code.children[0].tagName + '-' + (name && name + '-' || '') + sha1(html + JSON.stringify(props)).substr(0, 5);
+	core.renderOptions.resolveData = (key, value) => sha1(key + '-' + JSON.stringify(value));
+	let {events, data} = core.mount(code.children[0], true);
 
-        renderTag = (html, data) => {
-            var tag = cheerio.load(html),
-                tagName,
-				parser = require('parser'),
-                instance = {};
+	if (Object.keys(props).length > 0) {
+		code.children[0].setProps(props);
+	}
 
-            tag = tag.root().children().first();
-            tagName = tag.get(0).tagName;
-
-            if (!loadedTags[tagName]) {
-                throw new Error(tagName + ' is not imported. Please import it before using it.');
-            }
-            loadedTags[tagName].tag.__i = tag.html();
-
-			loadedTags[tagName].tag.mount.call(merge(instance, loadedTags[tagName].tag, data));
-			data = require('attributes')(merge({
-				attributes: Object.keys(tag.get(0).attribs).map(attr => ({name: attr, value: tag.get(0).attribs[attr]}))
-			}, instance, data));
-
-			parser.setUUID(function(g, idx) {
-				return sha1(JSON.stringify(this.data))[idx];
+	let eventList = [];
+	events = events.forEach(e => eventList = eventList.concat(e.childEvents, e.hostEvents));
+	events = Object.keys(eventList).map(el => {
+		let obj = {};
+		if (eventList[el]) {
+			obj[eventList[el].selector] = Object.keys(eventList[el].handlers).map(event => {
+				return `[${event} ${typeof eventList[el].handlers[event]}]${eventList[el].handlers[event].name}`;
 			});
+		}
+		return obj;
+	});
 
-            return {
-                html: parser(loadedTags[tagName].tagContent, data, merge),
-                data,
-                tagName,
-                registry: loadedTags[tagName]
-            };
-        },
+	let resultString = code.children[0].outerHTML + '\n' + JSON.stringify({data, events}, null, 2);
 
-        /* renders a tag with the given data and checks if it matches a previously-set snapshot */
-        matchesSnapshot = (html, data) => {
-            var result = renderTag(html, data),
-                resultString = '',
-                filename = './test/snapshots/' + result.tagName + '-' + sha1(html + JSON.stringify(data)).substr(0, 5) + '.json',
+	if (!fs.existsSync(path.dirname(fileName))) {
+		fs.mkdirSync(path.dirname(fileName));
+		writeResult(resultString);
+	} else if (!fs.existsSync(fileName)) {
+		writeResult(resultString);
+	} else {
+		let previousResult = fs.readFileSync(fileName, 'utf-8');
+		if (previousResult !== resultString) {
+			// create a diff
+			let diffResult = diff(previousResult, resultString);
+			diffResult.forEach(part => {
+				let color = part[0] === diff.DELETE ? 'red' : part[0] === diff.INSERT ? 'green' : 'gray';
+				process.stderr.write(part[1][color]);
+			});
+			if (readline.question('\nThe snapshots don\'t match.\nDo you want to take the new one as the reference snapshot (y/N)?') === 'y') {
+				writeResult(resultString);
+			} else {
+				throw new Error('Snapshots don\'t match.');
+			}
+		}
+	}
+}
 
-				events = result.registry.tag && result.registry.tag.events || {};
-
-			events = Object.keys(events).map(function(el) {
-				var obj = {};
-					if (events[el]) {
-						obj[el] = Object.keys(events[el]).map(function(event) {
-							return event + ' = [' + typeof events[el][event] + ']' + events[el][event].name;
-						});
-					}
-					return obj;
-				});
-
-            if (!fs.existsSync(path.dirname(filename))) {
-                fs.mkdirSync(path.dirname(filename));
-            }
-
-
-            resultString = result.html.trim() + '\n' + JSON.stringify({data: result.data, events: events, tagName: result.tagName}, null, 2);
-
-            if (!fs.existsSync(filename)) {
-                fs.writeFileSync(filename, resultString);
-            } else {
-                result = fs.readFileSync(filename, 'utf-8');
-                if (result !== resultString) {
-                    result = diff(result, resultString);
-                    result.forEach(part => {
-                        var color = part[0] === diff.DELETE ? 'red' : part[0] === diff.INSERT ? 'green' : 'gray';
-                        process.stderr.write(part[1][color]);
-                    });
-                    if (readline.question('\nThe snapshots don\'t match.\nDo you want to take the new one as the reference snapshot (y/N)?') === 'y') {
-                        fs.writeFileSync(filename, resultString);
-                        return;
-                    }
-                    throw new Error('Snapshots don\'t match.');
-                }
-            }
-        };
-
-    module.exports = {
-        matchesSnapshot,
-        importTag
-    };
-}());
+function writeResult(result) {
+	fs.writeFileSync(fileName, result);
+}

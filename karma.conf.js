@@ -44,7 +44,7 @@ module.exports = function(config) {
 	files: [
 		'zino.min.js',
 		'test/karma/**/test.*.js',
-		{pattern: 'examples/dist/**/*.html', included: false},
+		{pattern: 'test/components/**/*.(html|js)', included: false},
 	],
 
 
