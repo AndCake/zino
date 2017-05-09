@@ -520,7 +520,7 @@ function attachEvent(el, events, host) {
 			el.addEventListener(event, function (e) {
 				if (find(eventObj.selector, el).indexOf(e.target) >= 0) {
 					e.target.getHost = function () {
-						return host;
+						return host.getHost();
 					};
 					eventObj.handlers[event].call(e.target, e);
 				}
@@ -604,7 +604,7 @@ function initializeTag(tag, registryEntry) {
 	// copy all defined functions/attributes
 	for (var all in functions) {
 		var entry = functions[all];
-		if (['mount', 'unmount', 'events'].indexOf(all) < 0) {
+		if (['mount', 'unmount', 'events', 'render'].indexOf(all) < 0) {
 			if (typeof entry === 'function') {
 				tag[all] = entry.bind(tag);
 			} else {

@@ -22,14 +22,6 @@ module.exports = function(grunt) {
 			examples: {
 				files: ['examples/src/*.html'],
 				tasks: ['zino']
-			},
-			zino: {
-				files: ['./src/*.js'],
-				tasks: ['build']
-			},
-			karma: {
-				files: ['zino.min.js', 'test/karma/**/*.js', 'examples/dist/**/*.html'],
-				tasks: ['karma:unit:run']
 			}
 		},
 		connect: {
@@ -37,7 +29,7 @@ module.exports = function(grunt) {
 				options: {
 					port: 8000,
 					base: './',
-					open: 'http://localhost:8000/examples/index.html'
+					open: 'http://localhost:8000/test/index.html'
 				}
 			}
 		},
@@ -50,77 +42,8 @@ module.exports = function(grunt) {
 					dest: './examples/dist'
 				}]
 			}
-		},
-		uglify: {
-			options: {
-				mangle: true,
-				compress: {
-					dead_code: true,
-					unsafe: true,
-					drop_debugger: true,
-					conditionals: true,
-					unused: true,
-					hoist_funs: true,
-					if_return: true,
-					join_vars: true,
-					collapse_vars: true,
-					reduce_vars: true,
-					warnings: true,
-					keep_fargs: false,
-					passes: 2
-				},
-				sourceMap: false,
-				screwIE8: true
-			},
-			main: {
-				files: [{'zino.min.js': 'zino.js'}]
-			}
-		},
-		karma: {
-			unit: {
-				configFile: './karma.conf.js',
-				background: true,
-				singleRun: false,
-				autoWatch: false
-			}
-		},
-		compress: {
-			main: {
-				options: {
-					mode: 'gzip'
-				},
-				files: [{'zino.min.js.gz': 'zino.min.js'}]
-			}
-		},
-		assemble: {
-			files: ['src/*.js'],
-			targetDir: './'
 		}
 	});
 
-	grunt.registerTask('assemble', 'assembles all components used by the library', function() {
-		var files = grunt.file.expand(grunt.config.get(this.name).files),
-			path = require('path'),
-			targetDir = path.dirname(grunt.config.get(this.name).targetDir);
-
-		files.forEach(function(file) {
-			var data = grunt.file.read(file),
-				changed = false;
-			data = data.replace(/\brequire\s*\(\s*['"]([^'"]+)['"]\s*\)/gm, function(match, fileName) {
-				if (grunt.file.exists(path.dirname(file) + '/' + fileName + '.js')) {
-					changed = true;
-					return grunt.file.read(path.dirname(file) + '/' + fileName + '.js');
-				} else {
-					return match;
-				}
-			});
-			if (changed) {
-				grunt.file.write(targetDir + '/' + path.basename(file), data);
-				console.log('Assembled file ' + path.basename(file));
-			}
-		});
-	});
-
-	grunt.registerTask('build', ['assemble', 'uglify', 'compress']);
-	grunt.registerTask('default', ['build', 'zino', 'connect', 'karma:unit:start', 'chokidar']);
+	grunt.registerTask('default', ['zino', 'connect', 'chokidar']);
 };

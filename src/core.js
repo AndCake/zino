@@ -76,7 +76,7 @@ function initializeTag(tag, registryEntry) {
 	// copy all defined functions/attributes
 	for (let all in functions) {
 		let entry = functions[all];
-		if (['mount', 'unmount', 'events'].indexOf(all) < 0) {
+		if (['mount', 'unmount', 'events', 'render'].indexOf(all) < 0) {
 			if (typeof entry === 'function') {
 				tag[all] = entry.bind(tag);
 			} else {

@@ -45,7 +45,7 @@ export function attachEvent (el, events, host) {
 		Object.keys(eventObj.handlers).forEach((event) => {
 			el.addEventListener(event, e => {
 				if (find(eventObj.selector, el).indexOf(e.target) >= 0) {
-					e.target.getHost = () => host;
+					e.target.getHost = () => host.getHost();
 					eventObj.handlers[event].call(e.target, e);
 				}
 			}, false);
