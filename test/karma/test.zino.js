@@ -73,7 +73,7 @@ function dispatchEvent (el, evt) {
 	return evt;
 }
 function click(el) {
-	var ev = mouseEvent('click', el.offsetLet, el.offsetTop, el.clientLeft, el.clientTop);
+	var ev = mouseEvent('click', el.offsetLeft, el.offsetTop, el.clientLeft, el.clientTop);
 	dispatchEvent(el, ev);
 }
 
@@ -113,11 +113,11 @@ describe('zino', function () {
 		});
 		it('reacts to attribute change', function(done) {
 			comment.setAttribute('author', 'Tester');
-			comment.innerHTML = 'This is my wonderful test comment!';
+			comment.body = 'This is my wonderful test comment!';
 
 			setTimeout(function() {
 				assertElementHasContent('comment h2', '"Tester"');
-				assertElementHasContent('comment p', comment.innerHTML);
+				assertElementHasContent('comment p', comment.body);
 				done();
 			}, 100);
 		});

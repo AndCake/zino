@@ -280,7 +280,7 @@ function handleStyles(element) {
 	);
 }
 
-function handleScripts(element) {
+function handleScripts(element, path) {
 	let functions = merge({}, defaultFunctions);
 	$('script', element).forEach(script => {
 		let text = script.children.length > 0 && script.children[0].text.trim();
@@ -288,7 +288,8 @@ function handleScripts(element) {
 			return trigger('publish-script', script);
 		}
 		try {
-			merge(functions, new Function(`return ${text.replace(/;$/g, '')}`)());
+			text = text.replace(/\bZino\.import\s*\(/g, 'Zino.import.call({path: "' + path + '"}, ').replace(/;$/g, '');
+			merge(functions, new Function(`return ${text}`)());
 		} catch (e) {
 			error(`parse script ${text} in tag ${element.tagName}`, e);
 		}

@@ -51,7 +51,7 @@ export default Zino = {
 
 	import(path, callback = emptyFunc) {
 		let url = (this.path || '') + path;
-		this.fetch(url, data => {
+		Zino.fetch(url, data => {
 			registerTag(data, url, document.body);
 			callback();
 		}, true);

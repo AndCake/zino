@@ -821,7 +821,7 @@ function handleStyles(element) {
 	}).join('\n'));
 }
 
-function handleScripts(element) {
+function handleScripts(element, path) {
 	var functions = merge({}, defaultFunctions);
 	find('script', element).forEach(function (script) {
 		var text = script.children.length > 0 && script.children[0].text.trim();
@@ -829,7 +829,8 @@ function handleScripts(element) {
 			return trigger('publish-script', script);
 		}
 		try {
-			merge(functions, new Function('return ' + text.replace(/;$/g, ''))());
+			text = text.replace(/\bZino\.import\s*\(/g, 'Zino.import.call({path: "' + path + '"}, ').replace(/;$/g, '');
+			merge(functions, new Function('return ' + text)());
 		} catch (e) {
 			error$1('parse script ' + text + ' in tag ' + element.tagName, e);
 		}
@@ -895,7 +896,7 @@ var zino = Zino = {
 		var callback = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : emptyFunc;
 
 		var url = (this.path || '') + path;
-		this.fetch(url, function (data) {
+		Zino.fetch(url, function (data) {
 			registerTag(data, url, document.body);
 			callback();
 		}, true);

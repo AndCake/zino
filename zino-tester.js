@@ -108,7 +108,7 @@ function merge(target) {
 
 	args.forEach(function (arg) {
 		for (var all in arg) {
-			if (propDetails(arg, all).value && (!target[all] || propDetails(target, all).writable)) {
+			if (typeof propDetails(arg, all).value !== 'undefined' && (!target[all] || propDetails(target, all).writable)) {
 				target[all] = arg[all];
 			}
 		}
@@ -467,7 +467,7 @@ function find(selector, dom) {
 	}
 
 	// for virtual DOM
-	dom && dom.children && dom.children.forEach(function (child) {
+	dom && dom.children.forEach(function (child) {
 		var attr = void 0;
 		if (child.text) return;
 		if (selector[0] === '#' && child.attributes.id === selector.substr(1) || (attr = selector.match(/^\[(\w+)\]/)) && child.attributes[attr[1]] || (attr = selector.match(/^\[(\w+)(\^|\$|\*)?=(?:'([^']*)'|"([^"]*)"|([^\]])*)\]/)) && child.attributes[attr[1]] && evaluateMatch(child.attributes[attr[1]], attr[2], attr[3] || attr[4] || attr[5]) || selector[0] === '.' && child.attributes['class'] && child.attributes['class'].split(' ').indexOf(selector.substr(1)) >= 0 || child.tagName === selector.split(/\[\.#/)[0]) {
@@ -518,13 +518,6 @@ function attachEvent(el, events, host) {
 
 var tagRegistry = {};
 var dataRegistry = {};
-var renderOptions = {
-	resolveData: function resolveData(key, value) {
-		var id = uuid();
-		dataRegistry[id] = value;
-		return id;
-	}
-};
 var defaultFunctions = {
 	'props': {},
 	'mount': emptyFunc,
@@ -536,13 +529,21 @@ var defaultFunctions = {
 	},
 	setProps: function setProps(name, value) {
 		var tag = this.getHost();
-		if ((typeof name === 'undefined' ? 'undefined' : _typeof(name)) === 'object') {
+		if (isObj(name)) {
 			merge(tag.props, name);
 		} else {
 			tag.props[name] = value;
 		}
 		var subEvents = renderTag(tag);
 		attachSubEvents(subEvents, tag);
+	}
+};
+
+var renderOptions = {
+	resolveData: function resolveData(key, value) {
+		var id = uuid();
+		dataRegistry[id] = value;
+		return id;
 	}
 };
 
@@ -617,12 +618,12 @@ function initializeTag(tag, registryEntry) {
 	}
 	// define basic properties
 	Object.defineProperty(tag, 'body', {
-		set: function set$$1(val) {
+		set: function set(val) {
 			tag.__i = val;
 			setElementAttr(tag);
 			renderTag(tag);
 		},
-		get: function get$$1() {
+		get: function get() {
 			return tag.__i;
 		}
 	});
@@ -861,6 +862,9 @@ function matchesSnapshot(html) {
 
 	var code = parse$1(html);
 	fileName = './test/snapshots/' + code.children[0].tagName + '-' + (name && name + '-' || '') + sha1(html + JSON.stringify(props)).substr(0, 5);
+	renderOptions.resolveData = function (key, value) {
+		return sha1(key + '-' + JSON.stringify(value));
+	};
 
 	var _core$mount = mount(code.children[0], true),
 	    events = _core$mount.events,
