@@ -151,4 +151,19 @@ describe('zino', function () {
 			}, 100);
 		});
 	});
+	describe('component preloading', function() {
+		Zino.fetch('base/test/components/virtual-component.html', null, true, '<virtual-component>I render text: <quote>{{body}}</quote> -- yeah!</virtual-component>');
+		Zino.import('base/test/components/virtual-component.html');
+		var vc = document.createElement('virtual-component');
+		vc.innerHTML = 'Lorem ipsum dolor sit amet';
+		document.body.appendChild(vc);
+
+		it('renders the component', function(done) {
+			setTimeout(function() {
+				assertNotEmpty(document.querySelectorAll('virtual-component .-shadow-root'), 'component rendered');
+				assertElementHasContent('virtual-component quote', 'Lorem ipsum dolor sit amet', 'attribute has been applied correctly');
+				done();
+			}, 100);
+		});
+	});
 });

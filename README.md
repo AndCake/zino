@@ -18,6 +18,7 @@ Features
 - Flux support - simply define your stores
 - lifecycle events
 - no extra HTML elements/root elements
+- uses virtual DOM to efficiently render with as few reflows / repaints as possible
 - uses Mustache-like Syntax to keep components clean
 - no polyfills required
 - works with your coding style
@@ -30,7 +31,6 @@ Features
 	- Zino Grunt task merges separated technologies back into the components for easier deployment
 - faster to download
 - use CSS in JS the React way or define an automatically scoped fully-fledged stylesheet or mix both
-- uses virtual DOM to efficiently render with as few reflows / repaints as possible
 
 Browser Support
 ---------------
@@ -693,7 +693,7 @@ ZinoJS exports a set of functions in order to interact with it. Those functions 
 		- url - URL to load the element from, if not loaded yet
 		- callback - callback function to call when the tag has been loaded (optional)
 
-		Imports a component from the provided URL so that it can be rendered whenever added to the DOM. It will automatically be mounted.
+		Imports a component from the provided URL so that it can be rendered whenever added to the DOM. It will automatically be mounted. If used inside a component, the url is relative to the current component's URL.
 
 	- trigger(event[, data])
 		- event - name of the event to trigger
@@ -703,7 +703,6 @@ ZinoJS exports a set of functions in order to interact with it. Those functions 
 
 		Example:
 
-			// for simple case
 			Zino.trigger('update-data', {id: 2, text: 'My changed data'});
 
 	- on(event, callback)
@@ -715,7 +714,6 @@ ZinoJS exports a set of functions in order to interact with it. Those functions 
 
 		Example:
 
-			// for a simple case
 			Zino.on('update-data', function(data) {
 				// do something with the data
 			});
@@ -734,12 +732,14 @@ ZinoJS exports a set of functions in order to interact with it. Those functions 
 
 		Removes the event listener for the given event. 
 
-	- fetch(url, callback)
+	- fetch(url, callback[, cache[, code]])
 		- url - from where to fetch some content/data?
 		- callback(data) - function to call once successful
+		- cache - a boolean indicating whether or not to cache the result
+		- code - when provided, it will cache code for url and not do an XHR request
 
 		Do a very simple AJAX call (supports only GET). The response body will be handed
-		into the callback function as `data`.
+		into the callback function as `data`. If the code property is transmitted, then the callback parameter can be left empty and not actual AJAX request will be triggered.
 
 ## Mustache-enhancements
 

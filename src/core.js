@@ -19,8 +19,10 @@ let tagRegistry = {},
 			} else {
 				tag.props[name] = value;
 			}
-			let subEvents = renderTag(tag);
-			attachSubEvents(subEvents, tag);
+			if (!tag.mounting) {
+				let subEvents = renderTag(tag);
+				attachSubEvents(subEvents, tag);
+			}
 		}
 	};
 
@@ -71,7 +73,8 @@ export function flushRegisteredTags() {
 function initializeTag(tag, registryEntry) {
 	// check if the tag has been initialized already
 	if (tag['__s'] || !registryEntry) return;
-	let functions = registryEntry.functions;
+	let functions = registryEntry.functions, 
+		isRendered;
 
 	// copy all defined functions/attributes
 	for (let all in functions) {
@@ -93,7 +96,7 @@ function initializeTag(tag, registryEntry) {
 			setElementAttr(sibling, tag);
 			sibling.parentNode.removeChild(sibling);
 		}
-		tag.isRendered = true;
+		isRendered = true;
 	} else {
 		tag.__i = tag.innerHTML;
 		setElementAttr(tag);
@@ -117,13 +120,15 @@ function initializeTag(tag, registryEntry) {
 	// call mount callback
 	tag.props = merge({}, functions.props, getAttributes(tag, true));
 	try {
+		tag.mounting = true;
 		functions.mount.call(tag);
+		delete tag.mounting;
 	} catch (e) {
 		error('mount', tag.tagName, e);
 	}
 
 	// render the tag's content
-	let subEvents = renderTag.call(this, tag);
+	let subEvents = !isRendered && renderTag.call(this, tag) || {events:[]};
 
 	// attach events
 	let hostEvents = [],
@@ -135,6 +140,10 @@ function initializeTag(tag, registryEntry) {
 		}).map(e => ({selector: e, handlers: events[e]}));
 
 	subEvents.events = subEvents.events.concat({childEvents, hostEvents, tag: this && this.noEvents ? tag.tagName : tag})
+
+	if (!tag.attributes.__ready) {
+		tag.__s('__ready', true);
+	}	
 	if (!this || this.noEvents !== true) {
 		// attach sub events
 		attachSubEvents(subEvents, tag);
@@ -173,10 +182,6 @@ function renderTag(tag, registryEntry = tagRegistry[tag.tagName.toLowerCase()]) 
 		merge(subEl, renderedSubElements[index])
 		renderedSubElements[index].getHost = defaultFunctions.getHost.bind(subEl);
 	});
-
-	if (!tag.attributes.__ready) {
-		tag.__s('__ready', true);
-	}
 
 	if (!this || !this.noRenderCall) {
 		renderCallbacks.forEach(callback => callback());

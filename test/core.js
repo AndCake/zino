@@ -27,7 +27,7 @@ test('render simple tag', t => {
 	t.is(document.children[1].outerHTML, `<myx-tag __ready="true"><div class="-shadow-root"><div class="abc">A-BBB-C</div></div></myx-tag>`, 're-renders the tag after setProps');
 
 	document.children[1].setAttribute('letter', 'D');
-	t.is(document.children[1].outerHTML, `<myx-tag letter="D" __ready="true"><div class="-shadow-root"><div class="abc">A-BBB-C-D</div></div></myx-tag>`, 'renders a simple diff');
+	t.is(document.children[1].outerHTML, `<myx-tag __ready="true" letter="D"><div class="-shadow-root"><div class="abc">A-BBB-C-D</div></div></myx-tag>`, 'renders a simple diff');
 });
 
 test('render tag with sub components', t => {

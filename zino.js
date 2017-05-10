@@ -547,8 +547,10 @@ var defaultFunctions = {
 		} else {
 			tag.props[name] = value;
 		}
-		var subEvents = renderTag(tag);
-		attachSubEvents(subEvents, tag);
+		if (!tag.mounting) {
+			var subEvents = renderTag(tag);
+			attachSubEvents(subEvents, tag);
+		}
 	}
 };
 
@@ -599,7 +601,8 @@ function mount(tag, ignoreRender) {
 function initializeTag(tag, registryEntry) {
 	// check if the tag has been initialized already
 	if (tag['__s'] || !registryEntry) return;
-	var functions = registryEntry.functions;
+	var functions = registryEntry.functions,
+	    isRendered = void 0;
 
 	// copy all defined functions/attributes
 	for (var all in functions) {
@@ -621,7 +624,7 @@ function initializeTag(tag, registryEntry) {
 			setElementAttr(sibling, tag);
 			sibling.parentNode.removeChild(sibling);
 		}
-		tag.isRendered = true;
+		isRendered = true;
 	} else {
 		tag.__i = tag.innerHTML;
 		setElementAttr(tag);
@@ -647,13 +650,15 @@ function initializeTag(tag, registryEntry) {
 	// call mount callback
 	tag.props = merge({}, functions.props, getAttributes(tag, true));
 	try {
+		tag.mounting = true;
 		functions.mount.call(tag);
+		delete tag.mounting;
 	} catch (e) {
 		error$1('mount', tag.tagName, e);
 	}
 
 	// render the tag's content
-	var subEvents = renderTag.call(this, tag);
+	var subEvents = !isRendered && renderTag.call(this, tag) || { events: [] };
 
 	// attach events
 	var hostEvents = [],
@@ -667,6 +672,10 @@ function initializeTag(tag, registryEntry) {
 	});
 
 	subEvents.events = subEvents.events.concat({ childEvents: childEvents, hostEvents: hostEvents, tag: this && this.noEvents ? tag.tagName : tag });
+
+	if (!tag.attributes.__ready) {
+		tag.__s('__ready', true);
+	}
 	if (!this || this.noEvents !== true) {
 		// attach sub events
 		attachSubEvents(subEvents, tag);
@@ -712,10 +721,6 @@ function renderTag(tag) {
 		merge(subEl, renderedSubElements[index]);
 		renderedSubElements[index].getHost = defaultFunctions.getHost.bind(subEl);
 	});
-
-	if (!tag.attributes.__ready) {
-		tag.__s('__ready', true);
-	}
 
 	if (!this || !this.noRenderCall) {
 		renderCallbacks.forEach(function (callback) {
@@ -867,7 +872,7 @@ var tagObserver = new MutationObserver(function (records) {
 var zino = Zino = {
 	on: on, one: one, off: off, trigger: trigger,
 
-	fetch: function fetch(url, callback, cache) {
+	fetch: function fetch(url, callback, cache, code) {
 		if (cache && urlRegistry[url] && !urlRegistry[url].callback) {
 			return callback(urlRegistry[url]);
 		} else if (isObj(urlRegistry[url])) {
@@ -876,6 +881,10 @@ var zino = Zino = {
 		urlRegistry[url] = {
 			callback: [callback]
 		};
+		if (code) {
+			urlRegistry[url] = code;
+			return;
+		}
 		var req = new XMLHttpRequest();
 		req.open('GET', url, true);
 		req.onreadystatechange = function () {

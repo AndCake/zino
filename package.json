@@ -8,7 +8,7 @@
     },
     "homepage": "https://bitbucket.org/rkunze/zinojs.git",
     "scripts": {
-        "install": "rollup -c rollup.config.snapshots.js",
+        "install": "rollup -c rollup.config.snapshots.js; npm start",
         "start": "rollup -c &&  uglifyjs -m -c --screw-ie8 --in-source-map zino.js.map --source-map zino.min.js.map -o zino.min.js zino.js && gzip -c9 zino.min.js > zino.min.js.gz",
         "test": "(rollup -c rollup.config.test.js | node) && karma start",
         "watch": "while inotifywait -qq -r -e close_write ./src ./test; do npm test; done",

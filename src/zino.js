@@ -25,7 +25,7 @@ let urlRegistry = {},
 export default Zino = {
 	on, one, off, trigger,
 
-	fetch(url, callback, cache) {
+	fetch(url, callback, cache, code) {
 		if (cache && urlRegistry[url] && !urlRegistry[url].callback) {
 			return callback(urlRegistry[url]);
 		} else if (isObj(urlRegistry[url])) {
@@ -34,6 +34,10 @@ export default Zino = {
 		urlRegistry[url] = {
 			callback: [callback]
 		};
+		if (code) {
+			urlRegistry[url] = code;
+			return;
+		}
 		var req = new XMLHttpRequest();
 		req.open('GET', url, true);
 		req.onreadystatechange = () => {
