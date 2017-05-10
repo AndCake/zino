@@ -1,0 +1,22 @@
+<btn>
+	<button class="special-button" type="button">
+		{{body}}
+	</button>
+
+	<script>
+	({
+		events: {
+			button: {
+				click: function changePage(e) {
+					location.href = this.getHost().getAttribute('page');
+				}
+			}
+		}
+	})
+	</script>
+	<style>
+		.special-button {
+			color: red;
+		}
+	</style>
+</btn>

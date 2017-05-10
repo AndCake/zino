@@ -1,33 +1,44 @@
 {
-  "name": "zinojs",
-  "version": "1.4.2",
-  "description": "Mixture of Polymer and ReactJS-like microframework",
-  "main": "zino-tester.js",
-  "dependencies": {
-    "cheerio": "^0.22.0"
-  },
-  "devDependencies": {
-    "colors": "^1.1.2",
-    "fast-diff": "^1.1.1",
-    "grunt": "^1.0.1",
-    "grunt-chokidar": "^1.0.0",
-    "grunt-cli": "^1.2.0",
-    "grunt-contrib-compress": "^1.3.0",
-    "grunt-contrib-connect": "^1.0.2",
-    "grunt-contrib-uglify": "^2.0.0",
-    "grunt-karma": "^2.0.0",
-    "grunt-zino": "git+ssh://git@bitbucket.org/rkunze/grunt-zino.git",
-    "karma": "^1.6.0",
-    "karma-mocha": "^1.3.0",
-    "karma-sauce-launcher": "^1.1.0",
-    "load-grunt-tasks": "^3.5.2",
-    "mocha": "^3.2.0",
-    "readline-sync": "^1.4.5"
-  },
-  "scripts": {
-    "start": "grunt",
-    "test": "mocha && karma start"
-  },
-  "author": "Robert Kunze <r.kunze@protonmail.com>",
-  "license": "LGPL-3.0"
+    "name": "zino",
+    "version": "2.0.0",
+    "description": "Micro component framework",
+    "main": "zino-tester.js",
+    "directories": {
+        "test": "test"
+    },
+    "homepage": "https://bitbucket.org/rkunze/zinojs.git",
+    "scripts": {
+        "install": "rollup -c rollup.config.snapshots.js; npm start",
+        "start": "rollup -c &&  uglifyjs -m -c --screw-ie8 --in-source-map zino.js.map --source-map zino.min.js.map -o zino.min.js zino.js && gzip -c9 zino.min.js > zino.min.js.gz",
+        "test": "(rollup -c rollup.config.test.js | node) && karma start",
+        "watch": "while inotifywait -qq -r -e close_write ./src ./test; do npm test; done",
+        "debug": "rollup -c rollup.config.test.js -o index.js && node-debug index.js",
+        "clean": "rm zino*.js* index.js"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git://bitbucket.org/rkunze/zinojs.git"
+    },
+    "author": "Robert Kunze <quixotic.worx@protonmail.com>",
+    "license": "LGPL-3.0",
+    "devDependencies": {
+        "babel-plugin-external-helpers": "^6.22.0",
+        "babel-preset-latest": "^6.24.1",
+        "bower": "^1.8.0",
+        "colors": "^1.1.2",
+        "fast-diff": "^1.1.1",
+        "karma": "^1.6.0",
+        "karma-mocha": "^1.3.0",
+        "karma-sauce-launcher": "^1.1.0",
+        "mocha": "^3.2.0",
+        "readline-sync": "^1.4.7",
+        "rollup": "^0.41.6",
+        "rollup-plugin-babel": "^2.7.1",
+        "rollup-plugin-multi-entry": "^2.0.1",
+        "rollup-watch": "^3.2.2",
+        "uglify-js": "^2.8.22"
+    },
+    "optionalDependencies": {
+        "rkgttr-mutationobserverpolyfill": "0.0.2"
+    }
 }

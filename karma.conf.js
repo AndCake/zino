@@ -19,6 +19,12 @@ module.exports = function(config) {
 			browserName: 'internet explorer',
 			platform: 'Windows 8.1',
 			version: '11'
+		},
+		sl_ie_10: {
+			base: 'SauceLabs',
+			browserName: 'internet explorer',
+			platform: 'Windows 7',
+			version: '10'
 		}
 	},
 	sauce = require('./.saucelabs.json');
@@ -31,7 +37,8 @@ module.exports = function(config) {
 	sauceLabs: {
 		testName: 'Zino Unit Tests',
 		username: sauce.user,
-		accessKey: sauce.key
+		accessKey: sauce.key,
+		recordVideo: true
 	},
 	customLaunchers: customLaunchers,
 
@@ -42,9 +49,11 @@ module.exports = function(config) {
 
 	// list of files / patterns to load in the browser
 	files: [
+		'node_modules/rkgttr-weakmappolyfill/index.umd.js',
+		'node_modules/rkgttr-mutationobserverpolyfill/index.umd.js',
 		'zino.min.js',
 		'test/karma/**/test.*.js',
-		{pattern: 'examples/dist/**/*.html', included: false},
+		{pattern: 'test/components/*.*', included: false},
 	],
 
 

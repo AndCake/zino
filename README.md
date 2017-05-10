@@ -7,8 +7,8 @@ Comparison
 ----------
 
 - Polymer: 66.3 KB minified & gzipped
-- ReactJS: 45.06 KB minified & gzipped
-- ZinoJS: 4.4 KB minified & gzipped
+- ReactJS: 46.45 KB minified & gzipped
+- ZinoJS: 4.9 KB minified & gzipped
 
 Features
 --------
@@ -18,6 +18,7 @@ Features
 - Flux support - simply define your stores
 - lifecycle events
 - no extra HTML elements/root elements
+- uses virtual DOM to efficiently render with as few reflows / repaints as possible
 - uses Mustache-like Syntax to keep components clean
 - no polyfills required
 - works with your coding style
@@ -40,6 +41,8 @@ Browser Support
  * Chrome 18+
  * Mac & iOS Safari 6.1+
  * Android Browser 4.4+
+
+ *Please note:* IE10 is supported with the MutationObserver polyfill (see [optional dependencies](https://bitbucket.org/rkunze/zinojs/src/master/package.json)).
 
 Getting started
 ---------------
@@ -74,7 +77,7 @@ Here a simple example page HTML:
 
 ### Next Steps
 
-Check out the tutorial and API documentation or take a look at the examples from the `examples/` directory.
+Check out the [tutorial](#markdown-header-tutorial) and [API documentation](#markdown-header-api-documentation) or take a look at the [examples](https://bitbucket.org/rkunze/zinojs/src/master/test/components/).
 
 Tutorial
 ========
@@ -84,14 +87,14 @@ the dev dependencies from the package.json, though.
 
 In this tutorial, we will be creating a simple comment component where you can see
 all the comments that have been entered before, enter a new comment and functionality
-to bind it your backend.
+to bind it to your backend.
 
 Create your tutorial HTML file that looks like this:
 
 	<!DOCTYPE html>
 	<html>
 		<head>
-			<link rel="zino-tag" href="dist/comment-box.html"/>
+			<link rel="zino-tag" href="components/comment-box.html"/>
 		</head>
 		<body>
 			<comment-box></comment-box>
@@ -111,7 +114,7 @@ Our comment box will have all the previously-defined features. However, since we
 
 Working with components and in a very modular way is what Zino is really made for. So let's go ahead and define our comment-box first.
 
-Create a new file, in a directory called "dist", called "comment-box.html" (as specified in the above example page). Give it the following contents:
+Create a new file called "comment-box.html" inside a directory called "components" (as referenced in the above tutorial HTML). Give it the following contents:
 
 	<comment-box>
 		<h1>Comments</h1>
@@ -149,7 +152,7 @@ In our comment-box.html, let's add a script tag to define our state:
 	...
 		<script>
 			(function () {
-				Zino.import('dist/comment.html');
+				Zino.import('comment.html');
 				return {
 					props: {
 						author: 'Leeroy Jenkins',
@@ -160,7 +163,7 @@ In our comment-box.html, let's add a script tag to define our state:
 		</script>
 	</comment-box>
 
-So what did we do? First, we added a function that returns our props which define the different data-variables we want to use in our component. Zino.import() is called in order to tell Zino that our component relies on another component. It will automatically mount and render it. Sometimes you don't need to import anything if a component doesn't use other components. In these cases, you can just define the JSON object we returned above instead of wrapping it into a function.
+So what did we do? First, we added a function that returns our props which define the different data-variables we want to use in our component. Zino.import() is called in order to tell Zino that our component relies on another component. The path provided is always relative to the current component. It will automatically mount and render it. Sometimes you don't need to import anything if a component doesn't use other components. In these cases, you can just define the JSON object we returned above instead of wrapping it into a function.
 
 Obviously it is not good only being able to have one comment at a time. Therefore, let's turn our comments into an array in our props:
 
@@ -212,7 +215,7 @@ In praxis, this means that first, we create our store by creating a new file, ca
 		});
 	}());
 
-As you can see, the store mainly deals with handling our actual comment data. Zino.trigger() and Zino.on() are used to communicate with the dispatcher. Just load the `comment-store.js` in our index.html:
+As you can see, the store mainly deals with handling our actual comment data. Zino.trigger() and Zino.on() are used to communicate with the dispatcher. Just load the `comment-store.js` in our tutorial HTML file:
 
         <script src="comment-store.js"></script>
 
@@ -230,7 +233,7 @@ and we're ready to use it. Now let's update our component to make use of the sto
 					// listen for comments-changed events
 					Zino.on('comments-changed', this.changeHandler = function(comments) {
 						// update our internal state
-						this.setProps('comments', comments);
+						this.getHost().setProps('comments', comments);
 					}.bind(this));
 
 					// notify the store that we need the latest data
@@ -243,7 +246,7 @@ and we're ready to use it. Now let's update our component to make use of the sto
 			};
 		...
 
-The mount() and unmount() functions are called once our component is mounted/added to the page or unmounted/removed from the page. On those, we tell our dispatcher, that we want to be notified of any changes to the comments in our store. If there is one, we simply update our internal component state but using this.setProps(). Every time you call setProps and therefore change the internal state of the component, it triggers a re-render of the component, thereby displaying our updated comment list.
+The mount() and unmount() functions are called once our component is mounted/added to the page or unmounted/removed from the page. On those, we tell our dispatcher, that we want to be notified of any changes to the comments in our store. If there is one, we simply update our internal component state but using this.getHost().setProps(). The getHost() function will return the actual component instance. Every time you call setProps on it and therefore change the internal state of the component, it triggers a re-render of the component, thereby displaying our updated comment list.
 
 Last but not least, by triggering the comments-initialize action, we tell our store to send us everything he has for this action.
 
@@ -298,8 +301,8 @@ Last but not least, we need to tell our comment-box to actually mount our commen
 
 	...
 	(function() {
-		Zino.import('dist/comment.html');
-		Zino.import('dist/comment-form.html');
+		Zino.import('comment.html');
+		Zino.import('comment-form.html');
 
 		return {
 			...
@@ -590,7 +593,7 @@ There are certain default properties that do exist for every component implicitl
 			document.querySelector('my-custom-tag').body = 'this is my new content';
 
 	* props
-		- an object used to define the initial internal state of the component. You can read the state by using `this.props.<prop-name>`, however, never write a value to the state using this syntax. Instead use `this.setState('<prop-name>', <prop-value>);`, else there will be no automatic re-rendering of the component upon state-change.
+		- an object used to define the initial internal state of the component. You can read the state by using `this.props.<prop-name>`, however, never write a value to the state using this syntax. Instead use `this.setProps('<prop-name>', <prop-value>);`, else there will be no automatic re-rendering of the component upon state-change.
 
 		- Example:
 
@@ -637,8 +640,10 @@ There are certain default properties that do exist for every component implicitl
 				}
 			}
 
-	* setProps(prop[, value]), setState(prop[, value])
-		- setState is an alias for setProps.
+	* getHost()
+		- returns the component's instance. Use this to call setProps and other instance methods from within event handlers.
+
+	* setProps(prop[, value])
 		- call this function in order to update your props and trigger a re-render with the updated values.
 		- the first parameter can be a the name of a prop (type string) or an object containing multiple props and their values.
 		- the second parameter is only used, if the first parameter is a string to represent the prop's value.
@@ -646,8 +651,7 @@ There are certain default properties that do exist for every component implicitl
 
 You can define additional properties for the component that will be automatically bound to the component upon mounting by returning them in any of the component's script tags.
 
-Since all these functions are bound to the ZinoJS custom tag they were defined for, you can access all methods
-and attributes of that tag via the DOM API. Example:
+Since all these functions are bound to the ZinoJS custom tag they were defined for, you can access all methods and attributes of that tag via the DOM API. Example:
 
 	<!-- tag is used -->
 	<my-tag myattr="1"></my-tag>
@@ -672,7 +676,7 @@ Once a component is initialized, meaning mounted and rendered, an optional onrea
 		// register the onready handler
 		myNewTag.onready = function() {
 			// call setProps on myNewTag once the component is ready
-			this.setProps('prop1', 'value1');
+			this.getHost().setProps('prop1', 'value1');
 		}
 
 		// attach the component to the DOM
@@ -685,45 +689,32 @@ ZinoJS itself
 
 ZinoJS exports a set of functions in order to interact with it. Those functions are available in the Zino scope.
 
-	- import(url[, callback[, props])
+	- import(url[, callback)
 		- url - URL to load the element from, if not loaded yet
 		- callback - callback function to call when the tag has been loaded (optional)
-		- props - initially set properties (optional)
 
-		Imports a component from the provided URL so that it can be rendered whenever added to the DOM. It will automatically be mounted.
+		Imports a component from the provided URL so that it can be rendered whenever added to the DOM. It will automatically be mounted. If used inside a component, the url is relative to the current component's URL.
 
 	- trigger(event[, data])
 		- event - name of the event to trigger
 		- data - data to send with the event (optional)
 
-		Triggers the given event. When bound to some object, it will trigger the event on that object.
+		Triggers the given event.
 
 		Example:
 
-			// for simple case
 			Zino.trigger('update-data', {id: 2, text: 'My changed data'});
-
-			// for a specific element
-			var myElement = document.querySelector('my-element');
-			Zino.trigger.call(myElement, 'my-custom-event', {some: 'data'});
 
 	- on(event, callback)
 		- event - name of the event to listen for
 		- callback - callback function to call when the event is triggered
 
 		Listens for the given event and calls the callback for every occurrence.
-		Any data sent with the trigger will be directly given into the callback. When bound to some object, it will listen for the event on that object only.
+		Any data sent with the trigger will be directly given into the callback. 
 
 		Example:
 
-			// for a simple case
 			Zino.on('update-data', function(data) {
-				// do something with the data
-			});
-
-			// for a specific element
-			var myElement = document.querySelector('my-element');
-			Zino.on.call(myElement, 'my-custom-event', function(data) {
 				// do something with the data
 			});
 
@@ -733,21 +724,22 @@ ZinoJS exports a set of functions in order to interact with it. Those functions 
 
 		Listens for the given event and calls the callback only for the first
 		occurrence. Any data sent with the trigger will be directly given into
-		the callback. When bound to some object, it will listen for the event on that object only.
+		the callback. 
 
 	- off(event, callback)
 		- event - name of the event to listen for
 		- callback - function to remove as event listener
 
-		Removes the event listener for the given event. When bound to some object, it will remove the event handler on that object only.
+		Removes the event listener for the given event. 
 
-	- fetch(url, callback)
+	- fetch(url, callback[, cache[, code]])
 		- url - from where to fetch some content/data?
-		- callback(data, err) - function to call once successful
+		- callback(data) - function to call once successful
+		- cache - a boolean indicating whether or not to cache the result
+		- code - when provided, it will cache code for url and not do an XHR request
 
 		Do a very simple AJAX call (supports only GET). The response body will be handed
-		into the callback function as `data`. If an error occurs, the `err` parameter
-		will be filled with the server's response status code.
+		into the callback function as `data`. If the code property is transmitted, then the callback parameter can be left empty and not actual AJAX request will be triggered.
 
 ## Mustache-enhancements
 

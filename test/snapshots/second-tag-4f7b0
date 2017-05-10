@@ -1,6 +1,9 @@
-<div style="background-color:green;border:1px solid darkgreen;font-family:Arial;;color:white;">Hallo, test <a name="test"></a></div>
+<second-tag me="Welt!" __ready="true"><div class="-shadow-root"><div style="background-color:green;border:1px solid darkgreen;font-family:Arial;color:white;">Hallo, Welt!<a name="test"></a></div>
 
-	<todo-list data-list="--c30e6a46-562f-4cf0-6054-fcd78045a9be--"></todo-list>
+ <todo-list data-list="--f84a38d43d30ebec777412cfbe2c28bc3b36401f--"></todo-list>
+
+	
+ <link rel="stylesheet" href="./second-tag.css"/></div></second-tag>
 {
   "data": {
     "props": {
@@ -21,6 +24,7 @@
         }
       ]
     },
+    "element": {},
     "styles": {
       "button": {
         "backgroundColor": "green",
@@ -29,8 +33,7 @@
       }
     },
     "body": "",
-    "me": "test"
+    "me": "Welt!"
   },
-  "events": [],
-  "tagName": "second-tag"
+  "events": []
 }
