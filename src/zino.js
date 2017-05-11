@@ -3,7 +3,7 @@ import {emptyFunc, isObj} from './utils';
 import {find as $} from './htmlparser';
 import {on, one, off, trigger} from './events';
 
-let urlRegistry = {},
+let urlRegistry = window.zinoTagRegistry || {},
 	Zino,
 	tagObserver = new MutationObserver(records => {
 		records.forEach(record => {
@@ -31,13 +31,10 @@ export default Zino = {
 		} else if (isObj(urlRegistry[url])) {
 			return urlRegistry[url].callback.push(callback);
 		}
-		urlRegistry[url] = {
+		urlRegistry[url] = code || {
 			callback: [callback]
 		};
-		if (code) {
-			urlRegistry[url] = code;
-			return;
-		}
+		if (code) return;
 		var req = new XMLHttpRequest();
 		req.open('GET', url, true);
 		req.onreadystatechange = () => {
@@ -61,7 +58,7 @@ export default Zino = {
 		}, true);
 	}
 };
-
+window.Zino = Zino;
 on('publish-style', data => {
 	if (typeof data === 'string' && data.length > 0) {
 		let style = document.createElement('style');

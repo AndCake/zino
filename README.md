@@ -687,6 +687,8 @@ Once a component is initialized, meaning mounted and rendered, an optional onrea
 ZinoJS itself
 -------------
 
+When loading initially, in the browser context, Zino will look for a global variable called `zinoTagRegistry`. If this is defined, it expects it to be filled with a series of URL - data mappings that will be used to pre-fill the AJAX cache. Any requests using the cache for the registered URLs will automatically be answered without additional network traffic. 
+
 ZinoJS exports a set of functions in order to interact with it. Those functions are available in the Zino scope.
 
 	- import(url[, callback)
@@ -736,10 +738,9 @@ ZinoJS exports a set of functions in order to interact with it. Those functions 
 		- url - from where to fetch some content/data?
 		- callback(data) - function to call once successful
 		- cache - a boolean indicating whether or not to cache the result
-		- code - when provided, it will cache code for url and not do an XHR request
 
 		Do a very simple AJAX call (supports only GET). The response body will be handed
-		into the callback function as `data`. If the code property is transmitted, then the callback parameter can be left empty and not actual AJAX request will be triggered.
+		into the callback function as `data`. If the code property is transmitted, then the callback parameter can be left empty and not actual AJAX request will be triggered. This works similar to having the global `zinoTagRegistry` variable prefilled when loading Zino.
 
 ## Mustache-enhancements
 
@@ -910,3 +911,43 @@ Since events will usually trigger state changes, these events can be simulated b
 	})
 
 Please refer to the [test/test.js](https://bitbucket.org/rkunze/zinojs/src/master/test/test.js) for more examples of how snapshots can be used.
+
+## Zino Events
+
+Zino works through events that can be used to customize how Zino deals with browser-specific things. Listening for these kind of events works through the Zino.on / Zino.off / Zino.one functions. Triggering these events works through the Zino.trigger function. The following events are fired automatically by Zino:
+
+### publish-script
+
+Parameter:
+
+	script DOM node
+
+This event is fired if an external script file has been encountered when parsing the scripts of the given tag. 
+
+In the browser environment, Zino has an existing handler that will add the script tag to the page's DOM. 
+
+### publish-style
+
+Parameter:
+
+	link DOM node or css text
+
+This event is fired if some CSS styling is encountered while parsing the given component. If the component contains an external LINK tag, this tag will be handed as is into the listening function. If it encounters inline style, it will provide the pure CSS text. 
+
+In the browser environment, Zino has an existing handler that will either create a STYLE tag from the CSS code and attach it to the page's HEAD tag or will directly add a provided LINK tag to the page's HEAD tag.
+
+### --zino-mount-tag
+
+Parameter:
+
+	DOM node
+
+This event is fired whenever a new DOM node is added to the page. If the DOM node is a registered component (imported via `Zino.import()` or `LINK` tag), the component will be mounted and rendered.
+
+### --zino-unmount-tag
+
+Parameter:
+
+	DOM node
+
+This event is fired whenever a DOM node is removed from the DOM that contains (or is) a component. The DOM node provided is always a component. All contained sub components will have their `unmount` callback executed and complex data associated with this component will be cleaned up.

@@ -62,8 +62,8 @@ export function mount(tag, ignoreRender) {
 	if (!tag.tagName) return;
 	let entry = tagRegistry[tag.tagName.toLowerCase()];
 	if (!entry || tag.getAttribute('__ready')) return;
-	if (ignoreRender === true) entry.functions.render = emptyFunc;
-	return initializeTag.call({noEvents: true}, tag, entry);
+	if (ignoreRender) entry.functions.render = emptyFunc;
+	return initializeTag.call(ignoreRender ? {noEvents: true} : this, tag, entry);
 }
 
 export function flushRegisteredTags() {

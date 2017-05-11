@@ -1,8 +1,5 @@
-(function (global, factory) {
-	typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
-	typeof define === 'function' && define.amd ? define(factory) :
-	(global.Zino = factory());
-}(this, (function () { 'use strict';
+var Zino = (function () {
+'use strict';
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) {
   return typeof obj;
@@ -592,8 +589,8 @@ function mount(tag, ignoreRender) {
 	if (!tag.tagName) return;
 	var entry = tagRegistry[tag.tagName.toLowerCase()];
 	if (!entry || tag.getAttribute('__ready')) return;
-	if (ignoreRender === true) entry.functions.render = emptyFunc;
-	return initializeTag.call({ noEvents: true }, tag, entry);
+	if (ignoreRender) entry.functions.render = emptyFunc;
+	return initializeTag.call(ignoreRender ? { noEvents: true } : this, tag, entry);
 }
 
 
@@ -846,7 +843,7 @@ function handleScripts(element, path) {
 on('--zino-unmount-tag', unmountTag);
 on('--zino-mount-tag', mount);
 
-var urlRegistry = {};
+var urlRegistry = window.zinoTagRegistry || {};
 var Zino = void 0;
 var tagObserver = new MutationObserver(function (records) {
 	records.forEach(function (record) {
@@ -878,13 +875,10 @@ var zino = Zino = {
 		} else if (isObj(urlRegistry[url])) {
 			return urlRegistry[url].callback.push(callback);
 		}
-		urlRegistry[url] = {
+		urlRegistry[url] = code || {
 			callback: [callback]
 		};
-		if (code) {
-			urlRegistry[url] = code;
-			return;
-		}
+		if (code) return;
 		var req = new XMLHttpRequest();
 		req.open('GET', url, true);
 		req.onreadystatechange = function () {
@@ -911,7 +905,7 @@ var zino = Zino = {
 		}, true);
 	}
 };
-
+window.Zino = Zino;
 on('publish-style', function (data) {
 	if (typeof data === 'string' && data.length > 0) {
 		var style = document.createElement('style');
@@ -932,5 +926,5 @@ tagObserver.observe(document.body, {
 
 return zino;
 
-})));
+}());
 //# sourceMappingURL=zino.js.map
