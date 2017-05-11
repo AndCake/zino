@@ -332,7 +332,7 @@ var mustache = function (code, data, options) {
 var tagRegExp = /<(\/?)([\w-]+)([^>]*?)(\/?)>/g;
 var attrRegExp = /([\w_-]+)=(?:'([^']*?)'|"([^"]*?)")/g;
 var commentRegExp = /<!--(?:[^-]|-[^-])*-->/g;
-var selfClosingTags = 'br,img,input,source,hr,link,meta'.split(',');
+var selfClosingTags = 'br,img,input,source,hr,link,meta,wainclude'.split(',');
 
 function parseAttributes(match) {
 	var attributes = [];

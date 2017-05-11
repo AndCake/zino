@@ -2,7 +2,7 @@ const
 	tagRegExp = /<(\/?)([\w-]+)([^>]*?)(\/?)>/g,
 	attrRegExp = /([\w_-]+)=(?:'([^']*?)'|"([^"]*?)")/g,
 	commentRegExp = /<!--(?:[^-]|-[^-])*-->/g,
-	selfClosingTags = 'br,img,input,source,hr,link,meta'.split(',');
+	selfClosingTags = 'br,img,input,source,hr,link,meta,wainclude'.split(',');
 
 function parseAttributes(match) {
 	let attributes = [];

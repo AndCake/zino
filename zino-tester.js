@@ -342,7 +342,7 @@ var mustache = function (code, data, options) {
 var tagRegExp = /<(\/?)([\w-]+)([^>]*?)(\/?)>/g;
 var attrRegExp = /([\w_-]+)=(?:'([^']*?)'|"([^"]*?)")/g;
 var commentRegExp = /<!--(?:[^-]|-[^-])*-->/g;
-var selfClosingTags = 'br,img,input,source,hr,link,meta'.split(',');
+var selfClosingTags = 'br,img,input,source,hr,link,meta,wainclude'.split(',');
 
 function parseAttributes(match) {
 	var attributes = [];
@@ -507,7 +507,7 @@ function attachEvent(el, events, host) {
 			el.addEventListener(event, function (e) {
 				if (find(eventObj.selector, el).indexOf(e.target) >= 0) {
 					e.target.getHost = function () {
-						return host;
+						return host.getHost();
 					};
 					eventObj.handlers[event].call(e.target, e);
 				}
@@ -534,8 +534,10 @@ var defaultFunctions = {
 		} else {
 			tag.props[name] = value;
 		}
-		var subEvents = renderTag(tag);
-		attachSubEvents(subEvents, tag);
+		if (!tag.mounting) {
+			var subEvents = renderTag(tag);
+			attachSubEvents(subEvents, tag);
+		}
 	}
 };
 
@@ -577,8 +579,8 @@ function mount(tag, ignoreRender) {
 	if (!tag.tagName) return;
 	var entry = tagRegistry[tag.tagName.toLowerCase()];
 	if (!entry || tag.getAttribute('__ready')) return;
-	if (ignoreRender === true) entry.functions.render = emptyFunc;
-	return initializeTag.call({ noEvents: true }, tag, entry);
+	if (ignoreRender) entry.functions.render = emptyFunc;
+	return initializeTag.call(ignoreRender ? { noEvents: true } : this, tag, entry);
 }
 
 function flushRegisteredTags() {
@@ -588,12 +590,13 @@ function flushRegisteredTags() {
 function initializeTag(tag, registryEntry) {
 	// check if the tag has been initialized already
 	if (tag['__s'] || !registryEntry) return;
-	var functions = registryEntry.functions;
+	var functions = registryEntry.functions,
+	    isRendered = void 0;
 
 	// copy all defined functions/attributes
 	for (var all in functions) {
 		var entry = functions[all];
-		if (['mount', 'unmount', 'events'].indexOf(all) < 0) {
+		if (['mount', 'unmount', 'events', 'render'].indexOf(all) < 0) {
 			if (typeof entry === 'function') {
 				tag[all] = entry.bind(tag);
 			} else {
@@ -610,7 +613,7 @@ function initializeTag(tag, registryEntry) {
 			setElementAttr(sibling, tag);
 			sibling.parentNode.removeChild(sibling);
 		}
-		tag.isRendered = true;
+		isRendered = true;
 	} else {
 		tag.__i = tag.innerHTML;
 		setElementAttr(tag);
@@ -636,13 +639,15 @@ function initializeTag(tag, registryEntry) {
 	// call mount callback
 	tag.props = merge({}, functions.props, getAttributes(tag, true));
 	try {
+		tag.mounting = true;
 		functions.mount.call(tag);
+		delete tag.mounting;
 	} catch (e) {
 		error$1('mount', tag.tagName, e);
 	}
 
 	// render the tag's content
-	var subEvents = renderTag.call(this, tag);
+	var subEvents = !isRendered && renderTag.call(this, tag) || { events: [] };
 
 	// attach events
 	var hostEvents = [],
@@ -656,6 +661,10 @@ function initializeTag(tag, registryEntry) {
 	});
 
 	subEvents.events = subEvents.events.concat({ childEvents: childEvents, hostEvents: hostEvents, tag: this && this.noEvents ? tag.tagName : tag });
+
+	if (!tag.attributes.__ready) {
+		tag.__s('__ready', true);
+	}
 	if (!this || this.noEvents !== true) {
 		// attach sub events
 		attachSubEvents(subEvents, tag);
@@ -701,10 +710,6 @@ function renderTag(tag) {
 		merge(subEl, renderedSubElements[index]);
 		renderedSubElements[index].getHost = defaultFunctions.getHost.bind(subEl);
 	});
-
-	if (!tag.attributes.__ready) {
-		tag.__s('__ready', true);
-	}
 
 	if (!this || !this.noRenderCall) {
 		renderCallbacks.forEach(function (callback) {
@@ -810,7 +815,7 @@ function handleStyles(element) {
 	}).join('\n'));
 }
 
-function handleScripts(element) {
+function handleScripts(element, path$$1) {
 	var functions = merge({}, defaultFunctions);
 	find('script', element).forEach(function (script) {
 		var text = script.children.length > 0 && script.children[0].text.trim();
@@ -818,7 +823,8 @@ function handleScripts(element) {
 			return trigger('publish-script', script);
 		}
 		try {
-			merge(functions, new Function('return ' + text.replace(/;$/g, ''))());
+			text = text.replace(/\bZino\.import\s*\(/g, 'Zino.import.call({path: "' + path$$1 + '"}, ').replace(/;$/g, '');
+			merge(functions, new Function('return ' + text)());
 		} catch (e) {
 			error$1('parse script ' + text + ' in tag ' + element.tagName, e);
 		}
