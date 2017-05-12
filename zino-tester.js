@@ -515,10 +515,10 @@ function attachEvent(el, events, host) {
 			el.addEventListener(event, function (e) {
 				var target = void 0;
 				if (eventObj.selector === ':host' || (target = findEl(eventObj.selector, e.target))) {
-					target.getHost = function () {
+					target && (target.getHost = function () {
 						return host.getHost();
-					};
-					eventObj.handlers[event].call(target, e);
+					});
+					eventObj.handlers[event].call(target || host, e);
 				}
 			}, false);
 		});

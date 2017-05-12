@@ -1,5 +1,6 @@
 {
   "name": "zino",
+  "version": "2.0.1",
   "description": "micro component framework",
   "main": "zino.js",
   "authors": [

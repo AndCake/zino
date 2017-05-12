@@ -54,8 +54,8 @@ export function attachEvent (el, events, host) {
 			el.addEventListener(event, e => {
 				let target;
 				if (eventObj.selector === ':host' || (target = findEl(eventObj.selector, e.target))) {
-					target.getHost = () => host.getHost();
-					eventObj.handlers[event].call(target, e);
+					target && (target.getHost = () => host.getHost());
+					eventObj.handlers[event].call(target || host, e);
 				}
 			}, false);
 		});
