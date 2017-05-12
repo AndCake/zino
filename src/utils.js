@@ -7,7 +7,7 @@
 export function merge (target, ...args) {
 	args.forEach(arg => {
 		for (let all in arg) {
-			if (typeof propDetails(arg, all).value !== 'undefined' && (!target[all] || propDetails(target, all).writable)) {
+			if ((typeof HTMLElement !== 'undefined' && arg instanceof HTMLElement) || typeof propDetails(arg, all).value !== 'undefined' && (!target[all] || propDetails(target, all).writable)) {
 				target[all] = arg[all];
 			}
 		}

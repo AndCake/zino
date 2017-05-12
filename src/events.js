@@ -41,12 +41,21 @@ export function one(name, fn) {
 
 export function attachEvent (el, events, host) {
 	if (typeof el.addEventListener !== 'function') return;
+	let findEl = (selector, target) => {
+		let node = find(selector, el);
+		while (node.length > 0 && target !== host) {
+			if (node.indexOf(target) >= 0) return node[node.indexOf(target)];
+			target = target.parentNode;
+		}
+		return false;
+	};
 	events.forEach((eventObj) => {
 		Object.keys(eventObj.handlers).forEach((event) => {
 			el.addEventListener(event, e => {
-				if (find(eventObj.selector, el).indexOf(e.target) >= 0) {
-					e.target.getHost = () => host.getHost();
-					eventObj.handlers[event].call(e.target, e);
+				let target;
+				if (eventObj.selector === ':host' || (target = findEl(eventObj.selector, e.target))) {
+					target.getHost = () => host.getHost();
+					eventObj.handlers[event].call(target, e);
 				}
 			}, false);
 		});

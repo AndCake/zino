@@ -98,7 +98,7 @@ function merge(target) {
 
 	args.forEach(function (arg) {
 		for (var all in arg) {
-			if (typeof propDetails(arg, all).value !== 'undefined' && (!target[all] || propDetails(target, all).writable)) {
+			if (typeof HTMLElement !== 'undefined' && arg instanceof HTMLElement || typeof propDetails(arg, all).value !== 'undefined' && (!target[all] || propDetails(target, all).writable)) {
 				target[all] = arg[all];
 			}
 		}
@@ -512,14 +512,23 @@ function one(name, fn) {
 
 function attachEvent(el, events, host) {
 	if (typeof el.addEventListener !== 'function') return;
+	var findEl = function findEl(selector, target) {
+		var node = find(selector, el);
+		while (node.length > 0 && target !== host) {
+			if (node.indexOf(target) >= 0) return node[node.indexOf(target)];
+			target = target.parentNode;
+		}
+		return false;
+	};
 	events.forEach(function (eventObj) {
 		Object.keys(eventObj.handlers).forEach(function (event) {
 			el.addEventListener(event, function (e) {
-				if (find(eventObj.selector, el).indexOf(e.target) >= 0) {
-					e.target.getHost = function () {
+				var target = void 0;
+				if (eventObj.selector === ':host' || (target = findEl(eventObj.selector, e.target))) {
+					target.getHost = function () {
 						return host.getHost();
 					};
-					eventObj.handlers[event].call(e.target, e);
+					eventObj.handlers[event].call(target, e);
 				}
 			}, false);
 		});
