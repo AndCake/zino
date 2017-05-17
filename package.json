@@ -6,6 +6,7 @@
     "directories": {
         "test": "test"
     },
+    "unpkg": "zino.min.js",
     "files": [
         "zino.js",
         "test.js",
@@ -17,7 +18,8 @@
         "test": "(rollup -c rollup.config.test.js | node) && karma start",
         "watch": "while inotifywait -qq -r -e close_write ./src ./test; do npm test; done",
         "debug": "rollup -c rollup.config.test.js -o index.js && node-debug index.js",
-        "clean": "rm zino*.js* index.js"
+        "clean": "rm zino*.js* index.js",
+        "prepublish": "rollup -c rollup.config.snapshots.js && npm start"
     },
     "repository": {
         "type": "git",
@@ -40,9 +42,9 @@
         "uglify-js": "^2.8.22"
     },
     "dependencies": {
-        "readline-sync": "^1.4.7",
+        "colors": "^1.1.2",
         "fast-diff": "^1.1.1",
-        "colors": "^1.1.2"
+        "readline-sync": "^1.4.7"
     },
     "optionalDependencies": {
         "rkgttr-mutationobserverpolyfill": "0.0.2"
