@@ -2,7 +2,7 @@ import babel from 'rollup-plugin-babel';
 
 export default {
 	entry: 'src/zino-tester.js',
-	dest: './zino-tester.js',
+	dest: './test.js',
 	format: 'cjs',
 	plugins: [
 		babel({

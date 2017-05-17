@@ -1,5 +1,8 @@
-var Zino = (function () {
-'use strict';
+(function (global, factory) {
+	typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
+	typeof define === 'function' && define.amd ? define(factory) :
+	(global.Zino = factory());
+}(this, (function () { 'use strict';
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) {
   return typeof obj;
@@ -367,15 +370,9 @@ function DOM(tagName, match, parentNode) {
 			}
 		},
 		get innerHTML() {
-			var html = '';
-			this.children.forEach(function (child) {
-				if (child.text) {
-					html += child.text;
-				} else {
-					html += child.outerHTML;
-				}
-			});
-			return html;
+			return this.children.map(function (child) {
+				return child.text || child.outerHTML;
+			}).join('');
 		},
 		set innerHTML(value) {
 			this.children = parse$1(value).children;
@@ -397,7 +394,7 @@ function DOM(tagName, match, parentNode) {
 			for (var all in this.children) {
 				if (this.children[all] === ref) {
 					delete this.children[all]; // remove element
-					return;
+					break;
 				}
 			}
 		}
@@ -935,5 +932,5 @@ tagObserver.observe(document.body, {
 
 return zino;
 
-}());
+})));
 //# sourceMappingURL=zino.js.map

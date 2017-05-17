@@ -3,7 +3,7 @@ import babel from 'rollup-plugin-babel';
 export default {
 	entry: 'src/zino.js',
 	dest: './zino.js',
-	format: 'iife',
+	format: 'umd',
 	moduleName: 'Zino',
 	sourceMap: true,
 	plugins: [

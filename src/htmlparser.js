@@ -35,15 +35,9 @@ function DOM(tagName, match, parentNode) {
 			}
 		},
 		get innerHTML() {
-			let html = '';
-			this.children.forEach(child => {
-				if (child.text) {
-					html += child.text;
-				} else {
-					html += child.outerHTML;
-				}
-			});
-			return html;
+			return this.children.map(
+				child => child.text || child.outerHTML
+			).join('');
 		},
 		set innerHTML(value) {
 			this.children = parse(value).children;
@@ -63,7 +57,7 @@ function DOM(tagName, match, parentNode) {
 			for (var all in this.children) {
 				if (this.children[all] === ref) {
 					delete this.children[all]; // remove element
-					return;
+					break;
 				}
 			}
 		}

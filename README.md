@@ -8,7 +8,7 @@ Comparison
 
 - Polymer: 66.3 KB minified & gzipped
 - ReactJS: 46.45 KB minified & gzipped
-- ZinoJS: 4.9 KB minified & gzipped
+- ZinoJS: 5.0 KB minified & gzipped
 
 Features
 --------
@@ -43,6 +43,18 @@ Browser Support
  * Android Browser 4.4+
 
  *Please note:* IE10 is supported with the MutationObserver polyfill (see [optional dependencies](https://bitbucket.org/rkunze/zinojs/src/master/package.json)).
+
+ Installation
+ ------------
+
+ ZinoJS can be installed through NPM:
+
+ 	$ npm install -D zino
+
+ Alternatively, you can use the unpkg CDN by adding a script tag to your page:
+
+ 	<script src="https://unpkg.com/zino"></script>
+
 
 Getting started
 ---------------
@@ -892,7 +904,7 @@ The snapshot artifact should be committed alongside the code changes. On subsequ
 
 Testing Zino components can be done in NodeJS context after installing it via NPM:
 
-	$ npm install git+ssh://git@bitbucket.org/rkunze/zinojs.git
+	$ npm install zino
 
 Once it is installed, in your project, create a test/ directory. Place all your tests in that directory. It is recommended to use [MochaJS](http://mochajs.org/) for your tests but any test framework will do.
 
@@ -903,14 +915,16 @@ Zino offers two methods to support your testing efforts:
 
 Since events will usually trigger state changes, these events can be simulated by calling the matchesSnapshot method with the data parameter, which allows you to overwrite props values. For our [todolist tag](https://bitbucket.org/rkunze/zinojs/src/master/examples/src/todolist.html) example, this could look like that:
 
-	describe('todo-list', () => {
-		z.importTag('examples/dist/todolist.html');
+	const zino = require('zino/test');
 
-		it('renders empty', () => z.matchesSnapshot('<todo-list></todo-list>'));
-		it('renders todos', () => z.matchesSnapshot('<todo-list></todo-list>', {props: {tasks: ['Task 1']}}));
+	describe('todo-list', () => {
+		zino.importTag('examples/dist/todolist.html');
+
+		it('renders empty', () => zino.matchesSnapshot('<todo-list></todo-list>'));
+		it('renders todos', () => zino.matchesSnapshot('<todo-list></todo-list>', {props: {tasks: ['Task 1']}}));
 	})
 
-Please refer to the [test/test.js](https://bitbucket.org/rkunze/zinojs/src/master/test/test.js) for more examples of how snapshots can be used.
+Please refer to the [test/zino-tester.js](https://bitbucket.org/rkunze/zinojs/src/master/test/zino-tester.js) for more examples of how snapshots can be used.
 
 ## Zino Events
 

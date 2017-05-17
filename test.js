@@ -377,15 +377,9 @@ function DOM(tagName, match, parentNode) {
 			}
 		},
 		get innerHTML() {
-			var html = '';
-			this.children.forEach(function (child) {
-				if (child.text) {
-					html += child.text;
-				} else {
-					html += child.outerHTML;
-				}
-			});
-			return html;
+			return this.children.map(function (child) {
+				return child.text || child.outerHTML;
+			}).join('');
 		},
 		set innerHTML(value) {
 			this.children = parse$1(value).children;
@@ -407,7 +401,7 @@ function DOM(tagName, match, parentNode) {
 			for (var all in this.children) {
 				if (this.children[all] === ref) {
 					delete this.children[all]; // remove element
-					return;
+					break;
 				}
 			}
 		}
