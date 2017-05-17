@@ -80,3 +80,30 @@ test('DOM is interactive', t => {
 	dom.children[1].removeChild(dom.children[1].children[1]);
 	t.is(dom.children[1].outerHTML, '<div>test  me</div>', 'has removed node from DOM');
 });
+
+test('parses HTML with scripts correctly', t => {
+	dom = parse(`
+		test text
+		<!-- this is a comment -->
+		<div><div class="hallo, Welt!">
+		<script>
+			{
+				mount: function() {
+					if (this.x < 2) {
+						this.body = "<xyz>XXX<ul>";
+					}
+				}
+			}
+		</script>
+		<b>Test</b>
+	`);
+	t.is(find('xyz', dom).length, 0, 'does ignore script contents');
+	t.is(find('script', dom)[0].children.length, 1, 'script tag does have children');
+	t.is(find('script', dom)[0].children[0].text.trim(), `{
+				mount: function() {
+					if (this.x < 2) {
+						this.body = "\\x3cxyz>XXX\\x3cul>";
+					}
+				}
+			}`, 'has original script content as text node');
+});

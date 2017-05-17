@@ -400,6 +400,7 @@ function DOM(tagName, match, parentNode) {
 		}
 	};
 }
+
 function parse$1(html) {
 	var dom = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : new DOM('root');
 
@@ -407,8 +408,12 @@ function parse$1(html) {
 	    lastIndex = 0,
 	    currentDOM = dom;
 
-	// remove all comments in code
-	html = html.replace(commentRegExp, '').trim();
+	// remove all comments in code & clean up scripts
+	html = html.replace(commentRegExp, '').replace(/<(script|style)[^>]*?>((?:.|\n)*?)<\/\1>/g, function (g, x, m) {
+		return g.replace(m, m.replace(/(['"])(.*?)\1/g, function (g, m1, m2) {
+			return m1 + m2.replace(/</g, '\\x3c') + m1;
+		}));
+	}).trim();
 	while (null !== (match = tagRegExp.exec(html))) {
 		var child = void 0;
 		var _text = html.substring(lastIndex, match.index).replace(/^[ \t]+|[ \t]$/g, ' ');

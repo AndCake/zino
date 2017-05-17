@@ -63,12 +63,13 @@ function DOM(tagName, match, parentNode) {
 		}
 	};
 }
+
 export function parse(html, dom = new DOM('root')) {
 	let match, lastIndex = 0,
 		currentDOM = dom;
 
-	// remove all comments in code
-	html = html.replace(commentRegExp, '').trim();
+	// remove all comments in code & clean up scripts
+	html = html.replace(commentRegExp, '').replace(/<(script|style)[^>]*?>((?:.|\n)*?)<\/\1>/g, (g, x, m) => g.replace(m, m.replace(/(['"])(.*?)\1/g, (g, m1, m2) => m1+m2.replace(/</g, '\\x3c')+m1))).trim();
 	while (null !== (match = tagRegExp.exec(html))) {
 		let child;
 		let text = html.substring(lastIndex, match.index).replace(/^[ \t]+|[ \t]$/g, ' ');
