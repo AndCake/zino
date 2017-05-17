@@ -1,6 +1,6 @@
 {
     "name": "zino",
-    "version": "2.0.3",
+    "version": "2.0.4",
     "description": "Micro component framework",
     "main": "zino.js",
     "directories": {
@@ -10,7 +10,8 @@
     "files": [
         "zino.js",
         "test.js",
-        "zino.min.js"
+        "zino.min.js",
+        "src"
     ],
     "homepage": "https://bitbucket.org/rkunze/zinojs.git",
     "scripts": {
