@@ -46,13 +46,14 @@ test('value escaping', t => {
 	t.is(parse(`x{{{test}}}y`, {test: '<&"'}), 'x<&"y', 'does not escape unescaped values');
 });
 
+/* // support for partial has been removed since it wasn't used
 test('partials', t => {
 	t.is(parse(`x{{>test}}y`), 'xtesty', 'returns partial name if no partial resolver provided');
 	t.is(parse(`x{{>test}}y`, {}, {
 		resolvePartial: name => 'resolved'
 	}), 'xresolvedy', 'resolves partial');
 });
-
+*/
 test('renders styles', t => {
 	t.is(parse(`x{{%test}}y`, {test: {
 		value: 'hallo'
@@ -85,5 +86,5 @@ test('complex data', t => {
 	t.is(parse(`x{{+data}}y`, {data: [1, 2, 3]}, {resolveData: (key, value) => {
 		t.is(value.toString(), '1,2,3', 'value handed to data resolver over correctly');
 		return 'abcde';
-	}}), 'x--abcde--y', 'returns data name if no data resolver is set');	
+	}}), 'x--abcde--y', 'returns data name if no data resolver is set');
 });

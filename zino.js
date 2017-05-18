@@ -1,8 +1,5 @@
-(function (global, factory) {
-	typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
-	typeof define === 'function' && define.amd ? define(factory) :
-	(global.Zino = factory());
-}(this, (function () { 'use strict';
+var Zino = (function () {
+'use strict';
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) {
   return typeof obj;
@@ -266,7 +263,7 @@ var parse = function parse(code, data) {
 		};
 	}
 
-	while ((match = syntax.exec(code)) !== null) {
+	while (match = syntax.exec(code)) {
 		if (match.index < lastPos) {
 			continue;
 		}
@@ -277,7 +274,7 @@ var parse = function parse(code, data) {
 		len = match[0].length;
 		lastPos = match.index + len;
 
-		if ('#^@'.indexOf(ch) >= 0) {
+		if ('#^'.indexOf(ch) >= 0) {
 			// begin of block
 			var cresult = void 0;
 
@@ -295,25 +292,25 @@ var parse = function parse(code, data) {
 				throw new Error('Unexpected end of block ' + key);
 			}
 			return { lastIndex: lastPos, content: result };
-		} else if (ch === '>') {
-			result += (options.resolvePartial || identity)(key, data);
-		} else if (ch === '!') {
-			// comment - don't do anything
-			result += '';
-		} else if (ch === '%') {
-			// interpret given values separated by comma as styling
-			result += key.split(/\s*,\s*/).map(renderStyle).join('');
-		} else if (ch === '+') {
-			var value = getValue(key, data);
-			var id = (options.resolveData || identity)(key, value);
-			result += '--' + id + '--';
-		} else if (ch === '{') {
-			// unescaped content
-			result += getValue(key, data);
-		} else {
-			// escaped content
-			result += ('' + getValue(match[1], data) || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
-		}
+		} /* else if (ch === '>') {	// removed support for partials since it's never used...
+    result += (options.resolvePartial || identity)(key, data);
+    }*/else if (ch === '!') {
+				// comment - don't do anything
+				result += '';
+			} else if (ch === '%') {
+				// interpret given values separated by comma as styling
+				result += key.split(/\s*,\s*/).map(renderStyle).join('');
+			} else if (ch === '+') {
+				var value = getValue(key, data);
+				var id = (options.resolveData || identity)(key, value);
+				result += '--' + id + '--';
+			} else if (ch === '{') {
+				// unescaped content
+				result += getValue(key, data);
+			} else {
+				// escaped content
+				result += ('' + getValue(match[1], data) || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+			}
 	}
 	result += code.substr(lastPos);
 	if (depth > 0) {
@@ -341,7 +338,7 @@ function parseAttributes(match) {
 	var attributes = [];
 	var attr = void 0;
 
-	while (null !== (attr = attrRegExp.exec(match))) {
+	while (attr = attrRegExp.exec(match)) {
 		var idx = attributes.push({ name: attr[1].toLowerCase(), value: attr[2] || attr[3] }) - 1;
 		attributes[attributes[idx].name] = attributes[idx].value;
 	}
@@ -462,7 +459,7 @@ function find(selector, dom) {
 	dom && dom.children.forEach(function (child) {
 		var attr = void 0;
 		if (child.text) return;
-		if (selector[0] === '#' && child.attributes.id === selector.substr(1) || (attr = selector.match(/^\[(\w+)\]/)) && child.attributes[attr[1]] || (attr = selector.match(/^\[(\w+)(\^|\$|\*)?=(?:'([^']*)'|"([^"]*)"|([^\]])*)\]/)) && child.attributes[attr[1]] && evaluateMatch(child.attributes[attr[1]], attr[2], attr[3] || attr[4] || attr[5]) || selector[0] === '.' && child.attributes['class'] && child.attributes['class'].split(' ').indexOf(selector.substr(1)) >= 0 || child.tagName === selector.split(/\[\.#/)[0]) {
+		if (selector[0] === '#' && child.attributes.id === selector.substr(1) || (attr = selector.match(/^\[(\w+)\]/)) && child.attributes[attr[1]] || (attr = selector.match(/^\[(\w+)(\^|\$|\*)?=(?:'([^']*)'|"([^"]*)"|([^\]])*)\]/)) && child.attributes[attr[1]] && evaluateMatch(child.attributes[attr[1]], attr[2], attr[3] || attr[4] || attr[5]) || selector[0] === '.' && child.className.split(' ').indexOf(selector.substr(1)) >= 0 || child.tagName === selector.split(/\[\.#/)[0]) {
 			result.push(child);
 		}
 		result = result.concat(find(selector, child));
@@ -475,8 +472,7 @@ var eventQueue = {};
 function trigger(name, data) {
 	if (!eventQueue[name]) return;
 	for (var index in eventQueue[name]) {
-		var event = eventQueue[name][index];
-		var result = event(data);
+		var result = eventQueue[name][index](data);
 		if (result === false) break;
 	}
 }
@@ -489,7 +485,7 @@ function on(name, fn) {
 }
 
 function off(name, fn) {
-	if (typeof fn !== 'function') {
+	if (!isFn(fn)) {
 		delete eventQueue[name];
 		return;
 	}
@@ -502,18 +498,14 @@ function off(name, fn) {
 }
 
 function one(name, fn) {
-	var _this = this,
-	    _arguments = arguments;
-
-	var _self = void 0;
-	on(name, _self = function self() {
-		fn.apply(_this, _arguments);
-		off(name, _self);
+	on(name, function self() {
+		fn.apply(this, arguments);
+		off(name, self);
 	});
 }
 
 function attachEvent(el, events, host) {
-	if (typeof el.addEventListener !== 'function') return;
+	if (!isFn(el.addEventListener)) return;
 	var findEl = function findEl(selector, target) {
 		var node = find(selector, el);
 		while (node.length > 0 && target !== host) {
@@ -556,8 +548,7 @@ var defaultFunctions = {
 			tag.props[name] = value;
 		}
 		if (!tag.mounting) {
-			var subEvents = renderTag(tag);
-			attachSubEvents(subEvents, tag);
+			trigger('--zino-rerender-tag', tag);
 		}
 	}
 };
@@ -604,6 +595,11 @@ function mount(tag, ignoreRender) {
 	return initializeTag.call(ignoreRender ? { noEvents: true } : this, tag, entry);
 }
 
+function render(tag) {
+	var subEvents = renderTag(tag);
+	attachSubEvents(subEvents, tag);
+}
+
 
 
 function initializeTag(tag, registryEntry) {
@@ -616,7 +612,7 @@ function initializeTag(tag, registryEntry) {
 	for (var all in functions) {
 		var entry = functions[all];
 		if (['mount', 'unmount', 'events', 'render'].indexOf(all) < 0) {
-			if (typeof entry === 'function') {
+			if (isFn(entry)) {
 				tag[all] = entry.bind(tag);
 			} else {
 				tag[all] = entry;
@@ -643,7 +639,7 @@ function initializeTag(tag, registryEntry) {
 		set: function set(val) {
 			tag.__i = val;
 			setElementAttr(tag);
-			renderTag(tag);
+			render(tag);
 		},
 		get: function get() {
 			return tag.__i;
@@ -652,7 +648,7 @@ function initializeTag(tag, registryEntry) {
 	tag.__s = tag.__s || tag.setAttribute;
 	tag.setAttribute = function (attr, val) {
 		tag.__s(attr, val);
-		renderTag(tag);
+		render(tag);
 	};
 
 	// call mount callback
@@ -815,12 +811,11 @@ function handleStyles(element) {
 	var tagName = element.tagName;
 	find('link', element).forEach(function (link) {
 		if (link.attributes.type === 'stylesheet') {
-			link.attributes.id = tagName + '-external-styles';
 			trigger('publish-style', link);
 		}
 	});
 	trigger('publish-style', find('style', element).map(function (style) {
-		var code = style.children[0].text.replace(/<br>/g, '');
+		var code = style.innerHTML.replace(/<br>/g, '');
 		return code.replace(/[\r\n]*([^@%\{;\}]+?)\{/gm, function (global, match) {
 			var selectors = match.split(',').map(function (selector) {
 				selector = selector.trim();
@@ -837,12 +832,12 @@ function handleStyles(element) {
 function handleScripts(element, path) {
 	var functions = merge({}, defaultFunctions);
 	find('script', element).forEach(function (script) {
-		var text = script.children.length > 0 && script.children[0].text.trim();
+		var text = script.innerHTML.trim();
 		if (script.attributes.src) {
 			return trigger('publish-script', script);
 		}
 		try {
-			text = text.replace(/\bZino\.import\s*\(/g, 'Zino.import.call({path: "' + path + '"}, ').replace(/;$/g, '');
+			text = text.replace(/\bZino\.import\s*\(/g, 'Zino.import.call({path: "' + path + '"}, ');
 			merge(functions, new Function('return ' + text)());
 		} catch (e) {
 			error$1('parse script ' + text + ' in tag ' + element.tagName, e);
@@ -856,6 +851,7 @@ on('--zino-mount-tag', mount);
 
 var urlRegistry = window.zinoTagRegistry || {};
 var Zino = void 0;
+var dirtyTags = [];
 var tagObserver = new MutationObserver(function (records) {
 	records.forEach(function (record) {
 		var added = record.addedNodes,
@@ -895,7 +891,7 @@ var zino = Zino = {
 		req.onreadystatechange = function () {
 			if (req.readyState === 4) {
 				var callbacks = urlRegistry[url].callback;
-				if (req.status === 200 && cache) {
+				if (req.status === 200) {
 					urlRegistry[url] = req.responseText;
 				}
 				if (!cache) delete urlRegistry[url];
@@ -926,6 +922,9 @@ on('publish-style', function (data) {
 	data && document.head.appendChild(data);
 });
 on('publish-script', document.head.appendChild);
+on('--zino-rerender-tag', function (tag) {
+	return dirtyTags.push(tag);
+});
 trigger('publish-style', '[__ready] { contain: content; }');
 find('[rel="zino-tag"]', document).forEach(function (tag) {
 	return Zino.import(tag.href);
@@ -935,7 +934,13 @@ tagObserver.observe(document.body, {
 	childList: true
 });
 
+requestAnimationFrame(function reRender() {
+	dirtyTags.forEach(render);
+	dirtyTags = [];
+	requestAnimationFrame(reRender);
+});
+
 return zino;
 
-})));
+}());
 //# sourceMappingURL=zino.js.map

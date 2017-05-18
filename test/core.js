@@ -1,4 +1,5 @@
 import * as core from '../src/core';
+import {on, off} from '../src/events';
 import * as html from '../src/htmlparser';
 import test from './test';
 
@@ -6,7 +7,6 @@ test('Zino core functionality');
 let document = html.parse('X<myx-tag></myx-tag>Y<my-other-tag></my-other-tag>');
 
 test('render simple tag', t => {
-	debugger;
 	core.registerTag(`
 <myx-tag>
 	<div class="abc">A-{{#props.times}}B{{/props.times}}-C{{#letter}}-{{.}}{{/letter}}</div><script>
@@ -23,8 +23,11 @@ test('render simple tag', t => {
 	</script></myx-tag>`, './', document);
 	t.is(document.children[1].outerHTML, `<myx-tag __ready="true"><div class="-shadow-root"><div class="abc">A-BB-C</div></div></myx-tag>`, 'renders a tag');
 
+	let dirty = [];
+	on('--zino-rerender-tag', tag => dirty.push(tag));
 	document.children[1].setProps('times', [1, 2, 3]);
-	t.is(document.children[1].outerHTML, `<myx-tag __ready="true"><div class="-shadow-root"><div class="abc">A-BBB-C</div></div></myx-tag>`, 're-renders the tag after setProps');
+	t.is(dirty.length, 1, 'triggers re-render on tag after setProps');
+	off('--zino-rerender-tag');
 
 	document.children[1].setAttribute('letter', 'D');
 	t.is(document.children[1].outerHTML, `<myx-tag __ready="true" letter="D"><div class="-shadow-root"><div class="abc">A-BBB-C-D</div></div></myx-tag>`, 'renders a simple diff');
@@ -53,9 +56,11 @@ test('calls all callbacks', t => {
 	 t.throws(() => {
  		core.registerTag(`<y><script>({render:function(){throw 'render called';}})</script></y>`, './y', document);
 	}, 'render called', 'calls the render function');
+	on('--zino-rerender-tag', core.render);
 	t.throws(() => {
 		document.children[0].setProps('test', 123);
 	}, 'render called', 'calls the render function on setProps');
+	off('--zino-rerender-tag');
 
 	document.innerHTML = '<z></z>';
 	core.registerTag(`<a><script>({mount:function(){throw 'a mount called';}})</script></a>`, './');
