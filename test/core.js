@@ -29,8 +29,10 @@ test('render simple tag', t => {
 	t.is(dirty.length, 1, 'triggers re-render on tag after setProps');
 	off('--zino-rerender-tag');
 
+	on('--zino-rerender-tag', core.render);
 	document.children[1].setAttribute('letter', 'D');
 	t.is(document.children[1].outerHTML, `<myx-tag __ready="true" letter="D"><div class="-shadow-root"><div class="abc">A-BBB-C-D</div></div></myx-tag>`, 'renders a simple diff');
+	off('--zino-rerender-tag');
 });
 
 test('render tag with sub components', t => {
@@ -84,6 +86,7 @@ test('calls all callbacks', t => {
 });
 
 test('re-renders tag dynamically', t => {
+	on('--zino-rerender-tag', core.render);
 	document.innerHTML = '<ab>12 34</ab>';
 	core.registerTag('<ab>{{props.x}}{{{body}}}{{^x}}Y{{/x}}{{#x}}{{.}}{{/x}}<script>{props:{x:"X"}}</script></ab>', './ab', document);
 	t.is(document.children[0].children[0].innerHTML, 'X12 34Y', 'renders the body correctly');
@@ -96,4 +99,5 @@ test('re-renders tag dynamically', t => {
 
 	document.children[0].setAttribute('x', 'Z');
 	t.is(document.children[0].children[0].innerHTML, 'Y34 56Z', 're-rendered after setAttribute');
+	off('--zino-rerender-tag');
 });

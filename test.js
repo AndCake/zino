@@ -635,16 +635,16 @@ function initializeTag(tag, registryEntry) {
 		set: function set(val) {
 			tag.__i = val;
 			setElementAttr(tag);
-			render(tag);
+			trigger('--zino-rerender-tag', tag.getHost());
 		},
 		get: function get() {
 			return tag.__i;
 		}
 	});
-	tag.__s = tag.__s || tag.setAttribute;
+	tag.__s = tag.setAttribute;
 	tag.setAttribute = function (attr, val) {
 		tag.__s(attr, val);
-		render(tag);
+		trigger('--zino-rerender-tag', tag.getHost());
 	};
 
 	// call mount callback
