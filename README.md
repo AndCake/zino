@@ -965,3 +965,11 @@ Parameter:
 	DOM node
 
 This event is fired whenever a DOM node is removed from the DOM that contains (or is) a component. The DOM node provided is always a component. All contained sub components will have their `unmount` callback executed and complex data associated with this component will be cleaned up.
+
+### --zino-rerender-tag
+
+Parameter:
+
+	DOM node
+
+This event is fired whenever a tag needs to be re-rendered. The DOM node provided is the tag that requires re-rendering.
