@@ -1,5 +1,6 @@
 import * as core from './core';
 import {emptyFunc, merge} from './utils';
+import {on} from './events';
 import {parse} from './htmlparser';
 import fs from 'fs';
 import path from 'path';
@@ -79,6 +80,7 @@ export function matchesSnapshot(html, props = {}, name = '') {
 		}
 	}
 }
+on('--zino-rerender-tag', core.render);
 
 function writeResult(result) {
 	fs.writeFileSync(fileName, result);

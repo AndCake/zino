@@ -85,7 +85,7 @@ const
 
 				if (isObj(value)) {
 					for (var all in value) {
-						style += all.replace(/[A-Z]/g, function(g) { return '-' + g.toLowerCase(); }) + ':' + transform(value[all]) + ';';
+						style += all.replace(/[A-Z]/g, g => '-' + g.toLowerCase()) + ':' + transform(value[all]) + ';';
 					}
 				}
 
@@ -100,7 +100,7 @@ const
 			};
 		}
 
-		while ((match = syntax.exec(code)) !== null) {
+		while ((match = syntax.exec(code))) {
 			if (match.index < lastPos) {
 				continue;
 			}
@@ -111,7 +111,7 @@ const
 			len = match[0].length;
 			lastPos = match.index + len;
 
-			if ('#^@'.indexOf(ch) >= 0) {
+			if ('#^'.indexOf(ch) >= 0) {
 				// begin of block
 				let cresult;
 				[lastPos, cresult] = handleBlock(match[1], data, code, options, depth + 1, lastPos);
@@ -122,9 +122,9 @@ const
 					throw new Error('Unexpected end of block ' + key);
 				}
 				return {lastIndex: lastPos, content: result};
-			} else if (ch === '>') {
+			}/* else if (ch === '>') {	// removed support for partials since it's never used...
 				result += (options.resolvePartial || identity)(key, data);
-			} else if (ch === '!') {
+			}*/ else if (ch === '!') {
 				// comment - don't do anything
 				result += '';
 			} else if (ch === '%') {

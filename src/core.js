@@ -20,8 +20,7 @@ let tagRegistry = {},
 				tag.props[name] = value;
 			}
 			if (!tag.mounting) {
-				let subEvents = renderTag(tag);
-				attachSubEvents(subEvents, tag);
+				trigger('--zino-rerender-tag', tag);
 			}
 		}
 	};
@@ -31,7 +30,7 @@ export let renderOptions = {
 		let id = uuid();
 		dataRegistry[id] = value;
 		return id;
-	}	
+	}
 };
 
 export function registerTag(code, path, document) {
@@ -66,6 +65,11 @@ export function mount(tag, ignoreRender) {
 	return initializeTag.call(ignoreRender ? {noEvents: true} : this, tag, entry);
 }
 
+export function render(tag) {
+	let subEvents = renderTag(tag);
+	attachSubEvents(subEvents, tag);
+}
+
 export function flushRegisteredTags() {
 	tagRegistry = {};
 }
@@ -73,14 +77,14 @@ export function flushRegisteredTags() {
 function initializeTag(tag, registryEntry) {
 	// check if the tag has been initialized already
 	if (tag['__s'] || !registryEntry) return;
-	let functions = registryEntry.functions, 
+	let functions = registryEntry.functions,
 		isRendered;
 
 	// copy all defined functions/attributes
 	for (let all in functions) {
 		let entry = functions[all];
 		if (['mount', 'unmount', 'events', 'render'].indexOf(all) < 0) {
-			if (typeof entry === 'function') {
+			if (isFn(entry)) {
 				tag[all] = entry.bind(tag);
 			} else {
 				tag[all] = entry;
@@ -107,14 +111,14 @@ function initializeTag(tag, registryEntry) {
 		set(val) {
 			tag.__i = val;
 			setElementAttr(tag);
-			renderTag(tag.getHost());
+			render(tag);
 		},
 		get() { return tag.__i; }
 	});
 	tag.__s = tag.__s || tag.setAttribute;
 	tag.setAttribute = function(attr, val) {
 		tag.__s(attr, val);
-		renderTag(tag.getHost());
+		render(tag);
 	};
 
 	// call mount callback
@@ -143,7 +147,7 @@ function initializeTag(tag, registryEntry) {
 
 	if (!tag.attributes.__ready) {
 		tag.__s('__ready', true);
-	}	
+	}
 	if (!this || this.noEvents !== true) {
 		// attach sub events
 		attachSubEvents(subEvents, tag);
@@ -262,13 +266,12 @@ function handleStyles(element) {
 	let tagName = element.tagName;
 	$('link', element).forEach(link => {
 		if (link.attributes.type === 'stylesheet') {
-			link.attributes.id = tagName + '-external-styles';
 			trigger('publish-style', link);
 		}
 	});
 	trigger('publish-style',
 		$('style', element).map(style => {
-			let code = style.children[0].text.replace(/<br>/g, '');
+			let code = style.innerHTML.replace(/<br>/g, '');
 			return code.replace(/[\r\n]*([^@%\{;\}]+?)\{/gm, (global, match) => {
 				var selectors = match.split(',').map(selector => {
 					selector = selector.trim();
@@ -288,13 +291,13 @@ function handleStyles(element) {
 function handleScripts(element, path) {
 	let functions = merge({}, defaultFunctions);
 	$('script', element).forEach(script => {
-		let text = script.children.length > 0 && script.children[0].text.trim();
+		let text = script.innerHTML.trim();
 		if (script.attributes.src) {
 			return trigger('publish-script', script);
 		}
 		try {
-			text = text.replace(/\bZino\.import\s*\(/g, 'Zino.import.call({path: "' + path + '"}, ').replace(/;$/g, '');
-			merge(functions, new Function(`return ${text}`)());
+			text = text.replace(/\bZino\.import\s*\(/g, 'Zino.import.call({path: "' + path + '"}, ');
+			merge(functions, new Function('return ' + text)());
 		} catch (e) {
 			error(`parse script ${text} in tag ${element.tagName}`, e);
 		}

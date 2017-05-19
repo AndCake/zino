@@ -8,7 +8,7 @@ function parseAttributes(match) {
 	let attributes = [];
 	let attr;
 
-	while (null !== (attr = attrRegExp.exec(match))) {
+	while ((attr = attrRegExp.exec(match))) {
 		let idx = attributes.push({name: attr[1].toLowerCase(), value: attr[2] || attr[3]}) - 1;
 		attributes[attributes[idx].name] = attributes[idx].value;
 	}
@@ -35,9 +35,7 @@ function DOM(tagName, match, parentNode) {
 			}
 		},
 		get innerHTML() {
-			return this.children.map(
-				child => child.text || child.outerHTML
-			).join('');
+			return this.children.map(child => child.text || child.outerHTML).join('');
 		},
 		set innerHTML(value) {
 			this.children = parse(value).children;
@@ -121,7 +119,7 @@ export function find(selector, dom) {
 		if (selector[0] === '#' && child.attributes.id === selector.substr(1) ||
 			(attr = selector.match(/^\[(\w+)\]/)) && child.attributes[attr[1]] ||
 			(attr = selector.match(/^\[(\w+)(\^|\$|\*)?=(?:'([^']*)'|"([^"]*)"|([^\]])*)\]/)) && child.attributes[attr[1]] && evaluateMatch(child.attributes[attr[1]], attr[2], attr[3] || attr[4] || attr[5]) ||
-			selector[0] === '.' && child.attributes['class'] && child.attributes['class'].split(' ').indexOf(selector.substr(1)) >= 0 ||
+			selector[0] === '.' && child.className.split(' ').indexOf(selector.substr(1)) >= 0 ||
 			child.tagName === selector.split(/\[\.#/)[0]) {
 			result.push(child);
 		}

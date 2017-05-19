@@ -1,10 +1,11 @@
-import {registerTag} from './core';
+import {registerTag, render} from './core';
 import {emptyFunc, isObj} from './utils';
 import {find as $} from './htmlparser';
 import {on, one, off, trigger} from './events';
 
 let urlRegistry = window.zinoTagRegistry || {},
 	Zino,
+	dirtyTags = [],
 	tagObserver = new MutationObserver(records => {
 		records.forEach(record => {
 			let added = record.addedNodes,
@@ -35,12 +36,12 @@ export default Zino = {
 			callback: [callback]
 		};
 		if (code) return;
-		var req = new XMLHttpRequest();
+		let req = new XMLHttpRequest();
 		req.open('GET', url, true);
 		req.onreadystatechange = () => {
 			if (req.readyState === 4) {
 				let callbacks = urlRegistry[url].callback;
-				if (req.status === 200 && cache) {
+				if (req.status === 200) {
 					urlRegistry[url] = req.responseText;
 				}
 				if (!cache) delete urlRegistry[url];
@@ -68,9 +69,16 @@ on('publish-style', data => {
 	data && document.head.appendChild(data);
 });
 on('publish-script', document.head.appendChild);
+on('--zino-rerender-tag', tag => dirtyTags.push(tag));
 trigger('publish-style', '[__ready] { contain: content; }');
 $('[rel="zino-tag"]', document).forEach(tag => Zino.import(tag.href));
 tagObserver.observe(document.body, {
 	subtree: true,
 	childList: true
+});
+
+requestAnimationFrame(function reRender() {
+	dirtyTags.forEach(render);
+	dirtyTags = [];
+	requestAnimationFrame(reRender);
 });
