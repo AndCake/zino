@@ -77,3 +77,18 @@ test('calls all callbacks', t => {
 	core.registerTag(`<w>a</w>`, './', document);
 	t.true(called, 'on ready was called');
 });
+
+test('re-renders tag dynamically', t => {
+	document.innerHTML = '<ab>12 34</ab>';
+	core.registerTag('<ab>{{props.x}}{{{body}}}{{^x}}Y{{/x}}{{#x}}{{.}}{{/x}}<script>{props:{x:"X"}}</script></ab>', './ab', document);
+	t.is(document.children[0].children[0].innerHTML, 'X12 34Y', 'renders the body correctly');
+
+	document.children[0].body = '34 56';
+	t.is(document.children[0].children[0].innerHTML, 'X34 56Y', 're-rendered after body change');
+	
+	document.children[0].setProps('x', 'Y');
+	t.is(document.children[0].children[0].innerHTML, 'Y34 56Y', 're-rendered after setProps');
+
+	document.children[0].setAttribute('x', 'Z');
+	t.is(document.children[0].children[0].innerHTML, 'Y34 56Z', 're-rendered after setAttribute');
+});

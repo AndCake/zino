@@ -118,7 +118,7 @@ function merge(target) {
 }
 
 function propDetails(obj, attribute) {
-	return Object.getOwnPropertyDescriptor(obj, attribute) || {};
+	return isObj(obj) && Object.getOwnPropertyDescriptor(obj, attribute) || {};
 }
 
 /**
@@ -632,7 +632,7 @@ function initializeTag(tag, registryEntry) {
 		set: function set(val) {
 			tag.__i = val;
 			setElementAttr(tag);
-			renderTag(tag);
+			renderTag(tag.getHost());
 		},
 		get: function get() {
 			return tag.__i;
@@ -641,7 +641,7 @@ function initializeTag(tag, registryEntry) {
 	tag.__s = tag.__s || tag.setAttribute;
 	tag.setAttribute = function (attr, val) {
 		tag.__s(attr, val);
-		renderTag(tag);
+		renderTag(tag.getHost());
 	};
 
 	// call mount callback

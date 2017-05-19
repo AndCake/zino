@@ -51,7 +51,7 @@ module.exports = function(config) {
 	files: [
 		'node_modules/rkgttr-weakmappolyfill/index.umd.js',
 		'node_modules/rkgttr-mutationobserverpolyfill/index.umd.js',
-		'zino.min.js',
+		'zino.js',
 		'test/karma/**/test.*.js',
 		{pattern: 'test/components/*.*', included: false},
 	],

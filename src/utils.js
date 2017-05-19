@@ -17,7 +17,7 @@ export function merge (target, ...args) {
 }
 
 function propDetails(obj, attribute) {
-	return Object.getOwnPropertyDescriptor(obj, attribute) || {};
+	return isObj(obj) && Object.getOwnPropertyDescriptor(obj, attribute) || {};
 }
 
 /**

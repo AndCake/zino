@@ -107,14 +107,14 @@ function initializeTag(tag, registryEntry) {
 		set(val) {
 			tag.__i = val;
 			setElementAttr(tag);
-			renderTag(tag);
+			renderTag(tag.getHost());
 		},
 		get() { return tag.__i; }
 	});
 	tag.__s = tag.__s || tag.setAttribute;
 	tag.setAttribute = function(attr, val) {
 		tag.__s(attr, val);
-		renderTag(tag);
+		renderTag(tag.getHost());
 	};
 
 	// call mount callback

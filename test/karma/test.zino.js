@@ -166,4 +166,36 @@ describe('zino', function () {
 			}, 100);
 		});
 	});
+
+	describe('re-renders tag dynamically', function() {
+		var ab = document.createElement('ab');
+		ab.innerHTML = '12 34';
+		document.body.appendChild(ab);
+		Zino.fetch('base/test/components/ab.html', null, true, '<ab>{{props.x}}{{{body}}}{{^x}}Y{{/x}}{{#x}}{{.}}{{/x}}<script>{props:{x:"X"}}</script></ab>');
+		Zino.import('base/test/components/ab.html');
+
+		it('renders the body correctly', function(done) {
+			assertElementHasContent('ab .-shadow-root', 'X12 34Y', 'body contains expected value');
+			done();
+		});
+		
+
+		it('re-renders after body change', function(done) {
+			document.querySelector('ab').body = '34 56';
+			assertElementHasContent('ab .-shadow-root', 'X34 56Y', 're-rendered after body change');
+			done();
+		});
+
+		it('re-renders after setProps', function(done) {
+			document.querySelector('ab').setProps('x', 'Y');
+			assertElementHasContent('ab .-shadow-root', 'Y34 56Y', 're-rendered after setProps');
+			done();
+		});
+
+		it('re-renders after setAttribute', function(done) {
+			document.querySelector('ab').setAttribute('x', 'Z');
+			assertElementHasContent('ab .-shadow-root', 'Y34 56Z', 're-rendered after setAttribute');
+			done();
+		});
+	});
 });
