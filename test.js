@@ -954,11 +954,12 @@ function matchesSnapshot() {
 		if (previousResult !== resultString) {
 			// create a diff
 			var diffResult = diff(previousResult, resultString);
+			process.stderr.write('\nComponent ' + fileName + ' - snapshots don\'t match: \n');
 			diffResult.forEach(function (part) {
 				var color = part[0] === diff.DELETE ? 'red' : part[0] === diff.INSERT ? 'green' : 'gray';
 				process.stderr.write(part[1][color]);
 			});
-			if (readline.question('\nThe snapshots don\'t match.\nDo you want to take the new one as the reference snapshot (y/N)?') === 'y') {
+			if (readline.question('\nDo you want to take the new snapshot as the reference snapshot (y/N)?') === 'y') {
 				writeResult(resultString);
 			} else {
 				throw new Error('Snapshots don\'t match.');
