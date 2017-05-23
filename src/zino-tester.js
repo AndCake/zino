@@ -1,5 +1,5 @@
 import * as core from './core';
-import {emptyFunc, merge} from './utils';
+import {emptyFunc, merge, isObj} from './utils';
 import {on, off, one, trigger} from './events';
 import {parse} from './htmlparser';
 import fs from 'fs';
@@ -31,8 +31,14 @@ export function clearImports() {
 	core.flushRegisteredTags();
 }
 
-export function matchesSnapshot(html, props = {}, name = '') {
+export function matchesSnapshot(...args) {
+	if (isObj(args[0])) {
+		var {html, props = {}, name = '', callback = () => {}} = args[0];
+	} else {
+		var [html, props = {}, name = '', callback = () => {}] = args;
+	}
 	let code = parse(html);
+
 	fileName = './test/snapshots/' + code.children[0].tagName + '-' + (name && name + '-' || '') + sha1(html + JSON.stringify(props)).substr(0, 5);
 	core.renderOptions.resolveData = (key, value) => sha1(key + '-' + JSON.stringify(value));
 	let {events, data} = core.mount(code.children[0], true);
@@ -40,6 +46,8 @@ export function matchesSnapshot(html, props = {}, name = '') {
 	if (Object.keys(props).length > 0) {
 		code.children[0].setProps(props);
 	}
+
+	callback(code.children[0]);
 
 	let eventList = [];
 	events = events.forEach(e => eventList = eventList.concat(e.childEvents, e.hostEvents));

@@ -885,11 +885,31 @@ function clearImports() {
 	flushRegisteredTags();
 }
 
-function matchesSnapshot(html) {
-	var props = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-	var name = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : '';
+function matchesSnapshot() {
+	for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
+		args[_key] = arguments[_key];
+	}
 
+	if (isObj(args[0])) {
+		var _args$ = args[0],
+		    html = _args$.html,
+		    _args$$props = _args$.props,
+		    props = _args$$props === undefined ? {} : _args$$props,
+		    _args$$name = _args$.name,
+		    name = _args$$name === undefined ? '' : _args$$name,
+		    _args$$callback = _args$.callback,
+		    callback = _args$$callback === undefined ? function () {} : _args$$callback;
+	} else {
+		var html = args[0],
+		    _args$2 = args[1],
+		    props = _args$2 === undefined ? {} : _args$2,
+		    _args$3 = args[2],
+		    name = _args$3 === undefined ? '' : _args$3,
+		    _args$4 = args[3],
+		    callback = _args$4 === undefined ? function () {} : _args$4;
+	}
 	var code = parse$1(html);
+
 	fileName = './test/snapshots/' + code.children[0].tagName + '-' + (name && name + '-' || '') + sha1(html + JSON.stringify(props)).substr(0, 5);
 	renderOptions.resolveData = function (key, value) {
 		return sha1(key + '-' + JSON.stringify(value));
@@ -902,6 +922,8 @@ function matchesSnapshot(html) {
 	if (Object.keys(props).length > 0) {
 		code.children[0].setProps(props);
 	}
+
+	callback(code.children[0]);
 
 	var eventList = [];
 	events = events.forEach(function (e) {
