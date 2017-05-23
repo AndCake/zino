@@ -872,6 +872,9 @@ merge(global, {
 		import: emptyFunc,
 		fetch: emptyFunc
 	},
+	require: function require() {
+		return emptyFunc;
+	},
 	setTimeout: emptyFunc,
 	setInterval: emptyFunc
 });
