@@ -944,6 +944,7 @@ function matchesSnapshot() {
 	});
 
 	var resultString = code.children[0].outerHTML + '\n' + JSON.stringify({ data: data, events: events }, null, 2);
+	resultString = resultString.replace(/\r\n/g, '\n');
 
 	if (!fs.existsSync(path.dirname(fileName))) {
 		fs.mkdirSync(path.dirname(fileName));
@@ -951,7 +952,7 @@ function matchesSnapshot() {
 	} else if (!fs.existsSync(fileName)) {
 		writeResult(resultString);
 	} else {
-		var previousResult = fs.readFileSync(fileName, 'utf-8');
+		var previousResult = fs.readFileSync(fileName, 'utf-8').replace(/\r/g, '');
 		if (previousResult !== resultString) {
 			// create a diff
 			var diffResult = diff(previousResult, resultString);

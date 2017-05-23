@@ -64,6 +64,7 @@ export function matchesSnapshot(...args) {
 	});
 
 	let resultString = code.children[0].outerHTML + '\n' + JSON.stringify({data, events}, null, 2);
+	resultString = resultString.replace(/\r\n/g, '\n');
 
 	if (!fs.existsSync(path.dirname(fileName))) {
 		fs.mkdirSync(path.dirname(fileName));
@@ -71,7 +72,7 @@ export function matchesSnapshot(...args) {
 	} else if (!fs.existsSync(fileName)) {
 		writeResult(resultString);
 	} else {
-		let previousResult = fs.readFileSync(fileName, 'utf-8');
+		let previousResult = fs.readFileSync(fileName, 'utf-8').replace(/\r/g, '');
 		if (previousResult !== resultString) {
 			// create a diff
 			let diffResult = diff(previousResult, resultString);
