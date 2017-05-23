@@ -1,6 +1,6 @@
 import * as core from './core';
 import {emptyFunc, merge} from './utils';
-import {on} from './events';
+import {on, off, one, trigger} from './events';
 import {parse} from './htmlparser';
 import fs from 'fs';
 import path from 'path';
@@ -14,10 +14,7 @@ let fileName = null;
 
 merge(global, {
 	Zino: {
-		trigger: emptyFunc,
-		on: emptyFunc,
-		off: emptyFunc,
-		one: emptyFunc,
+		trigger, on, off, one,
 		import: emptyFunc,
 		fetch: emptyFunc
 	},

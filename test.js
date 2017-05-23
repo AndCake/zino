@@ -494,9 +494,25 @@ function on(name, fn) {
 	eventQueue[name].push(fn);
 }
 
+function off(name, fn) {
+	if (!isFn(fn)) {
+		delete eventQueue[name];
+		return;
+	}
+	for (var index in eventQueue[name]) {
+		if (eventQueue[name][index] === fn) {
+			delete eventQueue[name][index];
+			return;
+		}
+	}
+}
 
-
-
+function one(name, fn) {
+	on(name, function self() {
+		fn.apply(this, arguments);
+		off(name, self);
+	});
+}
 
 function attachEvent(el, events, host) {
 	if (!isFn(el.addEventListener)) return;
@@ -852,10 +868,7 @@ var fileName = null;
 
 merge(global, {
 	Zino: {
-		trigger: emptyFunc,
-		on: emptyFunc,
-		off: emptyFunc,
-		one: emptyFunc,
+		trigger: trigger, on: on, off: off, one: one,
 		import: emptyFunc,
 		fetch: emptyFunc
 	},
