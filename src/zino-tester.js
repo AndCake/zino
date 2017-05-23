@@ -40,7 +40,8 @@ export function matchesSnapshot(...args) {
 	}
 	let code = parse(html);
 
-	fileName = './test/snapshots/' + code.children[0].tagName + '-' + (name && name + '-' || '') + sha1(html + JSON.stringify(props)).substr(0, 5);
+	name = name.replace(/[^a-zA-Z0-9._-]/g, '-');
+	fileName = './test/snapshots/' + code.children[0].tagName + '-' + (name && name + '-' || '') + sha1(html + JSON.stringify(props) + callback.toString()).substr(0, 5);
 	core.renderOptions.resolveData = (key, value) => sha1(key + '-' + JSON.stringify(value));
 	let {events, data} = core.mount(code.children[0], true);
 
