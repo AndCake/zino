@@ -50,7 +50,7 @@ const
 							'.length': condition.length,
 							'.': el
 						}),
-						options,
+						merge({key, condition}, options),
 						depth,
 						startIdx
 					);
@@ -67,7 +67,7 @@ const
 		}
 
 		if (!isObj(parsed)) {
-			parsed = parse(code, data, options, depth, startIdx);
+			parsed = parse(code, data, merge({key, condition}, options), depth, startIdx);
 		}
 
 		return [parsed.lastIndex, result];
@@ -76,6 +76,7 @@ const
 	parse = function(code, data, options = {}, depth = 0, startIdx = 0) {
 		let result = '',
 			lastPos = startIdx,
+			lastBlock = '',
 			match, key, len, ch,
 
 			transform = val => isFn(val) ? transform(val.apply(data)) : val + (typeof val === 'number' && val !== null ? (data.styles && data.styles.defaultUnit || 'px') : ''),
@@ -114,6 +115,7 @@ const
 			if ('#^'.indexOf(ch) >= 0) {
 				// begin of block
 				let cresult;
+				lastBlock = [key, lastPos, match.index];
 				[lastPos, cresult] = handleBlock(match[1], data, code, options, depth + 1, lastPos);
 				result += cresult;
 			} else if (ch === '/') {
@@ -144,7 +146,7 @@ const
 		}
 		result += code.substr(lastPos);
 		if (depth > 0) {
-			throw new Error('Unable to locate end of block for ' + code.substr(startIdx));
+			throw new BlockEndError(options.key, startIdx, result, data, options.condition);
 		}
 
 		return {
@@ -158,3 +160,13 @@ export default function(code, data, options) {
 	var result = parse(code, data, options);
 	return result && result.content || '';
 };
+
+function BlockEndError(block, position, result, data, condition) {
+	this.message = 'Unable to locate end of block ' + block;
+	this.block = block;
+	this.result = result;
+	this.data = data;
+	this.position = position;
+	this.condition = condition;
+	this.name = 'BlockEndError';
+}

@@ -17,6 +17,9 @@ function parseAttributes(match) {
 
 function DOM(tagName, match, parentNode) {
 	let attributes = parseAttributes(match);
+	let isDirty = true;
+	let childCount = 0;
+	let innerHTML = '';
 
 	// make sure all tag names are lower cased
 	tagName = tagName && tagName.toLowerCase();
@@ -26,6 +29,11 @@ function DOM(tagName, match, parentNode) {
 		attributes,
 		children: [],
 		parentNode,
+
+		set __isDirty(value) {
+			isDirty = value;
+			parentNode && (parentNode.__isDirty = value);
+		},
 		get outerHTML() {
 			let attributes = [''].concat(this.attributes.map(attr => attr.name + '="' + attr.value + '"'));
 			if (selfClosingTags.indexOf(this.tagName) >= 0) {
@@ -35,10 +43,16 @@ function DOM(tagName, match, parentNode) {
 			}
 		},
 		get innerHTML() {
-			return this.children.map(child => child.text || child.outerHTML).join('');
+			if (isDirty || this.children.length !== childCount) {
+				innerHTML = this.children.map(child => child.text || child.outerHTML).join('')
+				isDirty = false;
+				childCount = this.children.length;
+			}
+			return innerHTML;
 		},
 		set innerHTML(value) {
 			this.children = parse(value).children;
+			this.__isDirty = true;
 		},
 		get className() {
 			return this.attributes['class'] || '';
@@ -47,9 +61,12 @@ function DOM(tagName, match, parentNode) {
 			return this.attributes[name];
 		},
 		setAttribute(name, value) {
-			this.attributes = this.attributes.filter(attr => attr.name !== name);
-			value !== null && this.attributes.push({name, value});
-			this.attributes[name] = value;
+			if (this.attributes[name] !== value) {
+				this.attributes = this.attributes.filter(attr => attr.name !== name);
+				value !== null && this.attributes.push({name, value});
+				this.attributes[name] = value;
+				this.__isDirty = true;
+			}
 		},
 		removeChild(ref) {
 			for (var all in this.children) {
@@ -58,11 +75,34 @@ function DOM(tagName, match, parentNode) {
 					break;
 				}
 			}
+		},
+		cloneNode() {
+			let clone = DOM(this.tagName, '', this.parentNode);
+			this.attributes.forEach(attr => clone.setAttribute(attr.name, attr.value));
+			this.children.forEach(child => clone.children.push(child.cloneNode()));
+			return clone;
 		}
 	};
 }
 
-export function parse(html, dom = new DOM('root')) {
+function Text(text, parentNode) {
+	var content = text;
+	return {
+		get text() {
+			return content;
+		},
+		set text(value) {
+			content = value;
+			parentNode.__isDirty = true;
+		},
+		parentNode,
+		cloneNode() {
+			return Text(content, this.parentNode);
+		}
+	};
+}
+
+export function parse(html, dom = DOM('root')) {
 	let match, lastIndex = 0,
 		currentDOM = dom;
 
@@ -74,7 +114,7 @@ export function parse(html, dom = new DOM('root')) {
 		lastIndex = match.index + match[0].length;
 		if (text.length > 0) {
 			// if we have any text in between the tags, add it as text node
-			currentDOM.children.push({text});
+			currentDOM.children.push(Text(text, currentDOM));
 		}
 		if (match[1]) {
 			// closing tag
@@ -82,7 +122,7 @@ export function parse(html, dom = new DOM('root')) {
 			currentDOM = currentDOM.parentNode;
 		} else {
 			// opening tag
-			child = new DOM(match[2], match[3], currentDOM);
+			child = DOM(match[2], match[3], currentDOM);
 			currentDOM.children.push(child);
 			if (!match[4] && selfClosingTags.indexOf(child.tagName) < 0) {
 				// if it's not a self-closing tag, create a nesting level
@@ -92,7 +132,7 @@ export function parse(html, dom = new DOM('root')) {
 	}
 	// capture the text after the last found tag
 	let text = html.substr(lastIndex);
-	text && dom.children.push({text});
+	text && dom.children.push(Text(text, dom));
 
 	return dom;
 }
