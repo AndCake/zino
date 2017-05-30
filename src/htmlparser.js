@@ -68,7 +68,7 @@ export function parse(html, dom = new DOM('root')) {
 
 	// remove all comments in code & clean up scripts
 	html = html.replace(commentRegExp, '').replace(/<(script|style)[^>]*?>((?:.|\n)*?)<\/\1>/g, (g, x, m) => g.replace(m, m.replace(/(['"])(.*?)\1/g, (g, m1, m2) => m1+m2.replace(/</g, '\\x3c')+m1))).trim();
-	while (null !== (match = tagRegExp.exec(html))) {
+	while ((match = tagRegExp.exec(html))) {
 		let child;
 		let text = html.substring(lastIndex, match.index).replace(/^[ \t]+|[ \t]$/g, ' ');
 		lastIndex = match.index + match[0].length;
@@ -98,17 +98,10 @@ export function parse(html, dom = new DOM('root')) {
 }
 
 export function find(selector, dom) {
-	const evaluateMatch = (value, operator, expected) => {
-		if (!operator) return value === expected;
-		if (operator === '^') return value.indexOf(expected) === 0;
-		if (operator === '$') return value.lastIndexOf(expected) + expected.length === value.length;
-		if (operator === '*') return value.indexOf(expected) >= 0;
-		return false;
-	};
 	let result = [];
 
 	// for regular Browser DOM
-	if (dom && typeof dom.ownerDocument !== 'undefined') {
+	if (dom && typeof dom.querySelectorAll === 'function') {
 		return [].slice.call(dom.querySelectorAll(selector));
 	}
 
@@ -118,7 +111,6 @@ export function find(selector, dom) {
 		if (child.text) return;
 		if (selector[0] === '#' && child.attributes.id === selector.substr(1) ||
 			(attr = selector.match(/^\[(\w+)\]/)) && child.attributes[attr[1]] ||
-			(attr = selector.match(/^\[(\w+)(\^|\$|\*)?=(?:'([^']*)'|"([^"]*)"|([^\]])*)\]/)) && child.attributes[attr[1]] && evaluateMatch(child.attributes[attr[1]], attr[2], attr[3] || attr[4] || attr[5]) ||
 			selector[0] === '.' && child.className.split(' ').indexOf(selector.substr(1)) >= 0 ||
 			child.tagName === selector.split(/\[\.#/)[0]) {
 			result.push(child);

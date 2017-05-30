@@ -48,3 +48,31 @@ test('can register one-time handler', t => {
 	events.trigger('one-time');
 	t.is(called, 0, 'one-time event handler has been removed');
 });
+
+test('calls debugging events', t => {
+	let triggered = false;
+	let registered = false;
+	let removed = false;
+	events.on('--event-trigger', ({name, fn, data}) => {
+		triggered = true;
+		t.is(typeof name, 'string', 'event trigger event name provided');
+		t.is(typeof fn, 'function', 'function triggered provided');
+		t.is(typeof data, 'object', 'data triggered provided');
+	});
+	events.on('--event-register', ({name, fn}) => {
+		registered = true;
+		t.is(typeof name, 'string', 'register event name provided');
+		t.is(typeof fn, 'function', 'function registered provided');
+	});
+	events.on('--event-unregister', ({name, fn}) => {
+		removed = true;
+		t.is(typeof name, 'string', 'remove event name provided');
+		t.is(typeof fn, 'function', 'function removed provided');
+	})
+	events.one('one-time2', () => {});
+	events.trigger('one-time2', {x: 1});
+
+	t.is(triggered, true, 'trigger event has been triggered');
+	t.is(registered, true, 'trigger event has been triggered');
+	t.is(removed, true, 'trigger event has been triggered');
+});

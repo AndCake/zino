@@ -159,9 +159,6 @@ var isFn = function isFn(fn) {
 	return typeof fn === 'function';
 };
 var emptyFunc = function emptyFunc() {};
-var identity = function identity(a) {
-	return a;
-};
 
 var syntax = /\{\{\s*([^\}]+)\s*\}\}\}?/g;
 var getValue = function getValue(name, data, noRun) {
@@ -292,25 +289,23 @@ var parse = function parse(code, data) {
 				throw new Error('Unexpected end of block ' + key);
 			}
 			return { lastIndex: lastPos, content: result };
-		} /* else if (ch === '>') {	// removed support for partials since it's never used...
-    result += (options.resolvePartial || identity)(key, data);
-    }*/else if (ch === '!') {
-				// comment - don't do anything
-				result += '';
-			} else if (ch === '%') {
-				// interpret given values separated by comma as styling
-				result += key.split(/\s*,\s*/).map(renderStyle).join('');
-			} else if (ch === '+') {
-				var value = getValue(key, data);
-				var id = (options.resolveData || identity)(key, value);
-				result += '--' + id + '--';
-			} else if (ch === '{') {
-				// unescaped content
-				result += getValue(key, data);
-			} else {
-				// escaped content
-				result += ('' + getValue(match[1], data) || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
-			}
+		} else if (ch === '!') {
+			// comment - don't do anything
+			result += '';
+		} else if (ch === '%') {
+			// interpret given values separated by comma as styling
+			result += key.split(/\s*,\s*/).map(renderStyle).join('');
+		} else if (ch === '+') {
+			var value = getValue(key, data);
+			var id = options.resolveData(key, value);
+			result += '--' + id + '--';
+		} else if (ch === '{') {
+			// unescaped content
+			result += getValue(key, data);
+		} else {
+			// escaped content
+			result += ('' + getValue(match[1], data)).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+		}
 	}
 	result += code.substr(lastPos);
 	if (depth > 0) {
@@ -324,7 +319,11 @@ var parse = function parse(code, data) {
 };
 
 // parses mustache-like template code
-var mustache = function (code, data, options) {
+var mustache = function (code, data) {
+	var options = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : { resolveData: function resolveData(x) {
+			return x;
+		} };
+
 	var result = parse(code, data, options);
 	return result && result.content || '';
 };
@@ -411,7 +410,7 @@ function parse$1(html) {
 			return m1 + m2.replace(/</g, '\\x3c') + m1;
 		}));
 	}).trim();
-	while (null !== (match = tagRegExp.exec(html))) {
+	while (match = tagRegExp.exec(html)) {
 		var child = void 0;
 		var _text = html.substring(lastIndex, match.index).replace(/^[ \t]+|[ \t]$/g, ' ');
 		lastIndex = match.index + match[0].length;
@@ -441,17 +440,10 @@ function parse$1(html) {
 }
 
 function find(selector, dom) {
-	var evaluateMatch = function evaluateMatch(value, operator, expected) {
-		if (!operator) return value === expected;
-		if (operator === '^') return value.indexOf(expected) === 0;
-		if (operator === '$') return value.lastIndexOf(expected) + expected.length === value.length;
-		if (operator === '*') return value.indexOf(expected) >= 0;
-		return false;
-	};
 	var result = [];
 
 	// for regular Browser DOM
-	if (dom && typeof dom.ownerDocument !== 'undefined') {
+	if (dom && typeof dom.querySelectorAll === 'function') {
 		return [].slice.call(dom.querySelectorAll(selector));
 	}
 
@@ -459,7 +451,7 @@ function find(selector, dom) {
 	dom && dom.children.forEach(function (child) {
 		var attr = void 0;
 		if (child.text) return;
-		if (selector[0] === '#' && child.attributes.id === selector.substr(1) || (attr = selector.match(/^\[(\w+)\]/)) && child.attributes[attr[1]] || (attr = selector.match(/^\[(\w+)(\^|\$|\*)?=(?:'([^']*)'|"([^"]*)"|([^\]])*)\]/)) && child.attributes[attr[1]] && evaluateMatch(child.attributes[attr[1]], attr[2], attr[3] || attr[4] || attr[5]) || selector[0] === '.' && child.className.split(' ').indexOf(selector.substr(1)) >= 0 || child.tagName === selector.split(/\[\.#/)[0]) {
+		if (selector[0] === '#' && child.attributes.id === selector.substr(1) || (attr = selector.match(/^\[(\w+)\]/)) && child.attributes[attr[1]] || selector[0] === '.' && child.className.split(' ').indexOf(selector.substr(1)) >= 0 || child.tagName === selector.split(/\[\.#/)[0]) {
 			result.push(child);
 		}
 		result = result.concat(find(selector, child));
@@ -472,6 +464,7 @@ var eventQueue = {};
 function trigger(name, data) {
 	if (!eventQueue[name]) return;
 	for (var index in eventQueue[name]) {
+		name.indexOf('--event-') && trigger('--event-trigger', { name: name, fn: eventQueue[name][index], data: data });
 		var result = eventQueue[name][index](data);
 		if (result === false) break;
 	}
@@ -482,17 +475,18 @@ function on(name, fn) {
 		eventQueue[name] = [];
 	}
 	eventQueue[name].push(fn);
+	name.indexOf('--event-') && trigger('--event-register', { name: name, fn: fn });
 }
 
 function off(name, fn) {
 	if (!isFn(fn)) {
 		delete eventQueue[name];
-		return;
+		return name.indexOf('--event-') && trigger('--event-unregister', { name: name });
 	}
 	for (var index in eventQueue[name]) {
 		if (eventQueue[name][index] === fn) {
 			delete eventQueue[name][index];
-			return;
+			return name.indexOf('--event-') && trigger('--event-unregister', { name: name, fn: fn });
 		}
 	}
 }
@@ -569,7 +563,7 @@ function registerTag(code, path, document) {
 	// clean up path
 	path = path.replace(/[^\/]+$/g, '');
 	// remove recursive tag use and all style/script nodes
-	code = code.replace(new RegExp('<\\/?' + tagName + '(?:\s+[^>]+)?>', 'ig'), '').replace(/<(style|script)[^>]*>(?:[^\s]|[^\S])*?<\/\1>/g, '');
+	code = code.replace(new RegExp('<\\/?' + tagName + '(?:\s+[^>]+)?>', 'ig'), '').replace(/<(style|script)[^>]*>(?:.|\n)*?<\/\1>/g, '');
 	firstElement.code = code;
 
 	if (tagRegistry[tagName]) {
@@ -859,7 +853,7 @@ var tagObserver = new MutationObserver(function (records) {
 
 		if (added.length > 0) {
 			[].forEach.call(added, function (tag) {
-				(tag.children && find('*', tag) || []).concat(tag).forEach(function (subTag) {
+				[tag].concat(tag.children && find('*', tag) || []).forEach(function (subTag) {
 					return trigger('--zino-mount-tag', subTag);
 				});
 			});
@@ -896,7 +890,7 @@ var zino = Zino = {
 				}
 				if (!cache) delete urlRegistry[url];
 				callbacks.forEach(function (cb) {
-					return cb(req.responseText);
+					return cb(req.responseText, req.status);
 				});
 			}
 		};
@@ -906,9 +900,11 @@ var zino = Zino = {
 		var callback = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : emptyFunc;
 
 		var url = (this.path || '') + path;
-		Zino.fetch(url, function (data) {
-			registerTag(data, url, document.body);
-			callback();
+		Zino.fetch(url, function (data, status) {
+			if (status === 200) {
+				registerTag(data, url, document.body);
+				callback();
+			}
 		}, true);
 	}
 };

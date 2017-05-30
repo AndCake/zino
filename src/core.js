@@ -41,7 +41,7 @@ export function registerTag(code, path, document) {
 	// clean up path
 	path = path.replace(/[^\/]+$/g, '');
 	// remove recursive tag use and all style/script nodes
-	code = code.replace(new RegExp('<\\/?' + tagName + '(?:\s+[^>]+)?>', 'ig'), '').replace(/<(style|script)[^>]*>(?:[^\s]|[^\S])*?<\/\1>/g, '');
+	code = code.replace(new RegExp('<\\/?' + tagName + '(?:\s+[^>]+)?>', 'ig'), '').replace(/<(style|script)[^>]*>(?:.|\n)*?<\/\1>/g, '');
 	firstElement.code = code;
 
 	if (tagRegistry[tagName]) {
