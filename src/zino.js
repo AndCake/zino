@@ -13,7 +13,7 @@ let urlRegistry = window.zinoTagRegistry || {},
 
 			if (added.length > 0) {
 				[].forEach.call(added, tag => {
-					(tag.children && $('*', tag) || []).concat(tag).forEach(subTag => trigger('--zino-mount-tag', subTag));
+					[tag].concat(tag.children && $('*', tag) || []).forEach(subTag => trigger('--zino-mount-tag', subTag));
 				});
 			} else if (removed.length > 0) {
 				[].forEach.call(removed, tag => {
@@ -45,7 +45,7 @@ export default Zino = {
 					urlRegistry[url] = req.responseText;
 				}
 				if (!cache) delete urlRegistry[url];
-				callbacks.forEach(cb => cb(req.responseText));
+				callbacks.forEach(cb => cb(req.responseText, req.status));
 			}
 		};
 		req.send();
@@ -53,9 +53,11 @@ export default Zino = {
 
 	import(path, callback = emptyFunc) {
 		let url = (this.path || '') + path;
-		Zino.fetch(url, data => {
-			registerTag(data, url, document.body);
-			callback();
+		Zino.fetch(url, (data, status) => {
+			if (status === 200) {
+				registerTag(data, url, document.body);
+				callback();
+			}
 		}, true);
 	}
 };

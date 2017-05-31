@@ -398,7 +398,7 @@ Let's see how to apply these styles to elements in our component:
 		<comment-form></comment-form>
 		...
 
-The `{{%...}}` is an extension to the Mustache syntax. You can learn more about that over in the Mustache Enhancements section of this documentation. 
+The `{{%...}}` is an extension to the Mustache syntax. You can learn more about that over in the Mustache Enhancements section of this documentation.
 The style attribute is used for styling the element. It makes more logical sense of employing the style attribute in order to style an element rather than saying it should be of a specific class.
 
 We also have the option of combining multiple defined styles into one style for a tag. We're going to do this in our comment component:
@@ -699,7 +699,7 @@ Once a component is initialized, meaning mounted and rendered, an optional onrea
 ZinoJS itself
 -------------
 
-When loading initially, in the browser context, Zino will look for a global variable called `zinoTagRegistry`. If this is defined, it expects it to be filled with a series of URL - data mappings that will be used to pre-fill the AJAX cache. Any requests using the cache for the registered URLs will automatically be answered without additional network traffic. 
+When loading initially, in the browser context, Zino will look for a global variable called `zinoTagRegistry`. If this is defined, it expects it to be filled with a series of URL - data mappings that will be used to pre-fill the AJAX cache. Any requests using the cache for the registered URLs will automatically be answered without additional network traffic.
 
 ZinoJS exports a set of functions in order to interact with it. Those functions are available in the Zino scope.
 
@@ -724,7 +724,7 @@ ZinoJS exports a set of functions in order to interact with it. Those functions 
 		- callback - callback function to call when the event is triggered
 
 		Listens for the given event and calls the callback for every occurrence.
-		Any data sent with the trigger will be directly given into the callback. 
+		Any data sent with the trigger will be directly given into the callback.
 
 		Example:
 
@@ -738,13 +738,13 @@ ZinoJS exports a set of functions in order to interact with it. Those functions 
 
 		Listens for the given event and calls the callback only for the first
 		occurrence. Any data sent with the trigger will be directly given into
-		the callback. 
+		the callback.
 
 	- off(event, callback)
 		- event - name of the event to listen for
 		- callback - function to remove as event listener
 
-		Removes the event listener for the given event. 
+		Removes the event listener for the given event.
 
 	- fetch(url, callback[, cache[, code]])
 		- url - from where to fetch some content/data?
@@ -936,9 +936,9 @@ Parameter:
 
 	script DOM node
 
-This event is fired if an external script file has been encountered when parsing the scripts of the given tag. 
+This event is fired if an external script file has been encountered when parsing the scripts of the given tag.
 
-In the browser environment, Zino has an existing handler that will add the script tag to the page's DOM. 
+In the browser environment, Zino has an existing handler that will add the script tag to the page's DOM.
 
 ### publish-style
 
@@ -946,7 +946,7 @@ Parameter:
 
 	link DOM node or css text
 
-This event is fired if some CSS styling is encountered while parsing the given component. If the component contains an external LINK tag, this tag will be handed as is into the listening function. If it encounters inline style, it will provide the pure CSS text. 
+This event is fired if some CSS styling is encountered while parsing the given component. If the component contains an external LINK tag, this tag will be handed as is into the listening function. If it encounters inline style, it will provide the pure CSS text.
 
 In the browser environment, Zino has an existing handler that will either create a STYLE tag from the CSS code and attach it to the page's HEAD tag or will directly add a provided LINK tag to the page's HEAD tag.
 
@@ -973,3 +973,27 @@ Parameter:
 	DOM node
 
 This event is fired whenever a tag needs to be re-rendered. The DOM node provided is the tag that requires re-rendering.
+
+### --event-register
+
+Parameter:
+
+	object {name, fn}
+
+This event is fired whenever a new event listener is registered. The object provided is containing name of the event and function to be called if the event is triggered
+
+### --event-trigger
+
+Parameter:
+
+	object {name, fn, data}
+
+This event is fired whenever an event is dispatched/triggered. The object provided contains the name of the event, the function called and the data transmitted to the function.
+
+### --event-unregister
+
+Parameter:
+
+	object {name, fn}
+
+This event is fired whenever an event handler is unregistered. The object provided contains the name of the event, and if existent, the function that is unregistered. If the object contains no fn property, all functions have been unregistered.

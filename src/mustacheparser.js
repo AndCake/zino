@@ -1,4 +1,4 @@
-import {merge, isFn, isObj, identity} from './utils';
+import {merge, isFn, isObj} from './utils';
 
 const
 	syntax = /\{\{\s*([^\}]+)\s*\}\}\}?/g,
@@ -122,9 +122,7 @@ const
 					throw new Error('Unexpected end of block ' + key);
 				}
 				return {lastIndex: lastPos, content: result};
-			}/* else if (ch === '>') {	// removed support for partials since it's never used...
-				result += (options.resolvePartial || identity)(key, data);
-			}*/ else if (ch === '!') {
+			} else if (ch === '!') {
 				// comment - don't do anything
 				result += '';
 			} else if (ch === '%') {
@@ -132,14 +130,14 @@ const
 				result += key.split(/\s*,\s*/).map(renderStyle).join('');
 			} else if (ch === '+') {
 				var value = getValue(key, data);
-				let id = (options.resolveData || identity)(key, value);
+				let id = options.resolveData(key, value);
 				result += '--' + id + '--';
 			} else if (ch === '{') {
 				// unescaped content
 				result += getValue(key, data);
 			} else {
 				// escaped content
-				result += ('' + getValue(match[1], data) || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+				result += ('' + getValue(match[1], data)).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
 			}
 		}
 		result += code.substr(lastPos);
@@ -154,7 +152,7 @@ const
 	};
 
 // parses mustache-like template code
-export default function(code, data, options) {
+export default function(code, data, options = {resolveData: x=>x}) {
 	var result = parse(code, data, options);
 	return result && result.content || '';
 };
