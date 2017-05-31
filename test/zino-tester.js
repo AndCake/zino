@@ -23,3 +23,18 @@ test('renders styles and events properly', t => {
 	zino.importTag('test/components/second-tag.html');
 	zino.matchesSnapshot('<second-tag me="Welt!"></second-tag>');
 });
+test('uses the provided name attribute', t => {
+	zino.matchesSnapshot('<second-tag me="Welt!"></second-tag>', {}, 'name parameter test');
+});
+test('calls the callback function', t => {
+	let called = false;
+	zino.matchesSnapshot('<second-tag me="Welt!"></second-tag>', {}, '', tag => {
+		called = true;
+		tag.children[0].innerHTML = 'content removed in callback!';
+	});
+	t.assert(called, 'Callback function was called');
+});
+
+test('supports object notation for matchesSnapshot', t => {
+	// test implementation missing
+});

@@ -138,13 +138,13 @@ Create a new file called "comment-box.html" inside a directory called "component
 		<comment-form></comment-form>
 	</comment-box>
 
-So what's happening here? The outermost tag "<comment-box>", tells ZinoJS that this is the new tag's name. Everything within that tag is describing how it will be rendered.
+So what's happening here? The outermost tag `<comment-box>`, tells ZinoJS that this is the new tag's name. Everything within that tag is describing how it will be rendered.
 
 The variable `props` refers to the internal state of our component. It will have the variable data stored in it. How, this happens, we will get to later.
 
 In line five you might be wondering what's happening with the curly braces: that's the Mustache syntax to render variables. Please read up on it over at the [Mustache website](https://mustache.github.io/mustache.5.html).
 
-By using the <comment> and the <comment-form> tags, we are basically employing the other components we are going to build.
+By using the `<comment>` and the `<comment-form>` tags, we are basically employing the other components we are going to build.
 
 So far so good. Let's flesh the first one out:
 
@@ -911,7 +911,7 @@ Once it is installed, in your project, create a test/ directory. Place all your 
 Zino offers two methods to support your testing efforts:
 
  * importTag(pathToTag) - imports a Zino component into the registry so that it can be used for testing
- * matchesSnapshot(tagExample, data) - renders the tag as if it were used in a browser and checks if a previous snapshot of it has changed
+ * matchesSnapshot(tagExample[, props][, name][, callback]) - renders the tag as if it were used in a browser and checks if a previous snapshot of it has changed. If the name is provided, the snapshot file will have an infix with that name making it easier to locate a specific test result. If the callback is provided, it is called after the component has been rendered. The reference to the component is handed into the callback function.
 
 Since events will usually trigger state changes, these events can be simulated by calling the matchesSnapshot method with the data parameter, which allows you to overwrite props values. For our [todolist tag](https://bitbucket.org/rkunze/zinojs/src/master/examples/src/todolist.html) example, this could look like that:
 
@@ -921,7 +921,7 @@ Since events will usually trigger state changes, these events can be simulated b
 		zino.importTag('examples/dist/todolist.html');
 
 		it('renders empty', () => zino.matchesSnapshot('<todo-list></todo-list>'));
-		it('renders todos', () => zino.matchesSnapshot('<todo-list></todo-list>', {props: {tasks: ['Task 1']}}));
+		it('renders todos', () => zino.matchesSnapshot('<todo-list></todo-list>', {tasks: ['Task 1']}}));
 	})
 
 Please refer to the [test/zino-tester.js](https://bitbucket.org/rkunze/zinojs/src/master/test/zino-tester.js) for more examples of how snapshots can be used.
