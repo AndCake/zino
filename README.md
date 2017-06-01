@@ -4,8 +4,8 @@ ZinoJS - Tiny Components
 ![Chrome 18+](https://img.shields.io/badge/Chrome-18+-green.svg?style=flat&colorA=777777&colorB=679A00)
 ![Firefox 14+](https://img.shields.io/badge/Firefox-14+-green.svg?style=flat&colorA=777777&colorB=679A00)
 ![Mac & iOS Safari 6+](https://img.shields.io/badge/Safari-6.1+-green.svg?style=flat&colorA=777777&colorB=679A00)
-![Internet Explorer 10](https://img.shields.io/badge/Internet Explorer-10-yellow.svg?style=flat&colorB=af8300&colorA=777777 "is supported with the MutationObserver polyfill")
-![Internet Explorer 11](https://img.shields.io/badge/Internet Explorer-11-green.svg?style=flat&colorA=777777&colorB=679A00)
+![Internet Explorer 10](https://img.shields.io/badge/Internet%20Explorer-10-yellow.svg?style=flat&colorB=af8300&colorA=777777 "is supported with the MutationObserver polyfill")
+![Internet Explorer 11](https://img.shields.io/badge/Internet%20Explorer-11-green.svg?style=flat&colorA=777777&colorB=679A00)
 ![Edge](https://img.shields.io/badge/Edge-20+-green.svg?style=flat&colorA=777777&colorB=679A00)
 
 This is a microframework similar to ReactJS and Polymer but without all the bloating and additional dependencies.
