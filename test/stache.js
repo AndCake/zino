@@ -48,5 +48,3 @@ test('renders blocks', t => {
 	result = stache.parse(template)({test: false});
 	t.is(result.innerHTML, '<h1>X</h1>', 'inverted block renders false values');
 });
-
-// @TODO how to deal with adding additional values without rendering everything anew?

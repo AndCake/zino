@@ -31,7 +31,7 @@ export function objectDiff(objA, objB) {
 	let result = {},
 		partialDiff;
 	Object.keys(objA).forEach((key, index) => {
-		if (!isValue(objA, key)) return;
+		if (key === 'parentNode' || !isValue(objA, key)) return;
 		if (typeof objB[key] === 'undefined') {
 			result[key] = objA[key];
 		} else if (Object.keys(objB)[index] !== key) {
@@ -54,6 +54,51 @@ export function objectDiff(objA, objB) {
 	});
 	if (Object.keys(result).length > 0) return result;
 	return false;
+}
+
+export function applyDiff(target, src, context = '') {
+	Object.keys(src).forEach(key => {
+		if (!isValue(src, key) || key === 'parentNode' || key === 'tagName') return;
+		if (typeof document !== 'undefined' && typeof src[key] === 'object') {
+			if (typeof target[key] === 'undefined') {
+				if (context === 'attributes') {
+					// has to be ignored
+				} else if (typeof src[key].tagName !== 'undefined') {
+					let tag = document.createElement('i');
+					tag.innerHTML = src[key].outerHTML;
+					//applyDiff(tag.children[0], src[key]);
+					key = parseInt(key, 10);
+					if (key >= target.childNodes.length) {
+						target.appendChild(tag.children[0]);
+					} else {
+						target.insertBefore(tag.children[0], target.childNodes[key]);
+					}
+				} else if (context === 'children') {	// not a tag but still in context children, so must be text node
+					let text = document.createTextNode(src[key].text);
+					key = parseInt(key, 10);
+					if (key >= target.childNodes.length) {
+						target.appendChild(text);
+					} else {
+						target.insertBefore(text, target.childNodes[key]);
+					}
+				} else {
+					target[key] = src[key];
+				}
+			} else {
+				if (key === 'children' || key === 'attributes') {
+					applyDiff(target, src[key], key);
+				} else {
+					applyDiff(target[key], src[key], context === 'attributes' ? context : key);
+				}
+			}
+		} else {
+			if (context === 'attributes') {
+				isFn(target.setAttribute) && target.setAttribute(key, src[key]);
+			} else {
+				target[key] = src[key];
+			}
+		}
+	});
 }
 
 export function error(method, tag, parentException) {

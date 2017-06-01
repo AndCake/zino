@@ -15,7 +15,7 @@ function handleElement(element, data) {
 	for (let idx = 0, len = element.children.length, child; child = element.children[idx], idx < len; idx += 1) {
 		if (typeof child.text !== 'undefined') {
 			try {
-				if (data.test === false) { debugger; }
+				//if (data.test === false) { debugger; }
 				child.text = mustache(child.text, data);
 			} catch (e) {
 				if (e.name === 'BlockEndError') {
@@ -94,7 +94,7 @@ export function parse(code) {
 			// do a diff on the data
 			if (data === lastClone.data) return lastClone;
 			let diff = objectDiff(lastClone.data, data);
-			
+
 		}
 		handleElement(clone, data);
 		clone.data = data;

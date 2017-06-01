@@ -30,9 +30,9 @@ function DOM(tagName, match, parentNode) {
 		children: [],
 		parentNode,
 
-		set __isDirty(value) {
-			isDirty = value;
-			parentNode && (parentNode.__isDirty = value);
+		dirty() {
+			isDirty = true;
+			this.parentNode && this.parentNode.dirty();
 		},
 		get outerHTML() {
 			let attributes = [''].concat(this.attributes.map(attr => attr.name + '="' + attr.value + '"'));
@@ -51,8 +51,8 @@ function DOM(tagName, match, parentNode) {
 			return innerHTML;
 		},
 		set innerHTML(value) {
+			this.dirty();
 			this.children = parse(value).children;
-			this.__isDirty = true;
 		},
 		get className() {
 			return this.attributes['class'] || '';
@@ -64,8 +64,8 @@ function DOM(tagName, match, parentNode) {
 			if (this.attributes[name] !== value) {
 				this.attributes = this.attributes.filter(attr => attr.name !== name);
 				value !== null && this.attributes.push({name, value});
-				this.attributes[name] = value;
-				this.__isDirty = true;
+				this.attributes.forEach((attr, idx) => this.attributes[this.attributes[idx].name] = this.attributes[idx].value);
+				this.parentNode && this.parentNode.dirty();
 			}
 		},
 		removeChild(ref) {
@@ -93,7 +93,7 @@ function Text(text, parentNode) {
 		},
 		set text(value) {
 			content = value;
-			parentNode.__isDirty = true;
+			this.parentNode.dirty();
 		},
 		parentNode,
 		cloneNode() {
@@ -138,13 +138,6 @@ export function parse(html, dom = DOM('root')) {
 }
 
 export function find(selector, dom) {
-	const evaluateMatch = (value, operator, expected) => {
-		if (!operator) return value === expected;
-		if (operator === '^') return value.indexOf(expected) === 0;
-		if (operator === '$') return value.lastIndexOf(expected) + expected.length === value.length;
-		if (operator === '*') return value.indexOf(expected) >= 0;
-		return false;
-	};
 	let result = [];
 
 	// for regular Browser DOM
@@ -158,7 +151,6 @@ export function find(selector, dom) {
 		if (child.text) return;
 		if (selector[0] === '#' && child.attributes.id === selector.substr(1) ||
 			(attr = selector.match(/^\[(\w+)\]/)) && child.attributes[attr[1]] ||
-			(attr = selector.match(/^\[(\w+)(\^|\$|\*)?=(?:'([^']*)'|"([^"]*)"|([^\]])*)\]/)) && child.attributes[attr[1]] && evaluateMatch(child.attributes[attr[1]], attr[2], attr[3] || attr[4] || attr[5]) ||
 			selector[0] === '.' && child.className.split(' ').indexOf(selector.substr(1)) >= 0 ||
 			child.tagName === selector.split(/\[\.#/)[0]) {
 			result.push(child);

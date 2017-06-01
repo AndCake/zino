@@ -1,6 +1,6 @@
-import mustache from './mustacheparser';
+import * as stache from './stache';
 import {parse as html, find as $} from './htmlparser';
-import {emptyFunc, isFn, isObj, error, uuid, merge} from './utils';
+import {emptyFunc, isFn, isObj, error, uuid, merge, applyDiff, objectDiff} from './utils';
 import {trigger, on, attachEvent} from './events';
 
 let tagRegistry = {},
@@ -42,7 +42,7 @@ export function registerTag(code, path, document) {
 	path = path.replace(/[^\/]+$/g, '');
 	// remove recursive tag use and all style/script nodes
 	code = code.replace(new RegExp('<\\/?' + tagName + '(?:\s+[^>]+)?>', 'ig'), '').replace(/<(style|script)[^>]*>(?:[^\s]|[^\S])*?<\/\1>/g, '');
-	firstElement.code = code;
+	code = stache.parse(code);
 
 	if (tagRegistry[tagName]) {
 		// tag is already registered
@@ -121,6 +121,7 @@ function initializeTag(tag, registryEntry) {
 		trigger('--zino-rerender-tag', tag.getHost());
 	};
 
+	tag.__vdom = {};
 	// call mount callback
 	tag.props = merge({}, functions.props, getAttributes(tag, true));
 	try {
@@ -162,8 +163,9 @@ function renderTag(tag, registryEntry = tagRegistry[tag.tagName.toLowerCase()]) 
 
 	// do the actual rendering of the component
 	let data = getAttributes(tag);
-	let renderedHTML = mustache(registryEntry.code, data, renderOptions);
-	let renderedDOM = html(renderedHTML);
+	let renderedDOM = registryEntry.code(data);
+	renderedDOM.tagName = 'div';
+	renderedDOM.setAttribute('class', '-shadow-root');
 
 	// render all contained sub components
 	for (let all in tagRegistry) {
@@ -180,8 +182,18 @@ function renderTag(tag, registryEntry = tagRegistry[tag.tagName.toLowerCase()]) 
 	// unmount all existing sub tags
 	$('[__ready]', tag).forEach(unmountTag);
 	let renderedSubElements = $('[__ready]', renderedDOM);
+	if (tag.ownerDocument) {
+		let diff = objectDiff(tag.__vdom, renderedDOM);
+		if (diff !== false) {
+			applyDiff(tag.children[0], diff);
+			tag.__vdom = renderedDOM;
+		}
+	} else {
+		tag.children[0].innerHTML = renderedDOM.innerHTML;
+	}
 	// simply render everything inside
-	tag.children[0].innerHTML = renderedDOM.innerHTML;
+	//tag.children[0].innerHTML = renderedDOM.innerHTML;
+
 	renderedSubElements.length > 0 && $('[__ready]', tag).forEach((subEl, index) => {
 		merge(subEl, renderedSubElements[index])
 		renderedSubElements[index].getHost = defaultFunctions.getHost.bind(subEl);
