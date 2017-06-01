@@ -12,8 +12,8 @@ source: docsrc/
 destination: docs/
 description: > # this means to ignore newlines until "baseurl:"
   A micro component framework - easy to learn and powerful.
-baseurl: "" # the subpath of your site, e.g. /blog
-url: "https://andcake.github.io/zino" # the base hostname & protocol for your site
+baseurl: "/zino" # the subpath of your site, e.g. /blog
+url: "https://andcake.github.io" # the base hostname & protocol for your site
 github_username:  AndCake
 
 # Build settings
