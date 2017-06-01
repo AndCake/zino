@@ -180,7 +180,6 @@ describe('zino', function () {
 				done();
 			}, 32);
 		});
-		
 
 		it('re-renders after body change', function(done) {
 			document.querySelector('ab').body = '34 56';
