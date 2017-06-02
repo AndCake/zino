@@ -1,6 +1,6 @@
 import * as stache from './stache';
 import {parse as html, find as $} from './htmlparser';
-import {emptyFunc, isFn, isObj, error, uuid, merge, applyDiff, objectDiff} from './utils';
+import {emptyFunc, isFn, isObj, error, uuid, merge, objectDiff} from './utils';
 import {trigger, on, attachEvent} from './events';
 
 let tagRegistry = {},
@@ -42,7 +42,7 @@ export function registerTag(code, path, document) {
 	path = path.replace(/[^\/]+$/g, '');
 	// remove recursive tag use and all style/script nodes
 	code = code.replace(new RegExp('<\\/?' + tagName + '(?:\s+[^>]+)?>', 'ig'), '').replace(/<(style|script)[^>]*>(?:[^\s]|[^\S])*?<\/\1>/g, '');
-	code = stache.parse(code);
+	code = stache.parse(code, renderOptions);
 
 	if (tagRegistry[tagName]) {
 		// tag is already registered
@@ -76,7 +76,7 @@ export function flushRegisteredTags() {
 
 function initializeTag(tag, registryEntry) {
 	// check if the tag has been initialized already
-	if (tag['__s'] || !registryEntry) return;
+	if (tag.__vdom || !registryEntry) return;
 	let functions = registryEntry.functions,
 		isRendered;
 
@@ -117,8 +117,8 @@ function initializeTag(tag, registryEntry) {
 	});
 	tag.__s = tag.setAttribute;
 	tag.setAttribute = function(attr, val) {
-		tag.__s(attr, val);
-		trigger('--zino-rerender-tag', tag.getHost());
+		this.__s(attr, val);
+		trigger('--zino-rerender-tag', this);
 	};
 
 	tag.__vdom = {};
@@ -182,21 +182,25 @@ function renderTag(tag, registryEntry = tagRegistry[tag.tagName.toLowerCase()]) 
 	// unmount all existing sub tags
 	$('[__ready]', tag).forEach(unmountTag);
 	let renderedSubElements = $('[__ready]', renderedDOM);
-	if (tag.ownerDocument) {
+	if (tag.attributes.__ready && tag.ownerDocument) {
+		// has been rendered before, so just apply diff
 		let diff = objectDiff(tag.__vdom, renderedDOM);
 		if (diff !== false) {
-			applyDiff(tag.children[0], diff);
-			tag.__vdom = renderedDOM;
+			stache.applyDOM(tag.children[0], diff, renderedDOM);
 		}
 	} else {
+		// simply render everything inside
 		tag.children[0].innerHTML = renderedDOM.innerHTML;
 	}
-	// simply render everything inside
-	//tag.children[0].innerHTML = renderedDOM.innerHTML;
+	tag.__vdom = renderedDOM;
 
 	renderedSubElements.length > 0 && $('[__ready]', tag).forEach((subEl, index) => {
 		merge(subEl, renderedSubElements[index])
 		renderedSubElements[index].getHost = defaultFunctions.getHost.bind(subEl);
+		subEl.setAttribute = function(attr, val) {
+			HTMLElement.prototype.setAttribute.call(subEl, attr, val);
+			trigger('--zino-rerender-tag', subEl);
+		};
 	});
 
 	if (!this || !this.noRenderCall) {
@@ -209,15 +213,18 @@ function renderTag(tag, registryEntry = tagRegistry[tag.tagName.toLowerCase()]) 
 }
 
 function attachSubEvents(subEvents, tag) {
-	let count = {};
+	var count = {};
 	subEvents.events.forEach(event => {
 		let el = event.tag;
 		if (!isObj(el)) {
 			count[el] = (count[el] || 0) + 1;
 			el = $(el, tag)[count[el] - 1];
 		}
-		attachEvent(el.children[0], event.childEvents, el);
-		attachEvent(el, event.hostEvents, el);
+		if (!el.children[0].__eventsAttached) {
+			attachEvent(el.children[0], event.childEvents, el);
+			attachEvent(el, event.hostEvents, el);
+			el.children[0].__eventsAttached = true;
+		}
 		isFn(el.onready) && el.onready();
 	});
 }
@@ -259,7 +266,7 @@ function getAttributes(tag, propsOnly) {
 function setElementAttr(source, target = source) {
 	let baseAttrs = {};
 	[].forEach.call(source.children, el => {
-		if (el.text) return;
+		if (!el.tagName) return;
 		let name = el.tagName.toLowerCase();
 		if (baseAttrs[name]) {
 			if (!baseAttrs[name].isArray) {

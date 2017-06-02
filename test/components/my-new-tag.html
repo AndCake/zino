@@ -10,10 +10,12 @@
 			},
 
 			render: function() {
-				var x = document.createElement('a');
-				x.innerHTML = 'hallo';
-				x.href = "test";
-				this.querySelector('div').appendChild(x);
+				if (!this.querySelector('a')) {
+					var x = document.createElement('a');
+					x.innerHTML = 'hallo';
+					x.href = "test";
+					this.querySelector('div').appendChild(x);
+				}
 			},
 			mount: function() {
 				this.interval = setInterval(function() {

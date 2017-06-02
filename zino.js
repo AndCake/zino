@@ -19,9 +19,6 @@ function parseAttributes(match) {
 
 function DOM(tagName, match, parentNode) {
 	var attributes = parseAttributes(match);
-	var isDirty = true;
-	var childCount = 0;
-	var innerHTML = '';
 
 	// make sure all tag names are lower cased
 	tagName = tagName && tagName.toLowerCase();
@@ -31,11 +28,6 @@ function DOM(tagName, match, parentNode) {
 		attributes: attributes,
 		children: [],
 		parentNode: parentNode,
-
-		dirty: function dirty() {
-			isDirty = true;
-			this.parentNode && this.parentNode.dirty();
-		},
 
 		get outerHTML() {
 			var attributes = [''].concat(this.attributes.map(function (attr) {
@@ -48,17 +40,11 @@ function DOM(tagName, match, parentNode) {
 			}
 		},
 		get innerHTML() {
-			if (isDirty || this.children.length !== childCount) {
-				innerHTML = this.children.map(function (child) {
-					return child.text || child.outerHTML;
-				}).join('');
-				isDirty = false;
-				childCount = this.children.length;
-			}
-			return innerHTML;
+			return this.children.map(function (child) {
+				return child.text || child.outerHTML;
+			}).join('');
 		},
 		set innerHTML(value) {
-			this.dirty();
 			this.children = parse$1(value).children;
 		},
 		get className() {
@@ -78,7 +64,6 @@ function DOM(tagName, match, parentNode) {
 				this.attributes.forEach(function (attr, idx) {
 					return _this.attributes[_this.attributes[idx].name] = _this.attributes[idx].value;
 				});
-				this.parentNode && this.parentNode.dirty();
 			}
 		},
 		removeChild: function removeChild(ref) {
@@ -110,7 +95,6 @@ function Text(text, parentNode) {
 		},
 		set text(value) {
 			content = value;
-			this.parentNode.dirty();
 		},
 		parentNode: parentNode,
 		cloneNode: function cloneNode() {
@@ -172,7 +156,7 @@ function find(selector, dom) {
 	// for virtual DOM
 	dom && dom.children.forEach(function (child) {
 		var attr = void 0;
-		if (child.text) return;
+		if (typeof child.text !== 'undefined') return;
 		if (selector[0] === '#' && child.attributes.id === selector.substr(1) || (attr = selector.match(/^\[(\w+)\]/)) && child.attributes[attr[1]] || selector[0] === '.' && child.className.split(' ').indexOf(selector.substr(1)) >= 0 || child.tagName === selector.split(/\[\.#/)[0]) {
 			result.push(child);
 		}
@@ -320,11 +304,14 @@ function propDetails(obj, attribute) {
  * @param  {Object} objB 	the object to compare with
  * @return {Object,Boolean} false if both objects are deep equal, else the values of what is different
  */
-function objectDiff$1(objA, objB) {
+function objectDiff(objA, objB) {
 	var result = {},
 	    partialDiff = void 0;
+
+	if (!objA) return objB || false;
+	if (!objB) return objA || false;
 	Object.keys(objA).forEach(function (key, index) {
-		if (key === 'parentNode' || !isValue(objA, key)) return;
+		if (['__vdom', 'element', 'parentNode', 'innerHTML', 'outerHTML', 'className'].indexOf(key) >= 0 || isFn(objA[key])) return;
 		if (typeof objB[key] === 'undefined') {
 			result[key] = objA[key];
 		} else if (Object.keys(objB)[index] !== key) {
@@ -335,66 +322,18 @@ function objectDiff$1(objA, objB) {
 			if (objA[key] !== objB[key]) {
 				result[key] = objB[key];
 			}
-		} else if (partialDiff = objectDiff$1(objA[key], objB[key])) {
+		} else if (partialDiff = objectDiff(objA[key], objB[key])) {
 			result[key] = partialDiff;
 		}
 	});
 	Object.keys(objB).forEach(function (key, index) {
-		if (!isValue(objB, key)) return;
+		if (['__vdom', 'element', 'parentNode', 'innerHTML', 'outerHTML', 'className'].indexOf(key) >= 0 || isFn(objB[key])) return;
 		if (typeof objA[key] === 'undefined') {
 			result[key] = objB[key];
 		}
 	});
 	if (Object.keys(result).length > 0) return result;
 	return false;
-}
-
-function applyDiff(target, src) {
-	var context = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : '';
-
-	Object.keys(src).forEach(function (key) {
-		if (!isValue(src, key) || key === 'parentNode' || key === 'tagName') return;
-		if (typeof document !== 'undefined' && _typeof(src[key]) === 'object') {
-			if (typeof target[key] === 'undefined') {
-				if (context === 'attributes') {
-					// has to be ignored
-				} else if (typeof src[key].tagName !== 'undefined') {
-					var tag = document.createElement('i');
-					tag.innerHTML = src[key].outerHTML;
-					//applyDiff(tag.children[0], src[key]);
-					key = parseInt(key, 10);
-					if (key >= target.childNodes.length) {
-						target.appendChild(tag.children[0]);
-					} else {
-						target.insertBefore(tag.children[0], target.childNodes[key]);
-					}
-				} else if (context === 'children') {
-					// not a tag but still in context children, so must be text node
-					var text = document.createTextNode(src[key].text);
-					key = parseInt(key, 10);
-					if (key >= target.childNodes.length) {
-						target.appendChild(text);
-					} else {
-						target.insertBefore(text, target.childNodes[key]);
-					}
-				} else {
-					target[key] = src[key];
-				}
-			} else {
-				if (key === 'children' || key === 'attributes') {
-					applyDiff(target, src[key], key);
-				} else {
-					applyDiff(target[key], src[key], context === 'attributes' ? context : key);
-				}
-			}
-		} else {
-			if (context === 'attributes') {
-				isFn(target.setAttribute) && target.setAttribute(key, src[key]);
-			} else {
-				target[key] = src[key];
-			}
-		}
-	});
 }
 
 function error$1(method, tag, parentException) {
@@ -423,7 +362,12 @@ function error$1(method, tag, parentException) {
  */
 
 
-
+function uuid() {
+	return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+		var r = Math.random() * 16 | 0;
+		return (c == 'x' ? r : r & 0x3 | 0x8).toString(16);
+	});
+}
 var isObj = function isObj(obj) {
 	return (typeof obj === 'undefined' ? 'undefined' : _typeof(obj)) === 'object';
 };
@@ -618,13 +562,13 @@ function BlockEndError(block, position, result, data, condition) {
 	this.name = 'BlockEndError';
 }
 
-function handleElement(element, data) {
+function handleElement(element, data, options) {
 	if (typeof element.text !== 'undefined') {
 		element.text = mustache(element.text, data);
 		return;
 	}
 	element.attributes.forEach(function (attr) {
-		element.setAttribute(attr.name, mustache(attr.value, data));
+		element.setAttribute(attr.name, mustache(attr.value, data, options));
 	});
 
 	var _loop = function _loop(_idx, _len, child) {
@@ -698,7 +642,7 @@ function handleElement(element, data) {
 		} else {
 			// a regular tag
 			child.attributes.forEach(function (attr) {
-				child.setAttribute(attr.name, mustache(attr.value, data));
+				child.setAttribute(attr.name, mustache(attr.value, data, options));
 			});
 			handleElement(child, data);
 		}
@@ -711,22 +655,116 @@ function handleElement(element, data) {
 	}
 }
 
-function parse$$1(code) {
+function cleanTextNodes(node) {
+	if (node.children) {
+		node.children.forEach(function (child, idx, list) {
+			if (child.children) {
+				cleanTextNodes(child);
+			} else if (typeof child.text !== 'undefined') {
+				var indexDiff = 1;
+				while (list[idx + indexDiff] && !list[idx + indexDiff].children && typeof list[idx + indexDiff].text !== 'undefined') {
+					child.text += list[idx + indexDiff].text;
+					indexDiff += 1;
+				}
+				list.splice(idx + 1, indexDiff - 1);
+			}
+		});
+	}
+}
+
+function parse$$1(code, options) {
 	var dom = parse$1(code);
-	var lastClone = void 0;
 	return function (data) {
-		var clone = void 0;
-		if (!lastClone) {
-			clone = dom.cloneNode();
-		} else {
-			// do a diff on the data
-			if (data === lastClone.data) return lastClone;
-			var diff = objectDiff(lastClone.data, data);
-		}
-		handleElement(clone, data);
-		clone.data = data;
+		var clone = dom.cloneNode();
+		handleElement(clone, data, options);
+		cleanTextNodes(clone);
 		return clone;
 	};
+}
+
+function applyDOM(target, src, newSrc) {
+	var context = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : '';
+
+	var removed = 0;
+	Object.keys(src).forEach(function (key) {
+		if (!isValue(src, key) || key === 'parentNode' || key === 'tagName') return;
+		var isNode = target instanceof Node || target[key] instanceof Node;
+		var isComplex = isObj(src[key]);
+		if (typeof document !== 'undefined' && isComplex && isNode) {
+			// is complex and node
+			if (typeof target[key] === 'undefined') {
+				// does not exist in target
+				if (context === 'attributes') {
+					// has to be ignored
+				} else {
+					if (!newSrc[key]) {
+						// does not exist in new version, remove it
+						if (target.childNodes[key - removed]) {
+							target.removeChild(target.childNodes[key - removed]);
+							removed++;
+						}
+					} else if (typeof src[key].tagName !== 'undefined' && typeof newSrc[key].tagName !== 'undefined') {
+						// is new tag
+						var tag = document.createElement('i');
+						tag.innerHTML = newSrc[key].outerHTML;
+						key = parseInt(key, 10);
+						if (target.childNodes[key]) {
+							target.replaceChild(tag.children[0], target.childNodes[key]);
+						} else {
+							if (key >= target.childNodes.length) {
+								target.appendChild(tag.children[0]);
+							} else {
+								target.insertBefore(tag.children[0], target.childNodes[key]);
+							}
+						}
+					} else if (context === 'children' && src[key].children && typeof newSrc[key].children !== 'undefined') {
+						// investigate children
+						applyDOM(target.childNodes[key], src[key], newSrc[key] || newSrc, context);
+					} else if (context === 'children' && typeof src[key].text !== 'undefined') {
+						// is text
+						var text = document.createTextNode(src[key].text);
+						key = parseInt(key, 10);
+						if (target.childNodes[key]) {
+							target.replaceChild(text, target.childNodes[key]);
+						} else {
+							if (key >= target.childNodes.length) {
+								target.appendChild(text);
+							} else {
+								target.insertBefore(text, target.childNodes[key]);
+							}
+						}
+					} else if (context === 'children' && src[key].attributes) {
+						// is attribute change
+						applyDOM(target.childNodes[key], src[key], newSrc[key] || newSrc, context);
+					} else {
+						// is neither of all, just copy
+						target[key] = src[key];
+					}
+				}
+			} else {
+				// target key exists
+				if (context === 'children' && 1 * key >= 0) {
+					// checkout the child', key, src, target
+					applyDOM(target.childNodes[1 * key], src[key], newSrc[key] || newSrc, context);
+				} else if (key === 'children' || key === 'attributes') {
+					// Found children
+					applyDOM(target, src[key], newSrc[key] || newSrc, ['children', 'attributes'].indexOf(context) >= 0 && key !== 'attributes' ? context : key);
+				} else {
+					// Found sth else
+					applyDOM(target[key], src[key], newSrc[key] || newSrc, ['children', 'attributes'].indexOf(context) >= 0 && key !== 'attributes' ? context : key);
+				}
+			}
+		} else {
+			// no complex or no node
+			if (context === 'attributes') {
+				// set attribute
+				isFn(target.setAttribute) && target.setAttribute(key, src[key]);
+			} else {
+				// copy it over
+				target[key] = src[key];
+			}
+		}
+	});
 }
 
 var eventQueue = {};
@@ -815,7 +853,13 @@ var defaultFunctions = {
 	}
 };
 
-
+var renderOptions = {
+	resolveData: function resolveData(key, value) {
+		var id = uuid();
+		dataRegistry[id] = value;
+		return id;
+	}
+};
 
 function registerTag(code, path, document) {
 	var firstElement = parse$1(code).children[0],
@@ -826,7 +870,7 @@ function registerTag(code, path, document) {
 	path = path.replace(/[^\/]+$/g, '');
 	// remove recursive tag use and all style/script nodes
 	code = code.replace(new RegExp('<\\/?' + tagName + '(?:\s+[^>]+)?>', 'ig'), '').replace(/<(style|script)[^>]*>(?:[^\s]|[^\S])*?<\/\1>/g, '');
-	code = parse$$1(code);
+	code = parse$$1(code, renderOptions);
 
 	if (tagRegistry[tagName]) {
 		// tag is already registered
@@ -860,7 +904,7 @@ function render(tag) {
 
 function initializeTag(tag, registryEntry) {
 	// check if the tag has been initialized already
-	if (tag['__s'] || !registryEntry) return;
+	if (tag.__vdom || !registryEntry) return;
 	var functions = registryEntry.functions,
 	    isRendered = void 0;
 
@@ -903,8 +947,8 @@ function initializeTag(tag, registryEntry) {
 	});
 	tag.__s = tag.setAttribute;
 	tag.setAttribute = function (attr, val) {
-		tag.__s(attr, val);
-		trigger('--zino-rerender-tag', tag.getHost());
+		this.__s(attr, val);
+		trigger('--zino-rerender-tag', this);
 	};
 
 	tag.__vdom = {};
@@ -977,21 +1021,25 @@ function renderTag(tag) {
 	// unmount all existing sub tags
 	find('[__ready]', tag).forEach(unmountTag);
 	var renderedSubElements = find('[__ready]', renderedDOM);
-	if (tag.ownerDocument) {
-		var diff = objectDiff$1(tag.__vdom, renderedDOM);
+	if (tag.attributes.__ready && tag.ownerDocument) {
+		// has been rendered before, so just apply diff
+		var diff = objectDiff(tag.__vdom, renderedDOM);
 		if (diff !== false) {
-			applyDiff(tag.children[0], diff);
-			tag.__vdom = renderedDOM;
+			applyDOM(tag.children[0], diff, renderedDOM);
 		}
 	} else {
+		// simply render everything inside
 		tag.children[0].innerHTML = renderedDOM.innerHTML;
 	}
-	// simply render everything inside
-	//tag.children[0].innerHTML = renderedDOM.innerHTML;
+	tag.__vdom = renderedDOM;
 
 	renderedSubElements.length > 0 && find('[__ready]', tag).forEach(function (subEl, index) {
 		merge(subEl, renderedSubElements[index]);
 		renderedSubElements[index].getHost = defaultFunctions.getHost.bind(subEl);
+		subEl.setAttribute = function (attr, val) {
+			HTMLElement.prototype.setAttribute.call(subEl, attr, val);
+			trigger('--zino-rerender-tag', subEl);
+		};
 	});
 
 	if (!this || !this.noRenderCall) {
@@ -1013,8 +1061,11 @@ function attachSubEvents(subEvents, tag) {
 			count[el] = (count[el] || 0) + 1;
 			el = find(el, tag)[count[el] - 1];
 		}
-		attachEvent(el.children[0], event.childEvents, el);
-		attachEvent(el, event.hostEvents, el);
+		if (!el.children[0].__eventsAttached) {
+			attachEvent(el.children[0], event.childEvents, el);
+			attachEvent(el, event.hostEvents, el);
+			el.children[0].__eventsAttached = true;
+		}
 		isFn(el.onready) && el.onready();
 	});
 }
@@ -1060,7 +1111,7 @@ function setElementAttr(source) {
 
 	var baseAttrs = {};
 	[].forEach.call(source.children, function (el) {
-		if (el.text) return;
+		if (!el.tagName) return;
 		var name = el.tagName.toLowerCase();
 		if (baseAttrs[name]) {
 			if (!baseAttrs[name].isArray) {
@@ -1191,7 +1242,7 @@ on('publish-style', function (data) {
 });
 on('publish-script', document.head.appendChild);
 on('--zino-rerender-tag', function (tag) {
-	return dirtyTags.push(tag);
+	return dirtyTags.indexOf(tag) < 0 && dirtyTags.push(tag);
 });
 trigger('publish-style', '[__ready] { contain: content; }');
 find('[rel="zino-tag"]', document).forEach(function (tag) {
@@ -1203,8 +1254,9 @@ tagObserver.observe(document.body, {
 });
 
 requestAnimationFrame(function reRender() {
-	dirtyTags.forEach(render);
-	dirtyTags = [];
+	while (dirtyTags.length > 0) {
+		render(dirtyTags.shift());
+	}
 	requestAnimationFrame(reRender);
 });
 

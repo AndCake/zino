@@ -65,11 +65,6 @@ test('can query elements', t => {
 	t.is(find('.opened', dom).length, 1, 'can use classes');
 	t.is(find('#my-id', dom).length, 1, 'can use IDs');
 	t.is(find('[href]', dom).length, 2, 'can use other attribute definitions');
-	t.is(find('[href="#2"]', dom).length, 1, 'can use attribute values');
-	t.is(find('[class$="ed"]', dom).length, 2, 'can use end of attribute values');
-	t.is(find('[class^="ha"]', dom).length, 1, 'can use beginning of attribute values');
-	t.is(find('[class*="pen"]', dom).length, 1, 'can use anywhere in attribute values');
-	t.is(find('[class*="pen"]', dom)[0].innerHTML, 'nothing here', 'returns correct element');
 	t.is(find('script', dom).length, 1, 'can parse & find the script tag');
 });
 

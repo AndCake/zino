@@ -17,9 +17,6 @@ function parseAttributes(match) {
 
 function DOM(tagName, match, parentNode) {
 	let attributes = parseAttributes(match);
-	let isDirty = true;
-	let childCount = 0;
-	let innerHTML = '';
 
 	// make sure all tag names are lower cased
 	tagName = tagName && tagName.toLowerCase();
@@ -30,10 +27,6 @@ function DOM(tagName, match, parentNode) {
 		children: [],
 		parentNode,
 
-		dirty() {
-			isDirty = true;
-			this.parentNode && this.parentNode.dirty();
-		},
 		get outerHTML() {
 			let attributes = [''].concat(this.attributes.map(attr => attr.name + '="' + attr.value + '"'));
 			if (selfClosingTags.indexOf(this.tagName) >= 0) {
@@ -43,15 +36,9 @@ function DOM(tagName, match, parentNode) {
 			}
 		},
 		get innerHTML() {
-			if (isDirty || this.children.length !== childCount) {
-				innerHTML = this.children.map(child => child.text || child.outerHTML).join('')
-				isDirty = false;
-				childCount = this.children.length;
-			}
-			return innerHTML;
+			return this.children.map(child => child.text || child.outerHTML).join('');
 		},
 		set innerHTML(value) {
-			this.dirty();
 			this.children = parse(value).children;
 		},
 		get className() {
@@ -65,7 +52,6 @@ function DOM(tagName, match, parentNode) {
 				this.attributes = this.attributes.filter(attr => attr.name !== name);
 				value !== null && this.attributes.push({name, value});
 				this.attributes.forEach((attr, idx) => this.attributes[this.attributes[idx].name] = this.attributes[idx].value);
-				this.parentNode && this.parentNode.dirty();
 			}
 		},
 		removeChild(ref) {
@@ -93,7 +79,6 @@ function Text(text, parentNode) {
 		},
 		set text(value) {
 			content = value;
-			this.parentNode.dirty();
 		},
 		parentNode,
 		cloneNode() {
@@ -148,7 +133,7 @@ export function find(selector, dom) {
 	// for virtual DOM
 	dom && dom.children.forEach(child => {
 		let attr;
-		if (child.text) return;
+		if (typeof child.text !== 'undefined') return;
 		if (selector[0] === '#' && child.attributes.id === selector.substr(1) ||
 			(attr = selector.match(/^\[(\w+)\]/)) && child.attributes[attr[1]] ||
 			selector[0] === '.' && child.className.split(' ').indexOf(selector.substr(1)) >= 0 ||

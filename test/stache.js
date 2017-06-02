@@ -11,6 +11,13 @@ test('generates vDOM nodes', t => {
 	t.is(result.innerHTML, template, 'contains same structure');
 });
 
+test('merges close text nodes together', t => {
+	let template = `<h1> {{#test}} am here {{/test}} </h1>`;
+	let result = stache.parse(template)({test: 'Hello, world!'});
+	t.is(result.children[0].children[0].text, '  am here  ', 'contains the elements text');
+	t.is(result.children[0].children.length, 1, 'no other sub nodes exist');
+});
+
 test('fills data', t => {
 	let template = `<h1>{{test}}</h1>`;
 	let result = stache.parse(template)({test: 'Hello, world!'});

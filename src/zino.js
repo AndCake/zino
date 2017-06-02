@@ -69,7 +69,7 @@ on('publish-style', data => {
 	data && document.head.appendChild(data);
 });
 on('publish-script', document.head.appendChild);
-on('--zino-rerender-tag', tag => dirtyTags.push(tag));
+on('--zino-rerender-tag', tag => dirtyTags.indexOf(tag) < 0 && dirtyTags.push(tag));
 trigger('publish-style', '[__ready] { contain: content; }');
 $('[rel="zino-tag"]', document).forEach(tag => Zino.import(tag.href));
 tagObserver.observe(document.body, {
@@ -78,7 +78,8 @@ tagObserver.observe(document.body, {
 });
 
 requestAnimationFrame(function reRender() {
-	dirtyTags.forEach(render);
-	dirtyTags = [];
+	while (dirtyTags.length > 0) {
+		render(dirtyTags.shift());
+	}
 	requestAnimationFrame(reRender);
 });
