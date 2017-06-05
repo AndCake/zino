@@ -115,8 +115,8 @@ function getInnerHTML(node) {
 	if (!isArray(node.children)) node.children = [node.children];
 
 	return (isArray(node) && node || node.children).map(function (child) {
-		if (typeof child === 'string') {
-			return child;
+		if ((typeof child === 'undefined' ? 'undefined' : _typeof(child)) !== 'object') {
+			return '' + child;
 		} else if (isArray(child)) {
 			return getInnerHTML(child);
 		} else {
