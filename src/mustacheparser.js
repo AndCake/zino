@@ -1,172 +1,207 @@
-import {merge, isFn, isObj, identity} from './utils';
-
-const
-	syntax = /\{\{\s*([^\}]+)\s*\}\}\}?/g,
-
-	getValue = (name, data, noRun) => {
-		let parts = ['.'],
-			obj = data;
-
-		if (obj[name]) {
-			parts = [name];
-		} else if (name.length > 1) {
-			parts = name.split('.');
+const tagRegExp = /<(\/?)([\w-]+)([^>]*?)(\/?)>/g;
+const attrRegExp = /([\w_-]+)=(?:'([^']*?)'|"([^"]*?)")/g;
+const commentRegExp = /<!--(?:[^-]|-[^-])*-->/g;
+const syntax = /\{\{\s*([^\}]+)\s*\}\}\}?/g;
+const safeAccess = `function safeAccess(obj, attrs) {
+	if (!attrs) return obj;
+	if (attrs[0] === '.') {
+		return obj[attrs];
+	}
+	attrs = attrs.split('.');
+	while (attrs.length > 0 && typeof (obj = obj[attrs.shift()]) !== 'undefined');
+	if (typeof obj === 'string') {
+		return obj.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;').replace(/>/g, '&gt;');
+	} else {
+		return obj || '';
+	}
+}`;
+const toArray = `function toArray(data, value) {
+	var dataValue = safeAccess(data, value);
+	if (dataValue) {
+		if (Object.prototype.toString.call(dataValue) === '[object Array]') {
+			return dataValue;
+		} else return [dataValue];
+	} else {
+		return [];
+	}
+}`;
+const spread = `function spread(array) {
+	var result = [];
+	array.forEach(function(entry) {
+		result = result.concat(entry);
+	});
+	return result;
+}`;
+const merge = `function merge(target) {
+	[].slice.call(arguments, 1).forEach(function (arg) {
+		for (var all in arg) {
+			target[all] = arg[all];
 		}
+	});
 
-		while (obj && parts.length > 0) {
-			obj = obj[parts.shift()];
+	return target;
+}`;
+const renderStyle = `function renderStyle(value, context) {
+	var style = '';
+		transform = function(val) {
+			if (typeof val === 'function') return transform(val.apply(context));
+			return val + (typeof val === 'number' && val !== null ? context.styles && context.styles.defaultUnit || 'px' : '');
+		};
+
+	if (typeof value === 'object') {
+		for (var all in value) {
+			style += all.replace(/[A-Z]/g, g => '-' + g.toLowerCase()) + ':' + transform(value[all]) + ';';
 		}
+	}
 
-		if (!noRun && isFn(obj)) {
-			obj = obj.apply(data);
-		}
-		return obj !== undefined && obj !== null ? obj : '';
-	},
+	return style;
+}`;
+const baseCode = `function(Tag) {
+	{{helperFunctions}}
 
-	handleBlock = (match, data, code, options, depth, startIdx) => {
-		let ch = match[0],
-			key = match.substr(1).trim(),
-			condition = getValue(key, data, true),
-			parsed = '',
-			result = '';
+	return {
+		tagName: '{{tagName}}',
+		{{styles}}
+		render: function(data) {
+			return [].concat({{render}})
+		},
 
-		if (ch === '^' && (!condition || condition && condition.length <= 0)) {
-			condition = true;
-		} else if (ch === '^') {
-			condition = false;
-		}
-
-		if (condition) {
-			if (!isObj(condition)) {
-				condition = [condition];
-			}
-			for (let all in condition) {
-				if (all === 'isArray') continue;
-				let el = condition[all];
-				parsed = parse(
-						code,
-						merge({}, data, el, {
-							'.index': all,
-							'.length': condition.length,
-							'.': el
-						}),
-						merge({key, condition}, options),
-						depth,
-						startIdx
-					);
-				if (isFn(el)) {
-					try {
-						result += el(parsed.content);
-					} catch (e) {
-						throw new Error('Unable to run condition function ' + parsed.content + ' while parsing template: ' + e.message);
-					}
-				} else {
-					result += parsed.content;
-				}
-			}
-		}
-
-		if (!isObj(parsed)) {
-			parsed = parse(code, data, merge({key, condition}, options), depth, startIdx);
-		}
-
-		return [parsed.lastIndex, result];
-	},
-
-	parse = function(code, data, options = {}, depth = 0, startIdx = 0) {
-		let result = '',
-			lastPos = startIdx,
-			lastBlock = '',
-			match, key, len, ch,
-
-			transform = val => isFn(val) ? transform(val.apply(data)) : val + (typeof val === 'number' && val !== null ? (data.styles && data.styles.defaultUnit || 'px') : ''),
-			renderStyle = name => {
-				let value = getValue(name, data),
-					style = '';
-
-				if (isObj(value)) {
-					for (var all in value) {
-						style += all.replace(/[A-Z]/g, g => '-' + g.toLowerCase()) + ':' + transform(value[all]) + ';';
-					}
-				}
-
-				return style;
-			};
-
-		// reset regexp so that recursion works
-		if (!code.match(syntax)) {
-			return {
-				content: code,
-				lastIndex: code.length - 1
-			};
-		}
-
-		while ((match = syntax.exec(code))) {
-			if (match.index < lastPos) {
-				continue;
-			}
-
-			result += code.substr(lastPos, match.index - lastPos);
-			ch = match[1][0];
-			key = match[1].substr(1).trim();
-			len = match[0].length;
-			lastPos = match.index + len;
-
-			if ('#^'.indexOf(ch) >= 0) {
-				// begin of block
-				let cresult;
-				lastBlock = [key, lastPos, match.index];
-				[lastPos, cresult] = handleBlock(match[1], data, code, options, depth + 1, lastPos);
-				result += cresult;
-			} else if (ch === '/') {
-				// end of block
-				if (depth <= 0) {
-					throw new Error('Unexpected end of block ' + key);
-				}
-				return {lastIndex: lastPos, content: result};
-			}/* else if (ch === '>') {	// removed support for partials since it's never used...
-				result += (options.resolvePartial || identity)(key, data);
-			}*/ else if (ch === '!') {
-				// comment - don't do anything
-				result += '';
-			} else if (ch === '%') {
-				// interpret given values separated by comma as styling
-				result += key.split(/\s*,\s*/).map(renderStyle).join('');
-			} else if (ch === '+') {
-				var value = getValue(key, data);
-				let id = (options.resolveData || identity)(key, value);
-				result += '--' + id + '--';
-			} else if (ch === '{') {
-				// unescaped content
-				result += getValue(key, data);
-			} else {
-				// escaped content
-				result += ('' + getValue(match[1], data) || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
-			}
-		}
-		result += code.substr(lastPos);
-		if (depth > 0) {
-			throw new BlockEndError(options.key, startIdx, result, data, options.condition);
-		}
-
-		return {
-			content: result,
-			lastIndex: code.length - 1
-		}
+		functions: {{functions}}
 	};
+}`;
 
-// parses mustache-like template code
-export default function(code, data, options) {
-	var result = parse(code, data, options);
-	return result && result.content || '';
-};
+export function parse(data) {
+	let resultObject = {
+		styles: [],
+		helperFunctions: [safeAccess],
+		tagName: '',
+		render: '',
+		functions: ''
+	};
+	let usesMerge = false, usesRenderStyle = false, usesSpread = false;
+	let match, lastIndex = 0, level = 0, tagStack = [];
 
-function BlockEndError(block, position, result, data, condition) {
-	this.message = 'Unable to locate end of block ' + block;
-	this.block = block;
-	this.result = result;
-	this.data = data;
-	this.position = position;
-	this.condition = condition;
-	this.name = 'BlockEndError';
+	function getData() {
+		return `data${level === 0 ? '' : '$' + level}`;
+	}
+
+	function handleText(text) {
+		let match, result = '', lastIndex = 0;
+		while (match = syntax.exec(text)) {
+			if (match.index < lastIndex) continue;
+			let frag = text.substring(lastIndex, match.index).trim()
+			if (frag.length > 0) {
+				result += "'" + frag.replace(/\n/g, '').replace(/'/g, '\\\'') + "', ";
+			}
+			lastIndex = match.index + match[0].length;
+			let key = match[1];
+			let value = key.substr(1);
+			if (key[0] === '#') {
+				result += `spread(toArray(${getData()}, '${value}').map(function (entry, index, arr) {
+						var data$${level + 1} = merge({}, data${0 <= level ? '' : '$' + level}, {'.': entry, '.index': index, '.length': arr.length}, entry);
+						return [`;
+				level += 1;
+				usesMerge = true;
+				usesSpread = true;
+			} else if (key[0] === '/') {
+				result += '\'\']; })), ';
+				level -= 1;
+				if (level < 0) {
+					throw new Error('Unexpected end of block ' + key.substr(1));
+				}
+			} else if (key[0] === '^') {
+				result += `(safeAccess(${getData()}, '${value}') && safeAccess(${getData()}, '${value}').length > 0) ? '' : spread([1].map(function() { var data$${level + 1} = merge({}, data${0 <= level ? '' : '$' + level}); return [`;
+				usesSpread = true;
+				level += 1;
+			} else if (key[0] === '%') {
+				result += key.substr(1).split(/\s*,\s*/).map(value => `renderStyle(safeAccess(${getData()}, '${value}'), ${getData()})`).join(' + ');
+				usesRenderStyle = true;
+			} else if (key[0] === '+') {
+				result += `safeAccess(${getData()}, '${value}'), `;
+			} else if (key[0] !== '{') {
+				value = key;
+				result += `safeAccess(${getData()}, '${value}', true), `
+			} else {
+				result += `safeAccess(${getData()}, '${value}'), `;
+			}
+		}
+		if (text.substr(lastIndex).length > 0) {
+			result += "'" + text.substr(lastIndex).replace(/\n/g, '').replace(/'/g, '\\\'') + "', ";
+		}
+		return result;
+	}
+
+	function makeAttributes(attrs) {
+		let attributes = '{';
+		let attr;
+
+		while ((attr = attrRegExp.exec(attrs))) {
+			if (attributes !== '{') attributes += ', ';
+			attributes += '"' + attr[1].toLowerCase() + '": ' + handleText(attr[2] || attr[3]).replace(/,\s*$/, '');
+		}
+		return attributes + '}';
+	}
+
+ 	// clean up code
+	data = data.replace(commentRegExp, '').replace(/<(script|style)[^>]*?>((?:.|\n)*?)<\/\1>/gi, (g, x, m) => {
+		if (x === 'style') {
+			resultObject.styles.push(m);
+		} else {
+			resultObject.functions += m.trim().replace(/;$/, '');
+		}
+		return '';
+	}).trim();
+
+	resultObject.tagName = data.match(/^<([\w_-]+)>/)[1].toLowerCase();
+
+	while (match = tagRegExp.exec(data)) {
+		if (match.index < lastIndex) continue;
+		let text = data.substring(lastIndex, match.index).replace(/^[ \t]+|[ \t]$/g, ' ').trim();
+		lastIndex = match.index + match[0].length;
+		if (text.length > 0) {
+			resultObject.render += handleText(text);
+		}
+		if (match[2] === resultObject.tagName) continue;
+		if (match[1]) {
+			// closing tag
+			let expected = tagStack.pop();
+			if (expected !== match[2]) {
+				throw new Error('Unexpected end of tag: ' + match[2] + '; expected to end ' + expected);
+			}
+			resultObject.render = resultObject.render.replace(/,\s*$/g, '') + ')), ';
+		} else {
+			// opening tag
+			tagStack.push(match[2]);
+			let attributes = makeAttributes(match[3]);
+			resultObject.render += `new Tag('${match[2]}', ${attributes}`;
+			if (!match[4]) {
+				resultObject.render += ', [].concat(';
+			} else {
+				resultObject.render += '), ';
+				tagStack.pop();
+			}
+		}
+	}
+	if (tagStack.length > 0) {
+		throw new Error('Unclosed tags: ' + tagStack.join(', '));
+	}
+	if (data.substr(lastIndex).trim().length > 0) {
+		resultObject.render += handleText(data.substr(lastIndex).replace(/^[ \t]+|[ \t]$/g, ' ').trim());
+	}
+	resultObject.render = resultObject.render.replace(/,\s*$/g, '');
+
+	if (usesMerge) {
+		resultObject.helperFunctions.push(merge);
+		resultObject.helperFunctions.push(toArray);
+	}
+	if (usesSpread) {
+		resultObject.helperFunctions.push(spread);
+	}
+	if (usesRenderStyle) {
+		resultObject.helperFunctions.push(renderStyle);
+	}
+	resultObject.functions = resultObject.functions || '{}';
+	resultObject.styles = resultObject.styles.length > 0 ? 'styles: ' + JSON.stringify(resultObject.styles) + ',' : '';
+	resultObject.helperFunctions = resultObject.helperFunctions.join('\n');
+	return baseCode.replace(syntax, (g, m) => resultObject[m]);
 }

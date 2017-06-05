@@ -1,14 +1,48 @@
-import parse from '../src/mustacheparser';
+import {parse} from '../src/mustacheparser';
+import {Tag, getInnerHTML} from '../src/vdom';
 import test from './test';
+
+function run(code) {
+	try {
+		return new Function('return ' + code)()(Tag);
+	} catch(e) {
+		console.log(code);
+		throw new Error('Generated code invalid!');
+	}
+}
 
 test('Mustache Parser');
 
-test('parser response', t => {
-	let result = parse(`x{{test}}y`, {test: 0});
-	t.is(typeof result, 'string');
-	t.is(result.length, 3);
+test('simple component', t => {
+	let result = run(parse(`<btn><button class="special-button" type="button">{{body}}</button></btn>`));
+
+	t.is(typeof result, 'object', 'results in an object');
+	t.is(result.tagName, 'btn', 'identifies tag name');
+	t.is(typeof result.render, 'function', 'has a render function');
+	let dom = result.render({body: 'XXX'});
+	t.is(dom[0].tagName, 'button', 'generated virtual DOM has content');
+	t.is(getInnerHTML(Tag('div', {}, dom)), '<button class="special-button" type="button">XXX</button>', 'renders correct data');
 });
 
+test('script added', t => {
+	let result = run(parse(`<btn>X<script>{props: {me: 1}, events: {':host': {click: function(e){'use strict;'}}}, render: function(){throw 'render can run!';}}</script></btn>`));
+
+	t.is(result.functions.props.me, 1);
+	t.throws(function() {
+		result.functions.render();
+	}, 'render can run!');
+});
+
+test('styles generated', t => {
+	let result = run(parse(`<btn><div style="{{%styles.test}}">X</div><script>{styles: {test: {border: '1px solid red'}}}</script><style>:host{color: red;}</style></btn>`));
+
+	t.not(typeof result.styles, 'undefined');
+	t.is(result.styles.length, 1);
+	let dom = result.render(result.functions);
+	t.is(dom[0].attributes.style, 'border:1px solid red;');
+	t.is(getInnerHTML(Tag('div', {}, dom)), '<div style="border:1px solid red;">X</div>');
+});
+/*
 test('simple variables', t => {
 	t.is(parse(`x{{test}}y`, {test: 2}), 'x2y', 'can parse variable type number.');
 	t.is(parse(`x{{test.x}}y`, {test: {x: 'hallo'}}), 'xhalloy', 'can render variable type object.');
@@ -46,14 +80,6 @@ test('value escaping', t => {
 	t.is(parse(`x{{{test}}}y`, {test: '<&"'}), 'x<&"y', 'does not escape unescaped values');
 });
 
-/* // support for partial has been removed since it wasn't used
-test('partials', t => {
-	t.is(parse(`x{{>test}}y`), 'xtesty', 'returns partial name if no partial resolver provided');
-	t.is(parse(`x{{>test}}y`, {}, {
-		resolvePartial: name => 'resolved'
-	}), 'xresolvedy', 'resolves partial');
-});
-*/
 test('renders styles', t => {
 	t.is(parse(`x{{%test}}y`, {test: {
 		value: 'hallo'
@@ -88,3 +114,4 @@ test('complex data', t => {
 		return 'abcde';
 	}}), 'x--abcde--y', 'returns data name if no data resolver is set');
 });
+*/

@@ -1,6 +1,6 @@
 import {registerTag, render} from './core';
+import {parse} from './mustacheparser';
 import {emptyFunc, isObj} from './utils';
-import {find as $} from './htmlparser';
 import {on, one, off, trigger} from './events';
 
 let urlRegistry = window.zinoTagRegistry || {},
@@ -23,12 +23,16 @@ let urlRegistry = window.zinoTagRegistry || {},
 		});
 	});
 
+function $(selector, context) {
+	return [].slice.call(context.querySelectorAll(selector));
+}
+
 export default Zino = {
 	on, one, off, trigger,
 
 	fetch(url, callback, cache, code) {
 		if (cache && urlRegistry[url] && !urlRegistry[url].callback) {
-			return callback(urlRegistry[url]);
+			return callback(urlRegistry[url], 200);
 		} else if (isObj(urlRegistry[url])) {
 			return urlRegistry[url].callback.push(callback);
 		}
@@ -45,16 +49,31 @@ export default Zino = {
 					urlRegistry[url] = req.responseText;
 				}
 				if (!cache) delete urlRegistry[url];
-				callbacks.forEach(cb => cb(req.responseText));
+				callbacks.forEach(cb => cb(req.responseText, req.status));
 			}
 		};
 		req.send();
 	},
 
-	import(path, callback = emptyFunc) {
+	import: function(path, callback = emptyFunc) {
 		let url = (this.path || '') + path;
-		Zino.fetch(url, data => {
-			registerTag(data, url, document.body);
+		Zino.fetch(url, (data, status) => {
+			let path = url.replace(/[^\/]+$/g, '');
+			if (status === 200) {
+				let code;
+				try {
+					// if we have HTML input
+					if (data.trim().indexOf('<') === 0) {
+						// convert it to JS
+						data = parse(data);
+					}
+					code = new Function('return ' + data.replace(/\bZino.import\s*\(/g, 'Zino.import.call({path: ' + JSON.stringify(path) + '}, ').trim().replace(/;$/, ''))();
+				} catch(e) {
+					e.message = 'Unable to import tag ' + url.replace(/.*\//g, '') + ': ' + e.message;
+					throw e;
+				}
+				code && registerTag(code, document.body);
+			}
 			callback();
 		}, true);
 	}
@@ -68,7 +87,6 @@ on('publish-style', data => {
 	}
 	data && document.head.appendChild(data);
 });
-on('publish-script', document.head.appendChild);
 on('--zino-rerender-tag', tag => dirtyTags.indexOf(tag) < 0 && dirtyTags.push(tag));
 trigger('publish-style', '[__ready] { contain: content; }');
 $('[rel="zino-tag"]', document).forEach(tag => Zino.import(tag.href));

@@ -1,6 +1,5 @@
-import * as stache from './stache';
-import {parse as html, find as $} from './htmlparser';
-import {emptyFunc, isFn, isObj, error, uuid, merge, objectDiff} from './utils';
+import * as vdom from './vdom';
+import {emptyFunc, isFn, isObj, error, uuid, merge} from './utils';
 import {trigger, on, attachEvent} from './events';
 
 let tagRegistry = {},
@@ -33,16 +32,9 @@ export let renderOptions = {
 	}
 };
 
-export function registerTag(code, path, document) {
-	let firstElement = html(code).children[0],
-		tagName = firstElement.tagName,
-		functions;
-
-	// clean up path
-	path = path.replace(/[^\/]+$/g, '');
-	// remove recursive tag use and all style/script nodes
-	code = code.replace(new RegExp('<\\/?' + tagName + '(?:\s+[^>]+)?>', 'ig'), '').replace(/<(style|script)[^>]*>(?:[^\s]|[^\S])*?<\/\1>/g, '');
-	code = stache.parse(code, renderOptions);
+export function registerTag(fn, document) {
+	let firstElement = fn(vdom.Tag),
+		tagName = firstElement.tagName;
 
 	if (tagRegistry[tagName]) {
 		// tag is already registered
@@ -50,11 +42,11 @@ export function registerTag(code, path, document) {
 	}
 
 	handleStyles(firstElement);
-	functions = handleScripts(firstElement, path);
-	tagRegistry[tagName] = {functions, code, path, tagName};
+	firstElement.functions = merge({}, defaultFunctions, firstElement.functions);
+	tagRegistry[tagName] = firstElement;
 
 	// initialize all occurences in provided context
-	document && $(tagName, document).forEach(tag => initializeTag(tag, tagRegistry[tagName]));
+	document && [].slice.call(document.querySelectorAll(tagName)).forEach(tag => initializeTag(tag, tagRegistry[tagName]));
 }
 
 export function mount(tag, ignoreRender) {
@@ -80,19 +72,8 @@ function initializeTag(tag, registryEntry) {
 	let functions = registryEntry.functions,
 		isRendered;
 
-	// copy all defined functions/attributes
-	for (let all in functions) {
-		let entry = functions[all];
-		if (['mount', 'unmount', 'events', 'render'].indexOf(all) < 0) {
-			if (isFn(entry)) {
-				tag[all] = entry.bind(tag);
-			} else {
-				tag[all] = entry;
-			}
-		}
-	}
 	// if it has been pre-rendered
-	if (tag.children.length > 0 && tag.children[0].className === '-shadow-root') {
+	if (tag.children.length > 0 && tag.children[0].attributes && tag.children[0].attributes['class'] === '-shadow-root') {
 		let sibling = tag.children[1];
 		// remove original HTML content
 		if (sibling && sibling.className === '-original-root') {
@@ -102,35 +83,12 @@ function initializeTag(tag, registryEntry) {
 		}
 		isRendered = true;
 	} else {
-		tag.__i = tag.innerHTML;
+		tag.__i = tag instanceof Node ? tag.innerHTML : vdom.getInnerHTML(tag);
 		setElementAttr(tag);
 		tag.innerHTML = '<div class="-shadow-root"></div>';
 	}
-	// define basic properties
-	Object.defineProperty(tag, 'body', {
-		set(val) {
-			tag.__i = val;
-			setElementAttr(tag);
-			trigger('--zino-rerender-tag', tag.getHost());
-		},
-		get() { return tag.__i; }
-	});
-	tag.__s = tag.setAttribute;
-	tag.setAttribute = function(attr, val) {
-		this.__s(attr, val);
-		trigger('--zino-rerender-tag', this);
-	};
-
+	initializeNode(tag, functions);
 	tag.__vdom = {};
-	// call mount callback
-	tag.props = merge({}, functions.props, getAttributes(tag, true));
-	try {
-		tag.mounting = true;
-		functions.mount.call(tag);
-		delete tag.mounting;
-	} catch (e) {
-		error('mount', tag.tagName, e);
-	}
 
 	// render the tag's content
 	let subEvents = !isRendered && renderTag.call(this, tag) || {events:[]};
@@ -147,7 +105,11 @@ function initializeTag(tag, registryEntry) {
 	subEvents.events = subEvents.events.concat({childEvents, hostEvents, tag: this && this.noEvents ? tag.tagName : tag})
 
 	if (!tag.attributes.__ready) {
-		tag.__s('__ready', true);
+		if (isFn(tag.__s)) {
+			tag.__s('__ready', true);
+		} else {
+			tag.attributes['__ready'] = true;
+		}
 	}
 	if (!this || this.noEvents !== true) {
 		// attach sub events
@@ -157,45 +119,101 @@ function initializeTag(tag, registryEntry) {
 	}
 }
 
+export function initializeNode(tag, functions) {
+	// copy all defined functions/attributes
+	for (let all in functions) {
+		let entry = functions[all];
+		if (['mount', 'unmount', 'events', 'render'].indexOf(all) < 0) {
+			if (isFn(entry)) {
+				tag[all] = entry.bind(tag);
+			} else {
+				tag[all] = entry;
+			}
+		}
+	}
+	// define basic properties
+	Object.defineProperty(tag, 'body', {
+		set(val) {
+			tag.__i = val;
+			setElementAttr(tag);
+			trigger('--zino-rerender-tag', tag.getHost());
+		},
+		get() { return tag.__i; }
+	});
+	tag.__s = tag.setAttribute;
+	tag.setAttribute = function(attr, val) {
+		if (isFn(this.__s)) {
+			this.__s(attr, val);
+		} else {
+			this.attributes[attr] = val;
+		}
+		trigger('--zino-rerender-tag', this);
+	};
+
+	// call mount callback
+	tag.props = merge({}, functions.props, getAttributes(tag, true));
+
+	if (tag.ownerDocument) {
+		try {
+			tag.mounting = true;
+			functions.mount.call(tag);
+			delete tag.mounting;
+		} catch (e) {
+			error('mount', tag.tagName, e);
+		}
+	}
+}
+
 function renderTag(tag, registryEntry = tagRegistry[tag.tagName.toLowerCase()]) {
 	let events = [],
-		renderCallbacks = [];
+		renderCallbacks = [],
+		renderedSubElements = [],
+		renderedDOM;
 
 	// do the actual rendering of the component
 	let data = getAttributes(tag);
-	let renderedDOM = registryEntry.code(data);
-	renderedDOM.tagName = 'div';
-	renderedDOM.setAttribute('class', '-shadow-root');
+	if (isFn(registryEntry.render)) {
+		vdom.setFilter(Object.keys(tagRegistry));
+		renderedDOM = vdom.Tag('div', {'class': '-shadow-root'}, registryEntry.render(data));
+	}
 
 	// render all contained sub components
-	for (let all in tagRegistry) {
-		$(all, renderedDOM).forEach(subEl => {
-			let subElEvents = initializeTag.call({
-				noRenderCallback: true,
-				noEvents: true
-			}, subEl, tagRegistry[all]);
-			events = events.concat(subElEvents.events);
-			renderCallbacks = renderCallbacks.concat(subElEvents.renderCallbacks);
-		});
-	}
+	renderedSubElements = renderedSubElements.concat(vdom.getTagsCreated());
+	renderedSubElements.forEach(subEl => {
+		let subElEvents = initializeTag.call({
+			noRenderCallback: true,
+			noEvents: true
+		}, subEl, tagRegistry[subEl.tagName]);
+		renderedSubElements = renderedSubElements.concat(vdom.getTagsCreated());
+		events = events.concat(subElEvents.events);
+		renderCallbacks = renderCallbacks.concat(subElEvents.renderCallbacks);
+	});
 
-	// unmount all existing sub tags
-	$('[__ready]', tag).forEach(unmountTag);
-	let renderedSubElements = $('[__ready]', renderedDOM);
 	if (tag.attributes.__ready && tag.ownerDocument) {
 		// has been rendered before, so just apply diff
-		let diff = objectDiff(tag.__vdom, renderedDOM);
-		if (diff !== false) {
-			stache.applyDOM(tag.children[0], diff, renderedDOM);
-		}
+		vdom.applyDOM(tag.children[0], renderedDOM, dataRegistry);
 	} else {
 		// simply render everything inside
-		tag.children[0].innerHTML = renderedDOM.innerHTML;
+		if (tag.ownerDocument) {
+			tag.children[0].innerHTML = vdom.getInnerHTML(renderedDOM);
+		} else {
+			tag.children[0] = renderedDOM;
+		}
 	}
 	tag.__vdom = renderedDOM;
+	tag.__subElements = renderedSubElements;
 
-	renderedSubElements.length > 0 && $('[__ready]', tag).forEach((subEl, index) => {
-		merge(subEl, renderedSubElements[index])
+	renderedSubElements.length > 0 && (tag.querySelectorAll && [].slice.call(tag.querySelectorAll('[__ready]')) || renderedSubElements).forEach((subEl, index) => {
+		merge(subEl, renderedSubElements[index]);
+		if (subEl.ownerDocument) {
+			try {
+				subEl.mounting = true;
+				tagRegistry[subEl.tagName.toLowerCase()].functions.mount.call(subEl);
+				delete subEl.mounting;
+			} catch (e) {
+				error('mount', subEl.tagName, e);
+			}
+		}
 		renderedSubElements[index].getHost = defaultFunctions.getHost.bind(subEl);
 		subEl.setAttribute = function(attr, val) {
 			HTMLElement.prototype.setAttribute.call(subEl, attr, val);
@@ -218,7 +236,7 @@ function attachSubEvents(subEvents, tag) {
 		let el = event.tag;
 		if (!isObj(el)) {
 			count[el] = (count[el] || 0) + 1;
-			el = $(el, tag)[count[el] - 1];
+			el = tag.querySelectorAll(el)[count[el] - 1];
 		}
 		if (!el.children[0].__eventsAttached) {
 			attachEvent(el.children[0], event.childEvents, el);
@@ -233,7 +251,7 @@ function unmountTag(tag) {
 	let name = (tag.tagName || '').toLowerCase(),
 		entry = tagRegistry[name];
 	if (entry) {
-		[].forEach.call(tag.attributes, attr => {
+		[].forEach.call(tag.nodeType === 1 && tag.attributes || Object.keys(tag.attributes).map(attr => ({name: attr, value: tag.attributes[attr]})), attr => {
 			// cleanup saved data
 			if (attr.name.indexOf('data-') >= 0) {
 				delete dataRegistry[attr.value];
@@ -251,8 +269,8 @@ function getAttributes(tag, propsOnly) {
 	let attrs = {props: tag.props, element: tag.element, styles: tag.styles, body: tag.__i},
 		props = {};
 
-	[].forEach.call(tag.attributes, attribute => {
-		let isComplex = attribute.name.indexOf('data-') >= 0 && attribute.value.substr(0, 2) === '--';
+	[].forEach.call(tag.nodeType === 1 && tag.attributes || Object.keys(tag.attributes).map(attr => ({name: attr, value: tag.attributes[attr]})), attribute => {
+		let isComplex = attribute.name.indexOf('data-') >= 0 && typeof attribute.value === 'string' && attribute.value.substr(0, 2) === '--';
 		attrs[attribute.name] || (attrs[attribute.name] = isComplex ? dataRegistry[attribute.value.replace(/^--|--$/g, '')] : attribute.value);
 		if (attribute.name.indexOf('data-') === 0) {
 			props[attribute.name.replace(/^data-/g, '').replace(/(\w)-(\w)/g, (g, m1, m2) => m1 + m2.toUpperCase())] = attrs[attribute.name];
@@ -283,14 +301,9 @@ function setElementAttr(source, target = source) {
 
 function handleStyles(element) {
 	let tagName = element.tagName;
-	$('link', element).forEach(link => {
-		if (link.attributes.type === 'stylesheet') {
-			trigger('publish-style', link);
-		}
-	});
 	trigger('publish-style',
-		$('style', element).map(style => {
-			let code = style.innerHTML.replace(/<br>/g, '');
+		(element.styles || []).map(style => {
+			let code = style;
 			return code.replace(/[\r\n]*([^@%\{;\}]+?)\{/gm, (global, match) => {
 				var selectors = match.split(',').map(selector => {
 					selector = selector.trim();
@@ -305,23 +318,6 @@ function handleStyles(element) {
 			}).replace(/:host\b/gm, tagName) + '\n';
 		}).join('\n')
 	);
-}
-
-function handleScripts(element, path) {
-	let functions = merge({}, defaultFunctions);
-	$('script', element).forEach(script => {
-		let text = script.innerHTML.trim();
-		if (script.attributes.src) {
-			return trigger('publish-script', script);
-		}
-		try {
-			text = text.replace(/\bZino\.import\s*\(/g, 'Zino.import.call({path: "' + path + '"}, ');
-			merge(functions, new Function('return ' + text)());
-		} catch (e) {
-			error(`parse script ${text} in tag ${element.tagName}`, e);
-		}
-	});
-	return functions;
 }
 
 on('--zino-unmount-tag', unmountTag);
