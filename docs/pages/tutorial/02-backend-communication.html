@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Communicating with a backend system</title>
+  <meta name="description" content="A micro component framework - easy to learn and powerful.
+">
+
+  <link rel="stylesheet" href="/zino/css/main.css">
+  <link rel="canonical" href="https://andcake.github.io/zino/pages/tutorial/02-backend-communication.html">
+  <link rel="alternate" type="application/rss+xml" title="zino" href="https://andcake.github.io/zino/feed.xml">
+</head>
+
+
+  <body>
+
+    <a href="https://github.com/AndCake/zino"><img style="position: absolute; top: 0; right: 0; border: 0;" src="https://camo.githubusercontent.com/365986a132ccd6a44c23a9169022c0b5c890c387/68747470733a2f2f73332e616d617a6f6e6177732e636f6d2f6769746875622f726962626f6e732f666f726b6d655f72696768745f7265645f6161303030302e706e67" alt="Fork me on GitHub" data-canonical-src="https://s3.amazonaws.com/github/ribbons/forkme_right_red_aa0000.png"></a>
+
+<header class="site-header">
+<nav class="site-nav">
+    <a class="site-title" href="/zino/">zino</a>
+
+  <a href="#" class="menu-icon">
+    <svg viewBox="0 0 18 15">
+      <path fill="#424242" d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.031C17.335,0,18,0.665,18,1.484L18,1.484z"/>
+      <path fill="#424242" d="M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0c0-0.82,0.665-1.484,1.484-1.484 h15.031C17.335,6.031,18,6.696,18,7.516L18,7.516z"/>
+      <path fill="#424242" d="M18,13.516C18,14.335,17.335,15,16.516,15H1.484C0.665,15,0,14.335,0,13.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.031C17.335,12.031,18,12.696,18,13.516L18,13.516z"/>
+    </svg>
+  </a>
+
+  <ul class="trigger">
+      
+        
+      
+        
+        <li>
+            <a class="page-link" href="/zino/getting-started">Getting Started</a>
+            <ul>
+            
+            </ul>
+        </li>
+        
+      
+        
+      
+        
+      
+        
+      
+        
+        <li>
+            <a class="page-link" href="/zino/tutorial">Tutorial</a>
+            <ul>
+            
+                <li><a class="page-link" href="/zino/pages/tutorial/01-first-component.html">Your First Component</a></li>
+            
+                <li><a class="page-link" href="/zino/pages/tutorial/02-backend-communication.html">Backend Communication</a></li>
+            
+                <li><a class="page-link" href="/zino/pages/tutorial/03-styling-components.html">Styling Components</a></li>
+            
+            </ul>
+        </li>
+        
+      
+        
+        <li>
+            <a class="page-link" href="/zino/api">API</a>
+            <ul>
+            
+                <li><a class="page-link" href="/zino/pages/api/01-zino-api.html">Zino API</a></li>
+            
+                <li><a class="page-link" href="/zino/pages/api/02-component-api.html">Component API</a></li>
+            
+            </ul>
+        </li>
+        
+      
+        
+      
+        
+      
+        
+        <li>
+            <a class="page-link" href="/zino/templates">Templating</a>
+            <ul>
+            
+                <li><a class="page-link" href="/zino/templates#variables">Variables</a></li>
+            
+                <li><a class="page-link" href="/zino/templates#sections--conditions--iterations">Conditions/Iterations</a></li>
+            
+                <li><a class="page-link" href="/zino/templates#inverted-sections">Inverted Sections</a></li>
+            
+                <li><a class="page-link" href="/zino/templates#section-keys">Section Keys</a></li>
+            
+                <li><a class="page-link" href="/zino/templates#style-tag">Style Tag</a></li>
+            
+                <li><a class="page-link" href="/zino/templates#transfer-tag">Transfer Tag</a></li>
+            
+            </ul>
+        </li>
+        
+      
+        
+        <li>
+            <a class="page-link" href="/zino/testing">Testing</a>
+            <ul>
+            
+            </ul>
+        </li>
+        
+      
+        
+        <li>
+            <a class="page-link" href="/zino/events">Events</a>
+            <ul>
+            
+            </ul>
+        </li>
+        
+      
+        
+      
+        
+      
+        
+      
+  </ul>
+
+  <hr>
+
+  <ul class="trigger">
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </ul>
+
+  <a href="https://github.com/AndCake/zino">View the Project on GitHub</a>
+
+</nav>
+</header>
+
+
+    <div class="page-content">
+      <div class="wrapper">
+        <article class="post">
+
+  <header class="post-header">
+    <h1 class="post-title">Communicating with a backend system</h1>
+  </header>
+
+  <div class="post-content">
+    <p>In order to understand how communication with the backend works, let’s to a small excursion to a concept called “Flux”. With a typical Model-View-Controller pattern, you would have a model that retrieves the data from the database and hands it over to the controller which finally triggers the view to re-render the results. With Flux, this concept changes:</p>
+
+<p>When the user interacts with a view, so for example our component, the view sends an action through Zino, which acts as a dispatcher for all messages, to the various stores that want to be notified of such an action. The stores then do their respective data changes and notify the view through the dispatcher of the changes done.</p>
+
+<p>In praxis, this means that first, we create our store by creating a new file, called <code class="highlighter-rouge">comment-store.js</code>. The file should look like that:</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><table style="border-spacing: 0"><tbody><tr><td class="gutter gl" style="text-align: right"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18</pre></td><td class="code"><pre><span class="p">(</span><span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+	<span class="s1">'use strict'</span><span class="p">;</span>
+
+	<span class="kd">var</span> <span class="nx">comments</span> <span class="o">=</span> <span class="p">[];</span>
+
+	<span class="c1">// initially load the comments from the server</span>
+	<span class="nx">Zino</span><span class="p">.</span><span class="nx">fetch</span><span class="p">(</span><span class="s1">'comments.json'</span><span class="p">,</span> <span class="kd">function</span><span class="p">(</span><span class="nx">data</span><span class="p">)</span> <span class="p">{</span>
+		<span class="nx">comments</span> <span class="o">=</span> <span class="nx">JSON</span><span class="p">.</span><span class="nx">parse</span><span class="p">(</span><span class="nx">data</span><span class="p">)</span> <span class="o">||</span> <span class="p">[];</span>
+
+		<span class="c1">// once loaded, notify everyone about the changes</span>
+		<span class="nx">Zino</span><span class="p">.</span><span class="nx">trigger</span><span class="p">(</span><span class="s1">'comments-changed'</span><span class="p">,</span> <span class="nx">comments</span><span class="p">);</span>
+	<span class="p">});</span>
+
+	<span class="nx">Zino</span><span class="p">.</span><span class="nx">on</span><span class="p">(</span><span class="s1">'comments-initialize'</span><span class="p">,</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+		<span class="c1">// send over the list of comments to anyone listening</span>
+		<span class="nx">Zino</span><span class="p">.</span><span class="nx">trigger</span><span class="p">(</span><span class="s1">'comments-changed'</span><span class="p">,</span> <span class="nx">comments</span><span class="p">);</span>
+	<span class="p">});</span>
+<span class="p">}());</span><span class="w">
+</span></pre></td></tr></tbody></table></code></pre></figure>
+
+<p>As you can see, the store mainly deals with handling our actual comment data. <code class="highlighter-rouge">Zino.trigger()</code> and <code class="highlighter-rouge">Zino.on()</code> are used to communicate with the dispatcher. Just load the <code class="highlighter-rouge">comment-store.js</code> in our tutorial HTML file:</p>
+
+<figure class="highlight"><pre><code class="language-html" data-lang="html">    <span class="nt">&lt;script </span><span class="na">src=</span><span class="s">"comment-store.js"</span><span class="nt">&gt;&lt;/script&gt;</span></code></pre></figure>
+
+<p>and we’re ready to use it. Now let’s update our component to make use of the store:</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js"><span class="p">...</span>
+<span class="k">return</span> <span class="p">{</span>
+	<span class="na">props</span><span class="p">:</span> <span class="p">{</span>
+		<span class="na">comments</span><span class="p">:</span> <span class="p">[]</span>
+	<span class="p">},</span>
+
+	<span class="na">mount</span><span class="p">:</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+		<span class="c1">// listen for comments-changed events</span>
+		<span class="nx">Zino</span><span class="p">.</span><span class="nx">on</span><span class="p">(</span><span class="s1">'comments-changed'</span><span class="p">,</span> <span class="k">this</span><span class="p">.</span><span class="nx">changeHandler</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">comments</span><span class="p">)</span> <span class="p">{</span>
+			<span class="c1">// update our internal state</span>
+			<span class="k">this</span><span class="p">.</span><span class="nx">getHost</span><span class="p">().</span><span class="nx">setProps</span><span class="p">(</span><span class="s1">'comments'</span><span class="p">,</span> <span class="nx">comments</span><span class="p">);</span>
+		<span class="p">}.</span><span class="nx">bind</span><span class="p">(</span><span class="k">this</span><span class="p">));</span>
+
+		<span class="c1">// notify the store that we need the latest data</span>
+		<span class="nx">Zino</span><span class="p">.</span><span class="nx">trigger</span><span class="p">(</span><span class="s1">'comments-initialize'</span><span class="p">);</span>
+	<span class="p">},</span>
+	<span class="na">unmount</span><span class="p">:</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+		<span class="c1">// make sure we clean up after us</span>
+		<span class="nx">Zino</span><span class="p">.</span><span class="nx">off</span><span class="p">(</span><span class="s1">'comments-changed'</span><span class="p">,</span> <span class="k">this</span><span class="p">.</span><span class="nx">changeHandler</span><span class="p">);</span>
+	<span class="p">}</span>
+<span class="p">};</span>
+<span class="p">...</span></code></pre></figure>
+
+<p>The <code class="highlighter-rouge">mount()</code> and <code class="highlighter-rouge">unmount()</code> functions are called once our component is mounted/added to the page’s DOM or unmounted/removed from the page’s DOM. On those, we tell our dispatcher, that we want to be notified of any changes to the comments in our store. If there is one, we simply update our internal component state but using <code class="highlighter-rouge">this.getHost().setProps()</code>. The <code class="highlighter-rouge">getHost()</code> function will return the actual component instance. Every time you call <code class="highlighter-rouge">setProps</code> on it and therefore change the internal state of the component, it triggers a re-render of the component, thereby displaying our updated comment list.</p>
+
+<p>Last but not least, by triggering the <code class="highlighter-rouge">comments-initialize</code> action, we tell our store to send us everything he has for this action.</p>
+
+<p>Sometimes you might want to change something of the component after it has been rendered. For this, there is the property <code class="highlighter-rouge">render</code>. It works similar to <code class="highlighter-rouge">mount</code> and <code class="highlighter-rouge">unmount</code>, so is also a callback. Since it is called after every time the component is rendered, having complex logic there should be avoided.</p>
+
+<p>Now let’s write our component for adding a new entry. Create the file <code class="highlighter-rouge">comment-form.html</code>:</p>
+
+<figure class="highlight"><pre><code class="language-html" data-lang="html"><table style="border-spacing: 0"><tbody><tr><td class="gutter gl" style="text-align: right"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22</pre></td><td class="code"><pre><span class="nt">&lt;comment-form&gt;</span>
+	<span class="nt">&lt;form</span> <span class="na">class=</span><span class="s">'comment-form'</span><span class="nt">&gt;</span>
+		<span class="nt">&lt;input</span> <span class="na">type=</span><span class="s">"text"</span> <span class="na">name=</span><span class="s">"author"</span> <span class="na">placeholder=</span><span class="s">"Your name"</span> <span class="nt">/&gt;</span>
+		<span class="nt">&lt;textarea</span> <span class="na">name=</span><span class="s">"comment"</span> <span class="na">placeholder=</span><span class="s">"Say something..."</span><span class="nt">&gt;&lt;/textarea&gt;</span>
+		<span class="nt">&lt;button&gt;</span>Post<span class="nt">&lt;/button&gt;</span>
+	<span class="nt">&lt;/form&gt;</span>
+	<span class="nt">&lt;script&gt;</span>
+	<span class="p">({</span>
+		<span class="na">events</span><span class="p">:</span> <span class="p">{</span>
+			<span class="s1">'form'</span><span class="p">:</span> <span class="p">{</span>
+				<span class="nl">submit</span><span class="p">:</span> <span class="kd">function</span> <span class="nx">addComment</span><span class="p">(</span><span class="nx">e</span><span class="p">)</span> <span class="p">{</span>
+					<span class="nx">e</span><span class="p">.</span><span class="nx">preventDefault</span><span class="p">();</span>
+					<span class="nx">Zino</span><span class="p">.</span><span class="nx">trigger</span><span class="p">(</span><span class="s1">'add-comment'</span><span class="p">,</span> <span class="p">{</span>
+						<span class="na">author</span><span class="p">:</span> <span class="k">this</span><span class="p">.</span><span class="nx">author</span><span class="p">.</span><span class="nx">value</span><span class="p">,</span>
+						<span class="na">comment</span><span class="p">:</span> <span class="k">this</span><span class="p">.</span><span class="nx">comment</span><span class="p">.</span><span class="nx">value</span>
+					<span class="p">});</span>
+				<span class="p">}</span>
+			<span class="p">}</span>
+		<span class="p">}</span>
+	<span class="p">})</span>
+	<span class="nt">&lt;/script&gt;</span>
+<span class="nt">&lt;/comment-form&gt;</span><span class="w">
+</span></pre></td></tr></tbody></table></code></pre></figure>
+
+<p>So what does this mean? Since we don’t use other components, we simply use object syntax to define what the properties of our component are. With the events property we can register any kind of event for any part of our component. It won’t register events to anything outside the component. So in this case, we select the form element, but any kind of CSS selector would work, there. For example, instead of <code class="highlighter-rouge">'form'</code>, we could also use <code class="highlighter-rouge">'.comment-form'</code> as the key in our object. All events declared in the events object are registered through event delegation for optimal performance.</p>
+
+<p>Within the event’s form object, we have defined the submit property, which is a function that handles the event, once it occurs. Within this function, we simply tell our store what the new comment’s author and content are, the store will deal with the rest.</p>
+
+<p>For our store to actually support this action, we need to extend it with the following code in <code class="highlighter-rouge">comment-store.js</code>:</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">	<span class="p">...</span>
+	<span class="c1">// when receiving the notification about an added comment</span>
+	<span class="nx">Zino</span><span class="p">.</span><span class="nx">on</span><span class="p">(</span><span class="s1">'add-comment'</span><span class="p">,</span> <span class="kd">function</span><span class="p">(</span><span class="nx">comment</span><span class="p">)</span> <span class="p">{</span>
+		<span class="c1">// add it to the list of comments</span>
+		<span class="nx">comments</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span><span class="nx">comment</span><span class="p">);</span>
+
+		<span class="c1">// send comments to the server</span>
+		<span class="c1">// ...</span>
+
+		<span class="c1">// once done, trigger the comments-changed event to notify everyone</span>
+		<span class="nx">Zino</span><span class="p">.</span><span class="nx">trigger</span><span class="p">(</span><span class="s1">'comments-changed'</span><span class="p">,</span> <span class="nx">comments</span><span class="p">);</span>
+	<span class="p">});</span>
+<span class="p">}());</span></code></pre></figure>
+
+<p>Last but not least, we need to tell our <code class="highlighter-rouge">comment-box</code> where Zino can load our <code class="highlighter-rouge">comment-form</code> component from:</p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js"><span class="p">...</span>
+<span class="p">(</span><span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+	<span class="nx">Zino</span><span class="p">.</span><span class="kr">import</span><span class="p">(</span><span class="s1">'comment.html'</span><span class="p">);</span>
+	<span class="nx">Zino</span><span class="p">.</span><span class="kr">import</span><span class="p">(</span><span class="s1">'comment-form.html'</span><span class="p">);</span>
+
+	<span class="k">return</span> <span class="p">{</span>
+		<span class="p">...</span></code></pre></figure>
+
+
+  </div>
+
+</article>
+
+      </div>
+    </div>
+
+    <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">zino</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-2">
+        <ul class="social-media-list">
+          
+          <li>
+            <a href="https://github.com/AndCake"><span class="icon icon--github"><svg viewBox="0 0 16 16"><path fill="#828282" d="M7.999,0.431c-4.285,0-7.76,3.474-7.76,7.761 c0,3.428,2.223,6.337,5.307,7.363c0.388,0.071,0.53-0.168,0.53-0.374c0-0.184-0.007-0.672-0.01-1.32 c-2.159,0.469-2.614-1.04-2.614-1.04c-0.353-0.896-0.862-1.135-0.862-1.135c-0.705-0.481,0.053-0.472,0.053-0.472 c0.779,0.055,1.189,0.8,1.189,0.8c0.692,1.186,1.816,0.843,2.258,0.645c0.071-0.502,0.271-0.843,0.493-1.037 C4.86,11.425,3.049,10.76,3.049,7.786c0-0.847,0.302-1.54,0.799-2.082C3.768,5.507,3.501,4.718,3.924,3.65 c0,0,0.652-0.209,2.134,0.796C6.677,4.273,7.34,4.187,8,4.184c0.659,0.003,1.323,0.089,1.943,0.261 c1.482-1.004,2.132-0.796,2.132-0.796c0.423,1.068,0.157,1.857,0.077,2.054c0.497,0.542,0.798,1.235,0.798,2.082 c0,2.981-1.814,3.637-3.543,3.829c0.279,0.24,0.527,0.713,0.527,1.437c0,1.037-0.01,1.874-0.01,2.129 c0,0.208,0.14,0.449,0.534,0.373c3.081-1.028,5.302-3.935,5.302-7.362C15.76,3.906,12.285,0.431,7.999,0.431z"/></svg>
+</span><span class="username">AndCake</span></a>
+
+          </li>
+          
+
+          
+        </ul>
+      </div>
+
+      <div class="footer-col footer-col-3">
+        <p>A micro component framework - easy to learn and powerful.
+</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+
+<script>
+    [].slice.call(document.querySelectorAll('.site-nav li')).forEach(function(li) {
+        if (li.querySelector('a[href]').href === location.href) {
+            li.classList.add('active');
+            if (li.parentNode.parentNode.tagName === 'LI') {
+                li.parentNode.parentNode.classList.add('active');
+            }
+        }
+    });
+</script>
+
+
+  </body>
+
+</html>

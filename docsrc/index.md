@@ -1,16 +1,18 @@
-ZinoJS - Tiny Components
-========================
+---
+layout: default
+---
+
+# Zino Documentation
 
 ![Chrome 18+](https://img.shields.io/badge/Chrome-18+-green.svg?style=flat&colorA=777777&colorB=679A00)
 ![Firefox 14+](https://img.shields.io/badge/Firefox-14+-green.svg?style=flat&colorA=777777&colorB=679A00)
 ![Mac & iOS Safari 6+](https://img.shields.io/badge/Safari-6.1+-green.svg?style=flat&colorA=777777&colorB=679A00)
-![Internet Explorer 10](https://img.shields.io/badge/Internet%20Explorer-10-yellow.svg?style=flat&colorB=af8300&colorA=777777 "is supported with the MutationObserver polyfill")
-![Internet Explorer 11](https://img.shields.io/badge/Internet%20Explorer-11-green.svg?style=flat&colorA=777777&colorB=679A00)
+![Internet Explorer 10](https://img.shields.io/badge/Internet Explorer-10-yellow.svg?style=flat&colorB=af8300&colorA=777777 "is supported with the MutationObserver polyfill")
+![Internet Explorer 11](https://img.shields.io/badge/Internet Explorer-11-green.svg?style=flat&colorA=777777&colorB=679A00)
 ![Edge](https://img.shields.io/badge/Edge-20+-green.svg?style=flat&colorA=777777&colorB=679A00)
 
 This is a microframework similar to ReactJS and Polymer but without all the bloating and additional dependencies.
 
-For information on how to get started and how to use Zino, please see the [Zino Homepage](https://andcake.github.io/zino/). For source files and issues, please visit the [Zino repo](https://github.com/AndCake/zino.git).
 
 ## Features
 
@@ -30,6 +32,23 @@ For information on how to get started and how to use Zino, please see the [Zino 
   - write your JS in ES6, Typescript or CoffeeScript, and/or use Browserify
 - use CSS in JS the React way or define an automatically scoped fully-fledged stylesheet or mix both
 
-## License
+## Comparison
 
-[LGPLv3](https://opensource.org/licenses/LGPL-3.0)
+- Polymer: 66.3 KB minified & gzipped
+- ReactJS: 46.45 KB minified & gzipped
+- Zino: 5.0 KB minified & gzipped
+
+Installation
+------------
+
+Zino can be installed through NPM:
+
+{% highlight bash %}
+$ npm install -D zino
+{% endhighlight %}
+
+Alternatively, you can use the unpkg CDN by adding a script tag to your page:
+
+{% highlight html %}
+<script src="https://unpkg.com/zino"></script>
+{% endhighlight %}

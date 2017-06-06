@@ -853,7 +853,7 @@ var tagObserver = new MutationObserver(function (records) {
 
 		if (added.length > 0) {
 			[].forEach.call(added, function (tag) {
-				[tag].concat(tag.children && find('*', tag) || []).forEach(function (subTag) {
+				(tag.children && find('*', tag) || []).concat(tag).forEach(function (subTag) {
 					return trigger('--zino-mount-tag', subTag);
 				});
 			});
@@ -872,7 +872,7 @@ var zino = Zino = {
 
 	fetch: function fetch(url, callback, cache, code) {
 		if (cache && urlRegistry[url] && !urlRegistry[url].callback) {
-			return callback(urlRegistry[url]);
+			return callback(urlRegistry[url], 200);
 		} else if (isObj(urlRegistry[url])) {
 			return urlRegistry[url].callback.push(callback);
 		}
