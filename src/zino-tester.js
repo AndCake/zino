@@ -23,9 +23,9 @@ merge(global, {
 	setInterval: emptyFunc
 });
 
-export function importTag(tagFile) {
+export function importTag(tagFile, document) {
 	let code = fs.readFileSync(tagFile, 'utf-8');
-	core.registerTag(code, tagFile);
+	core.registerTag(code, tagFile, document);
 }
 
 export function clearImports() {

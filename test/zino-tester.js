@@ -1,4 +1,5 @@
 import * as zino from '../src/zino-tester';
+import * as html from '../src/htmlparser';
 import test from './test';
 
 test('Zino Snapshotting');
@@ -32,9 +33,17 @@ test('calls the callback function', t => {
 		called = true;
 		tag.children[0].innerHTML = 'content removed in callback!';
 	});
-	t.assert(called, 'Callback function was called');
+	t.true(called, 'Callback function was called');
 });
 
 test('supports object notation for matchesSnapshot', t => {
 	// test implementation missing
+});
+
+test('allows for non-snapshot testing', t => {
+	let document = html.parse('<comment author="Bucks Bunny">I love carrots!</comment>');
+	zino.clearImports();
+	zino.importTag('test/components/comment.html', document);
+	let comment = document.children[0];
+	t.is(comment.children[0].children[0].innerHTML, '"Bucks Bunny"', 'rendered the tag into the DOM');
 });

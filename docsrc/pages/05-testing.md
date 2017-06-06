@@ -4,7 +4,7 @@ title: Testing
 permalink: /testing
 ---
 
-Zino offers snapshot testing for making sure that tests can be written very easily and tested equally quickly. Consider this simple [button link example](https://bitbucket.org/rkunze/zinojs/src/master/examples/src/btn.html):
+Zino offers snapshot testing for making sure that tests can be written very easily and tested equally quickly. Consider this simple [button link example](https://github.com/AndCake/zino/blob/master/test/components/btn.html):
 
 {% highlight javascript %}
 var z = require('zino/test');
@@ -13,7 +13,7 @@ describe('btn link component', () => {
 	z.importTag('src/btn.html');
 
 	it('receives the URL and renders the text properly', () => {
-		z.matchesSnapshot('<btn page="https://bitbucket.org/rkunze/zinojs">ZinoJS</btn>')
+		z.matchesSnapshot('<btn page="https://andcake.github.io/zino">ZinoJS</btn>')
 	});
 })
 {% endhighlight %}
@@ -27,7 +27,7 @@ The first time, this test is executed, Zino creates a snapshot file that looks l
 	  "data": {
 	    "props": {},
 	    "body": "ZinoJS",
-	    "page": "https://bitbucket.org/rkunze/zinojs"
+	    "page": "https://andcake.github.io/zino"
 	  },
 	  "events": [
 	    {
@@ -53,10 +53,11 @@ Once it is installed, in your project, create a `test/` directory. Place all you
 
 Zino offers two methods to support your testing efforts:
 
- * `importTag(<pathToTag>)` - imports a Zino component into the registry so that it can be used for testing
+ * `importTag(<pathToTag>[, <document>])` - imports a Zino component into the registry so that it can be used for testing. If the second parameter, which should be a virtual DOM implementation is provided, all instances of the imported component will be rendered in that document
  * `matchesSnapshot(<tagExample>, <data>)` - renders the tag as if it were used in a browser and checks if a previous snapshot of it has changed
+ * `clearImports()` - removes all imported components from memory.
 
-Since events will usually trigger state changes, these events can be simulated by calling the `matchesSnapshot()` method with the data parameter, which allows you to overwrite props values. For our [todolist tag](https://bitbucket.org/rkunze/zinojs/src/master/examples/src/todolist.html) example, this could look like that:
+Since events will usually trigger state changes, these events can be simulated by calling the `matchesSnapshot()` method with the data parameter, which allows you to overwrite props values. For our [todolist tag](https://github.com/AndCake/zino/blob/master/test/components/todolist.html) example, this could look like that:
 
 {% highlight javascript %}
 const zino = require('zino/test');
@@ -76,4 +77,4 @@ describe('todo-list', () => {
 })
 {% endhighlight %}
 
-Please refer to the [test/zino-tester.js](https://bitbucket.org/rkunze/zinojs/src/master/test/zino-tester.js) for more examples of how snapshots can be used.
+Please refer to the [test/zino-tester.js](https://github.com/AndCake/zino/blob/master/test/zino-tester.js) for more examples of how snapshots can be used.

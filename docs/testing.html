@@ -181,7 +181,7 @@
   </header>
 
   <div class="post-content">
-    <p>Zino offers snapshot testing for making sure that tests can be written very easily and tested equally quickly. Consider this simple <a href="https://bitbucket.org/rkunze/zinojs/src/master/examples/src/btn.html">button link example</a>:</p>
+    <p>Zino offers snapshot testing for making sure that tests can be written very easily and tested equally quickly. Consider this simple <a href="https://github.com/AndCake/zino/blob/master/test/components/btn.html">button link example</a>:</p>
 
 <figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">var</span> <span class="nx">z</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s1">'zino/test'</span><span class="p">);</span>
 
@@ -189,7 +189,7 @@
 	<span class="nx">z</span><span class="p">.</span><span class="nx">importTag</span><span class="p">(</span><span class="s1">'src/btn.html'</span><span class="p">);</span>
 
 	<span class="nx">it</span><span class="p">(</span><span class="s1">'receives the URL and renders the text properly'</span><span class="p">,</span> <span class="p">()</span> <span class="o">=&gt;</span> <span class="p">{</span>
-		<span class="nx">z</span><span class="p">.</span><span class="nx">matchesSnapshot</span><span class="p">(</span><span class="s1">'&lt;btn page="https://bitbucket.org/rkunze/zinojs"&gt;ZinoJS&lt;/btn&gt;'</span><span class="p">)</span>
+		<span class="nx">z</span><span class="p">.</span><span class="nx">matchesSnapshot</span><span class="p">(</span><span class="s1">'&lt;btn page="https://andcake.github.io/zino"&gt;ZinoJS&lt;/btn&gt;'</span><span class="p">)</span>
 	<span class="p">});</span>
 <span class="p">})</span></code></pre></figure>
 
@@ -202,7 +202,7 @@
   "data": {
     "props": {},
     "body": "ZinoJS",
-    "page": "https://bitbucket.org/rkunze/zinojs"
+    "page": "https://andcake.github.io/zino"
   },
   "events": [
     {
@@ -229,11 +229,12 @@
 <p>Zino offers two methods to support your testing efforts:</p>
 
 <ul>
-  <li><code class="highlighter-rouge">importTag(&lt;pathToTag&gt;)</code> - imports a Zino component into the registry so that it can be used for testing</li>
+  <li><code class="highlighter-rouge">importTag(&lt;pathToTag&gt;[, &lt;document&gt;])</code> - imports a Zino component into the registry so that it can be used for testing. If the second parameter, which should be a virtual DOM implementation is provided, all instances of the imported component will be rendered in that document</li>
   <li><code class="highlighter-rouge">matchesSnapshot(&lt;tagExample&gt;, &lt;data&gt;)</code> - renders the tag as if it were used in a browser and checks if a previous snapshot of it has changed</li>
+  <li><code class="highlighter-rouge">clearImports()</code> - removes all imported components from memory.</li>
 </ul>
 
-<p>Since events will usually trigger state changes, these events can be simulated by calling the <code class="highlighter-rouge">matchesSnapshot()</code> method with the data parameter, which allows you to overwrite props values. For our <a href="https://bitbucket.org/rkunze/zinojs/src/master/examples/src/todolist.html">todolist tag</a> example, this could look like that:</p>
+<p>Since events will usually trigger state changes, these events can be simulated by calling the <code class="highlighter-rouge">matchesSnapshot()</code> method with the data parameter, which allows you to overwrite props values. For our <a href="https://github.com/AndCake/zino/blob/master/test/components/todolist.html">todolist tag</a> example, this could look like that:</p>
 
 <figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kr">const</span> <span class="nx">zino</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s1">'zino/test'</span><span class="p">);</span>
 
@@ -251,7 +252,7 @@
 	<span class="p">});</span>
 <span class="p">})</span></code></pre></figure>
 
-<p>Please refer to the <a href="https://bitbucket.org/rkunze/zinojs/src/master/test/zino-tester.js">test/zino-tester.js</a> for more examples of how snapshots can be used.</p>
+<p>Please refer to the <a href="https://github.com/AndCake/zino/blob/master/test/zino-tester.js">test/zino-tester.js</a> for more examples of how snapshots can be used.</p>
 
   </div>
 

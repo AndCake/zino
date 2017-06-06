@@ -1,0 +1,34 @@
+<second-tag me="Welt!" __ready="true"><div class="-shadow-root">content removed in callback!</div></second-tag>
+{
+  "data": {
+    "props": {
+      "color": "white",
+      "list": [
+        {
+          "test": 123,
+          "me": "Hallo",
+          "x": {
+            "huhu": "ja"
+          },
+          "y": [
+            1,
+            2,
+            3,
+            4
+          ]
+        }
+      ]
+    },
+    "element": {},
+    "styles": {
+      "button": {
+        "backgroundColor": "green",
+        "border": "1px solid darkgreen",
+        "fontFamily": "Arial"
+      }
+    },
+    "body": "",
+    "me": "Welt!"
+  },
+  "events": []
+}

@@ -873,9 +873,9 @@ merge(global, {
 	setInterval: emptyFunc
 });
 
-function importTag(tagFile) {
+function importTag(tagFile, document) {
 	var code = fs.readFileSync(tagFile, 'utf-8');
-	registerTag(code, tagFile);
+	registerTag(code, tagFile, document);
 }
 
 function clearImports() {

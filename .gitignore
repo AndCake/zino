@@ -4,3 +4,5 @@ node_modules
 examples/dist
 .saucelabs.json
 .sass-cache
+
+yarn\.lock

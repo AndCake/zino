@@ -38,7 +38,8 @@ module.exports = function(config) {
 		testName: 'Zino Unit Tests',
 		username: sauce.user,
 		accessKey: sauce.key,
-		recordVideo: true
+		recordVideo: true,
+		build: require('./package.json').version + '-' + (+new Date)
 	},
 	customLaunchers: customLaunchers,
 
