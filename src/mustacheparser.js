@@ -2,15 +2,17 @@ const tagRegExp = /<(\/?)([\w-]+)([^>]*?)(\/?)>/g;
 const attrRegExp = /([\w_-]+)=(?:'([^']*?)'|"([^"]*?)")/g;
 const commentRegExp = /<!--(?:[^-]|-[^-])*-->/g;
 const syntax = /\{\{\s*([^\}]+)\s*\}\}\}?/g;
-const safeAccess = `function safeAccess(obj, attrs) {
+const safeAccess = `function safeAccess(obj, attrs, escape) {
 	if (!attrs) return obj;
 	if (attrs[0] === '.') {
 		return obj[attrs];
 	}
 	attrs = attrs.split('.');
 	while (attrs.length > 0 && typeof (obj = obj[attrs.shift()]) !== 'undefined');
-	if (typeof obj === 'string') {
+	if (typeof obj === 'string' && escape === true) {
 		return obj.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;').replace(/>/g, '&gt;');
+	} else if (typeof obj === 'function') {
+		return obj.call(instance);
 	} else {
 		return obj || '';
 	}
@@ -20,6 +22,8 @@ const toArray = `function toArray(data, value) {
 	if (dataValue) {
 		if (Object.prototype.toString.call(dataValue) === '[object Array]') {
 			return dataValue;
+		} else if (typeof dataValue === 'function') {
+			return dataValue();
 		} else return [dataValue];
 	} else {
 		return [];
@@ -57,12 +61,14 @@ const renderStyle = `function renderStyle(value, context) {
 	return style;
 }`;
 const baseCode = `function(Tag) {
+	var instance = null;
 	{{helperFunctions}}
 
 	return {
 		tagName: '{{tagName}}',
 		{{styles}}
 		render: function(data) {
+			instance = this;
 			return [].concat({{render}})
 		},
 
@@ -87,6 +93,10 @@ export function parse(data) {
 
 	function handleText(text) {
 		let match, result = '', lastIndex = 0;
+
+		if (!text.match(syntax)) {
+			return result += "'" + text.substr(lastIndex).replace(/\n/g, '').replace(/'/g, '\\\'') + "', ";
+		}
 		while (match = syntax.exec(text)) {
 			if (match.index < lastIndex) continue;
 			let frag = text.substring(lastIndex, match.index).trim()
@@ -107,10 +117,13 @@ export function parse(data) {
 				result += '\'\']; })), ';
 				level -= 1;
 				if (level < 0) {
-					throw new Error('Unexpected end of block ' + key.substr(1));
+					throw new Error('Unexpected end of block: ' + key.substr(1));
 				}
+			} else if (key[0] === '!') {
+				// ignore comments
+				result += '';
 			} else if (key[0] === '^') {
-				result += `(safeAccess(${getData()}, '${value}') && safeAccess(${getData()}, '${value}').length > 0) ? '' : spread([1].map(function() { var data$${level + 1} = merge({}, data${0 <= level ? '' : '$' + level}); return [`;
+				result += `(safeAccess(${getData()}, '${value}') && (typeof safeAccess(${getData()}, '${value}') === 'boolean' || safeAccess(${getData()}, '${value}').length > 0)) ? '' : spread([1].map(function() { var data$${level + 1} = merge({}, data${0 <= level ? '' : '$' + level}); return [`;
 				usesSpread = true;
 				level += 1;
 			} else if (key[0] === '%') {
@@ -152,6 +165,10 @@ export function parse(data) {
 		return '';
 	}).trim();
 
+	if (!data.match(tagRegExp)) {
+		console.log(data);
+		throw new Error('No proper component provided');
+	}
 	resultObject.tagName = data.match(/^<([\w_-]+)>/)[1].toLowerCase();
 
 	while (match = tagRegExp.exec(data)) {
@@ -184,6 +201,9 @@ export function parse(data) {
 	}
 	if (tagStack.length > 0) {
 		throw new Error('Unclosed tags: ' + tagStack.join(', '));
+	}
+	if (level > 0) {
+		throw new Error('Unexpected end of block');
 	}
 	if (data.substr(lastIndex).trim().length > 0) {
 		resultObject.render += handleText(data.substr(lastIndex).replace(/^[ \t]+|[ \t]$/g, ' ').trim());

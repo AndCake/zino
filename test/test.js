@@ -27,9 +27,7 @@ export default function(name, fn) {
 					isOk = true;
 				} else if (!type) { isOk = true; }
 			}
-			if (!isOk) {
-				assertValue(false, `${msg} throws exception.`);
-			}
+			assertValue(isOk, `${msg} throws exception.`);
 		}
 	};
 	if (typeof fn !== 'function') {

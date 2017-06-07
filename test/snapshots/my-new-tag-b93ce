@@ -1,0 +1,12 @@
+<my-new-tag __ready="true"><div class="-shadow-root"><div>This is some content:</div><p>Counting:</p></div></my-new-tag>
+{
+  "data": {
+    "props": {
+      "test": 0,
+      "tasks": []
+    },
+    "element": {},
+    "body": "with content"
+  },
+  "events": []
+}

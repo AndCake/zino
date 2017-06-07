@@ -1,6 +1,6 @@
 {
     "name": "zino",
-    "version": "2.2.5",
+    "version": "2.4.0",
     "description": "Micro component framework",
     "main": "zino.js",
     "directories": {
@@ -45,6 +45,7 @@
     "dependencies": {
         "colors": "^1.1.2",
         "fast-diff": "^1.1.1",
+        "jsdom": "^11.0.0",
         "readline-sync": "^1.4.7"
     },
     "optionalDependencies": {

@@ -25,8 +25,12 @@ let tagRegistry = {},
 	};
 
 export let renderOptions = {
-	resolveData(key, value) {
+	resolveData(key, value, oldID) {
 		let id = uuid();
+		if (oldID) {
+			// unregister old entry
+			delete dataRegistry[oldID];
+		}
 		dataRegistry[id] = value;
 		return id;
 	}
@@ -35,7 +39,7 @@ export let renderOptions = {
 export function registerTag(fn, document) {
 	let firstElement = fn(vdom.Tag),
 		tagName = firstElement.tagName;
-
+	
 	if (tagRegistry[tagName]) {
 		// tag is already registered
 		return;
@@ -46,7 +50,7 @@ export function registerTag(fn, document) {
 	tagRegistry[tagName] = firstElement;
 
 	// initialize all occurences in provided context
-	document && [].slice.call(document.querySelectorAll(tagName)).forEach(tag => initializeTag(tag, tagRegistry[tagName]));
+	document && [].slice.call(vdom.getElementsByTagName(tagName, document)).forEach(tag => initializeTag(tag, tagRegistry[tagName]));
 }
 
 export function mount(tag, ignoreRender) {
@@ -83,11 +87,11 @@ function initializeTag(tag, registryEntry) {
 		}
 		isRendered = true;
 	} else {
-		tag.__i = tag instanceof Node ? tag.innerHTML : vdom.getInnerHTML(tag);
+		tag.__i = tag.ownerDocument ? tag.innerHTML : vdom.getInnerHTML(tag);
 		setElementAttr(tag);
 		tag.innerHTML = '<div class="-shadow-root"></div>';
 	}
-	initializeNode(tag, functions);
+	trigger('--zino-initialize-node', {tag, node: functions});
 	tag.__vdom = {};
 
 	// render the tag's content
@@ -119,7 +123,7 @@ function initializeTag(tag, registryEntry) {
 	}
 }
 
-export function initializeNode(tag, functions) {
+export function initializeNode({tag, node: functions}) {
 	// copy all defined functions/attributes
 	for (let all in functions) {
 		let entry = functions[all];
@@ -171,10 +175,13 @@ function renderTag(tag, registryEntry = tagRegistry[tag.tagName.toLowerCase()]) 
 		renderedDOM;
 
 	// do the actual rendering of the component
+	vdom.setDataResolver(renderOptions.resolveData);
 	let data = getAttributes(tag);
 	if (isFn(registryEntry.render)) {
 		vdom.setFilter(Object.keys(tagRegistry));
-		renderedDOM = vdom.Tag('div', {'class': '-shadow-root'}, registryEntry.render(data));
+		renderedDOM = vdom.Tag('div', {'class': '-shadow-root'}, registryEntry.render.call(tag, data));
+	} else {
+		throw new Error('No render function provided in component ' + tag.tagName);
 	}
 
 	// render all contained sub components
@@ -191,7 +198,7 @@ function renderTag(tag, registryEntry = tagRegistry[tag.tagName.toLowerCase()]) 
 
 	if (tag.attributes.__ready && tag.ownerDocument) {
 		// has been rendered before, so just apply diff
-		vdom.applyDOM(tag.children[0], renderedDOM, dataRegistry);
+		vdom.applyDOM(tag.children[0], renderedDOM, tag.ownerDocument);
 	} else {
 		// simply render everything inside
 		if (tag.ownerDocument) {
@@ -320,5 +327,6 @@ function handleStyles(element) {
 	);
 }
 
+on('--zino-initialize-node', initializeNode);
 on('--zino-unmount-tag', unmountTag);
 on('--zino-mount-tag', mount);

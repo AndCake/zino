@@ -82,131 +82,6 @@ var isFn = function isFn(fn) {
 };
 var emptyFunc = function emptyFunc() {};
 
-var tagFilter = [];
-var tagsCreated = [];
-
-function isArray(obj) {
-	return Object.prototype.toString.call(obj) === '[object Array]';
-}
-
-function Tag(tagName, attributes, children) {
-	tagName = tagName.toLowerCase();
-	var tag = {
-		tagName: tagName,
-		attributes: attributes || {},
-		children: children || []
-	};
-	if (tagFilter.indexOf(tagName) >= 0) tagsCreated.push(tag);
-	return tag;
-}
-
-function setFilter(filter) {
-	tagFilter = filter;
-}
-
-function getTagsCreated() {
-	var created = tagsCreated;
-	tagsCreated = [];
-	return created;
-}
-
-function getInnerHTML(node) {
-	if (!node.children) return '';
-	if (!isArray(node.children)) node.children = [node.children];
-
-	return (isArray(node) && node || node.children).map(function (child) {
-		if ((typeof child === 'undefined' ? 'undefined' : _typeof(child)) !== 'object') {
-			return '' + child;
-		} else if (isArray(child)) {
-			return getInnerHTML(child);
-		} else {
-			var attributes = [''].concat(Object.keys(child.attributes).map(function (attr) {
-				return attr + '="' + child.attributes[attr] + '"';
-			}));
-			return '<' + child.tagName + attributes.join(' ') + '>' + getInnerHTML(child) + '</' + child.tagName + '>';
-		}
-	}).join('');
-}
-
-function createElement(node) {
-	var tag = void 0;
-	if ((typeof node === 'undefined' ? 'undefined' : _typeof(node)) !== 'object') {
-		tag = document.createTextNode('' + node);
-	} else {
-		tag = document.createElement(node.tagName);
-		Object.keys(node.attributes).forEach(function (attr) {
-			tag.setAttribute(attr, node.attributes[attr]);
-		});
-		if (node.__vdom) {
-			initializeNode(tag, node);
-		}
-		tag.innerHTML = getInnerHTML(node);
-	}
-
-	return tag;
-}
-
-function applyDOM(dom, vdom, dataRegistry) {
-	if (!isArray(vdom)) {
-		if (!isArray(vdom.children)) vdom.children = [vdom.children];
-		if (vdom.tagName !== dom.tagName.toLowerCase()) {
-			dom.parentNode.replaceChild(createElement(vdom), dom);
-		} else {
-			Object.keys(vdom.attributes).forEach(function (attr) {
-				if (_typeof(vdom.attributes[attr]) !== 'object') {
-					if (dom.getAttribute(attr) != vdom.attributes[attr]) {
-						dom.setAttribute(attr, vdom.attributes[attr]);
-					}
-				} else {
-					if (dom.getAttribute(attr) && dataRegistry[dom.getAttribute(attr).replace(/^--|--$/g, '')] !== vdom.attributes[attr]) {
-						var id = uuid();
-						// unregister old entry
-						delete dataRegistry[dom.getAttribute(attr).replace(/^--|--$/g, '')];
-						// register new one
-						dataRegistry[id] = vdom.attributes[attr];
-						dom.setAttribute(attr, '--' + id + '--');
-					}
-				}
-			});
-			if (dom.attributes.length > Object.keys(vdom.attributes)) {
-				[].forEach.call(dom.attributes, function (attr) {
-					if (typeof vdom.attributes[attr.name] === 'undefined') {
-						dom.removeAttribute(attr.name);
-					}
-				});
-			}
-		}
-	}
-	var children = isArray(vdom) ? vdom : vdom.children;
-	children.forEach(function (node, index) {
-		if (isArray(node)) return applyDOM(dom, node, dataRegistry);
-		if (typeof dom.childNodes[index] === 'undefined') {
-			// does not exist
-			dom.appendChild(createElement(node));
-		} else if (dom.childNodes[index].nodeType === 3) {
-			// is a text node
-			if (typeof node === 'string' && dom.childNodes[index].nodeValue !== node) {
-				dom.childNodes[index].nodeValue = node;
-			} else if (typeof node !== 'string') {
-				dom.replaceChild(createElement(node), dom.childNodes[index]);
-			}
-		} else if (dom.childNodes[index].nodeType === 1) {
-			// is a normal HTML tag
-			if ((typeof node === 'undefined' ? 'undefined' : _typeof(node)) === 'object') {
-				applyDOM(dom.childNodes[index], node, dataRegistry);
-			} else {
-				dom.replaceChild(createElement(node), dom.childNodes[index]);
-			}
-		}
-	});
-	if (dom.childNodes.length > children.length) {
-		// remove superfluous child nodes
-		[].slice.call(dom.childNodes, children.length).forEach(function (child) {
-			return dom.removeChild(child);
-		});
-	}
-}
-
 var eventQueue = {};
 
 function trigger(name, data) {
@@ -269,6 +144,154 @@ function attachEvent(el, events, host) {
 	});
 }
 
+var tagFilter = [];
+var tagsCreated = [];
+var dataResolver = function dataResolver(attr, value) {
+	return attr;
+};
+
+function isArray(obj) {
+	return Object.prototype.toString.call(obj) === '[object Array]';
+}
+
+function setDataResolver(resolver) {
+	dataResolver = resolver;
+}
+
+function Tag(tagName, attributes, children) {
+	tagName = tagName.toLowerCase();
+	var tag = {
+		tagName: tagName,
+		attributes: attributes || {},
+		children: children || []
+	};
+	if (tagFilter.indexOf(tagName) >= 0) tagsCreated.push(tag);
+	return tag;
+}
+
+function getElementsByTagName(name, dom) {
+	var result = [];
+	name = (name || '').toLowerCase();
+	if (typeof dom.getElementsByTagName === 'function') return [].slice.call(dom.getElementsByTagName(name));
+
+	if (dom.children) {
+		result = result.concat(dom.children.filter(function (child) {
+			return child.tagName && child.tagName.toLowerCase() === name;
+		}));
+		dom.children.forEach(function (child) {
+			result = result.concat(getElementsByTagName(name, child));
+		});
+	}
+	return result;
+}
+
+function setFilter(filter) {
+	tagFilter = filter;
+}
+
+function getTagsCreated() {
+	var created = tagsCreated;
+	tagsCreated = [];
+	return created;
+}
+
+function getInnerHTML(node) {
+	if (!node.children) return '';
+	if (!isArray(node.children)) node.children = [node.children];
+
+	return (isArray(node) && node || node.children).map(function (child) {
+		if ((typeof child === 'undefined' ? 'undefined' : _typeof(child)) !== 'object') {
+			return '' + child;
+		} else if (isArray(child)) {
+			return getInnerHTML(child);
+		} else {
+			var attributes = [''].concat(Object.keys(child.attributes).map(function (attr) {
+				if (_typeof(child.attributes[attr]) === 'object') {
+					return attr + '="--' + dataResolver(attr, child.attributes[attr]) + '--"';
+				} else {
+					return attr + '="' + child.attributes[attr] + '"';
+				}
+			}));
+			return '<' + child.tagName + attributes.join(' ') + '>' + getInnerHTML(child) + '</' + child.tagName + '>';
+		}
+	}).join('');
+}
+
+function createElement(node, document) {
+	var tag = void 0;
+	if ((typeof node === 'undefined' ? 'undefined' : _typeof(node)) !== 'object') {
+		tag = document.createTextNode('' + node);
+	} else {
+		tag = document.createElement(node.tagName);
+		Object.keys(node.attributes).forEach(function (attr) {
+			tag.setAttribute(attr, node.attributes[attr]);
+		});
+		if (node.__vdom) {
+			trigger('--zino-initialize-node', { tag: tag, node: node });
+		}
+		tag.innerHTML = getInnerHTML(node);
+	}
+
+	return tag;
+}
+
+function applyDOM(dom, vdom, document) {
+	if (!isArray(vdom)) {
+		if (!isArray(vdom.children)) vdom.children = [vdom.children];
+		if (vdom.tagName !== dom.tagName.toLowerCase()) {
+			dom.parentNode.replaceChild(createElement(vdom, document), dom);
+		} else {
+			Object.keys(vdom.attributes).forEach(function (attr) {
+				if (_typeof(vdom.attributes[attr]) !== 'object') {
+					if (dom.getAttribute(attr) != vdom.attributes[attr]) {
+						dom.setAttribute(attr, vdom.attributes[attr]);
+					}
+				} else {
+					if (dom.getAttribute(attr) && dom.getAttribute(attr).match(/^--|--$/g)) {
+						var id = dataResolver(attr, vdom.attributes[attr], dom.getAttribute(attr).replace(/^--|--$/g, ''));
+						dom.setAttribute(attr, '--' + id + '--');
+					}
+				}
+			});
+			if (dom.attributes.length > Object.keys(vdom.attributes)) {
+				[].forEach.call(dom.attributes, function (attr) {
+					if (typeof vdom.attributes[attr.name] === 'undefined') {
+						dom.removeAttribute(attr.name);
+					}
+				});
+			}
+		}
+	}
+	var children = isArray(vdom) ? vdom : vdom.children;
+	children.forEach(function (node, index) {
+		if (isArray(node)) return applyDOM(dom, node, document);
+		if (typeof dom.childNodes[index] === 'undefined') {
+			// does not exist
+			dom.appendChild(createElement(node, document));
+		} else if (dom.childNodes[index].nodeType === 3) {
+			// is a text node
+			if (typeof node === 'string' && dom.childNodes[index].nodeValue !== node) {
+				dom.childNodes[index].nodeValue = node;
+			} else if (typeof node !== 'string') {
+				dom.replaceChild(createElement(node, document), dom.childNodes[index]);
+			}
+		} else if (dom.childNodes[index].nodeType === 1) {
+			// is a normal HTML tag
+			if ((typeof node === 'undefined' ? 'undefined' : _typeof(node)) === 'object') {
+				applyDOM(dom.childNodes[index], node, document);
+			} else {
+				dom.replaceChild(createElement(node, document), dom.childNodes[index]);
+			}
+		}
+	});
+	if (dom.childNodes.length > children.length) {
+		// remove superfluous child nodes
+		[].slice.call(dom.childNodes, children.length).forEach(function (child) {
+			return dom.removeChild(child);
+		});
+	}
+}
+
 var tagRegistry = {};
 var dataRegistry = {};
 var defaultFunctions = {
@@ -293,7 +316,17 @@ var defaultFunctions = {
 	}
 };
 
-
+var renderOptions = {
+	resolveData: function resolveData(key, value, oldID) {
+		var id = uuid();
+		if (oldID) {
+			// unregister old entry
+			delete dataRegistry[oldID];
+		}
+		dataRegistry[id] = value;
+		return id;
+	}
+};
 
 function registerTag(fn, document) {
 	var firstElement = fn(Tag),
@@ -309,7 +342,7 @@ function registerTag(fn, document) {
 	tagRegistry[tagName] = firstElement;
 
 	// initialize all occurences in provided context
-	document && [].slice.call(document.querySelectorAll(tagName)).forEach(function (tag) {
+	document && [].slice.call(getElementsByTagName(tagName, document)).forEach(function (tag) {
 		return initializeTag(tag, tagRegistry[tagName]);
 	});
 }
@@ -346,11 +379,11 @@ function initializeTag(tag, registryEntry) {
 		}
 		isRendered = true;
 	} else {
-		tag.__i = tag instanceof Node ? tag.innerHTML : getInnerHTML(tag);
+		tag.__i = tag.ownerDocument ? tag.innerHTML : getInnerHTML(tag);
 		setElementAttr(tag);
 		tag.innerHTML = '<div class="-shadow-root"></div>';
 	}
-	initializeNode(tag, functions);
+	trigger('--zino-initialize-node', { tag: tag, node: functions });
 	tag.__vdom = {};
 
 	// render the tag's content
@@ -384,7 +417,10 @@ function initializeTag(tag, registryEntry) {
 	}
 }
 
-function initializeNode(tag, functions) {
+function initializeNode(_ref) {
+	var tag = _ref.tag,
+	    functions = _ref.node;
+
 	// copy all defined functions/attributes
 	for (var all in functions) {
 		var entry = functions[all];
@@ -440,10 +476,13 @@ function renderTag(tag) {
 	    renderedDOM = void 0;
 
 	// do the actual rendering of the component
+	setDataResolver(renderOptions.resolveData);
 	var data = getAttributes(tag);
 	if (isFn(registryEntry.render)) {
 		setFilter(Object.keys(tagRegistry));
-		renderedDOM = Tag('div', { 'class': '-shadow-root' }, registryEntry.render(data));
+		renderedDOM = Tag('div', { 'class': '-shadow-root' }, registryEntry.render.call(tag, data));
+	} else {
+		throw new Error('No render function provided in component ' + tag.tagName);
 	}
 
 	// render all contained sub components
@@ -460,7 +499,7 @@ function renderTag(tag) {
 
 	if (tag.attributes.__ready && tag.ownerDocument) {
 		// has been rendered before, so just apply diff
-		applyDOM(tag.children[0], renderedDOM, dataRegistry);
+		applyDOM(tag.children[0], renderedDOM, tag.ownerDocument);
 	} else {
 		// simply render everything inside
 		if (tag.ownerDocument) {
@@ -595,6 +634,7 @@ function handleStyles(element) {
 	}).join('\n'));
 }
 
+on('--zino-initialize-node', initializeNode);
 on('--zino-unmount-tag', unmountTag);
 on('--zino-mount-tag', mount);
 
@@ -602,12 +642,12 @@ var tagRegExp = /<(\/?)([\w-]+)([^>]*?)(\/?)>/g;
 var attrRegExp = /([\w_-]+)=(?:'([^']*?)'|"([^"]*?)")/g;
 var commentRegExp = /<!--(?:[^-]|-[^-])*-->/g;
 var syntax = /\{\{\s*([^\}]+)\s*\}\}\}?/g;
-var safeAccess$1 = 'function safeAccess(obj, attrs) {\n\tif (!attrs) return obj;\n\tif (attrs[0] === \'.\') {\n\t\treturn obj[attrs];\n\t}\n\tattrs = attrs.split(\'.\');\n\twhile (attrs.length > 0 && typeof (obj = obj[attrs.shift()]) !== \'undefined\');\n\tif (typeof obj === \'string\') {\n\t\treturn obj.replace(/&/g, \'&amp;\').replace(/</g, \'&lt;\').replace(/"/g, \'&quot;\').replace(/>/g, \'&gt;\');\n\t} else {\n\t\treturn obj || \'\';\n\t}\n}';
-var toArray$1 = 'function toArray(data, value) {\n\tvar dataValue = safeAccess(data, value);\n\tif (dataValue) {\n\t\tif (Object.prototype.toString.call(dataValue) === \'[object Array]\') {\n\t\t\treturn dataValue;\n\t\t} else return [dataValue];\n\t} else {\n\t\treturn [];\n\t}\n}';
+var safeAccess$1 = 'function safeAccess(obj, attrs, escape) {\n\tif (!attrs) return obj;\n\tif (attrs[0] === \'.\') {\n\t\treturn obj[attrs];\n\t}\n\tattrs = attrs.split(\'.\');\n\twhile (attrs.length > 0 && typeof (obj = obj[attrs.shift()]) !== \'undefined\');\n\tif (typeof obj === \'string\' && escape === true) {\n\t\treturn obj.replace(/&/g, \'&amp;\').replace(/</g, \'&lt;\').replace(/"/g, \'&quot;\').replace(/>/g, \'&gt;\');\n\t} else if (typeof obj === \'function\') {\n\t\treturn obj.call(instance);\n\t} else {\n\t\treturn obj || \'\';\n\t}\n}';
+var toArray$1 = 'function toArray(data, value) {\n\tvar dataValue = safeAccess(data, value);\n\tif (dataValue) {\n\t\tif (Object.prototype.toString.call(dataValue) === \'[object Array]\') {\n\t\t\treturn dataValue;\n\t\t} else if (typeof dataValue === \'function\') {\n\t\t\treturn dataValue();\n\t\t} else return [dataValue];\n\t} else {\n\t\treturn [];\n\t}\n}';
 var spread = 'function spread(array) {\n\tvar result = [];\n\tarray.forEach(function(entry) {\n\t\tresult = result.concat(entry);\n\t});\n\treturn result;\n}';
 var merge$1 = 'function merge(target) {\n\t[].slice.call(arguments, 1).forEach(function (arg) {\n\t\tfor (var all in arg) {\n\t\t\ttarget[all] = arg[all];\n\t\t}\n\t});\n\n\treturn target;\n}';
 var renderStyle = 'function renderStyle(value, context) {\n\tvar style = \'\';\n\t\ttransform = function(val) {\n\t\t\tif (typeof val === \'function\') return transform(val.apply(context));\n\t\t\treturn val + (typeof val === \'number\' && val !== null ? context.styles && context.styles.defaultUnit || \'px\' : \'\');\n\t\t};\n\n\tif (typeof value === \'object\') {\n\t\tfor (var all in value) {\n\t\t\tstyle += all.replace(/[A-Z]/g, g => \'-\' + g.toLowerCase()) + \':\' + transform(value[all]) + \';\';\n\t\t}\n\t}\n\n\treturn style;\n}';
-var baseCode = 'function(Tag) {\n\t{{helperFunctions}}\n\n\treturn {\n\t\ttagName: \'{{tagName}}\',\n\t\t{{styles}}\n\t\trender: function(data) {\n\t\t\treturn [].concat({{render}})\n\t\t},\n\n\t\tfunctions: {{functions}}\n\t};\n}';
+var baseCode = 'function(Tag) {\n\tvar instance = null;\n\t{{helperFunctions}}\n\n\treturn {\n\t\ttagName: \'{{tagName}}\',\n\t\t{{styles}}\n\t\trender: function(data) {\n\t\t\tinstance = this;\n\t\t\treturn [].concat({{render}})\n\t\t},\n\n\t\tfunctions: {{functions}}\n\t};\n}';
 
 function parse(data) {
 	var resultObject = {
@@ -633,6 +673,10 @@ function parse(data) {
 		var match = void 0,
 		    result = '',
 		    lastIndex = 0;
+
+		if (!text.match(syntax)) {
+			return result += "'" + text.substr(lastIndex).replace(/\n/g, '').replace(/'/g, '\\\'') + "', ";
+		}
 		while (match = syntax.exec(text)) {
 			if (match.index < lastIndex) continue;
 			var frag = text.substring(lastIndex, match.index).trim();
@@ -651,10 +695,13 @@ function parse(data) {
 				result += '\'\']; })), ';
 				level -= 1;
 				if (level < 0) {
-					throw new Error('Unexpected end of block ' + key.substr(1));
+					throw new Error('Unexpected end of block: ' + key.substr(1));
 				}
+			} else if (key[0] === '!') {
+				// ignore comments
+				result += '';
 			} else if (key[0] === '^') {
-				result += '(safeAccess(' + getData() + ', \'' + value + '\') && safeAccess(' + getData() + ', \'' + value + '\').length > 0) ? \'\' : spread([1].map(function() { var data$' + (level + 1) + ' = merge({}, data' + (0 <= level ? '' : '$' + level) + '); return [';
+				result += '(safeAccess(' + getData() + ', \'' + value + '\') && (typeof safeAccess(' + getData() + ', \'' + value + '\') === \'boolean\' || safeAccess(' + getData() + ', \'' + value + '\').length > 0)) ? \'\' : spread([1].map(function() { var data$' + (level + 1) + ' = merge({}, data' + (0 <= level ? '' : '$' + level) + '); return [';
 				usesSpread = true;
 				level += 1;
 			} else if (key[0] === '%') {
@@ -698,6 +745,10 @@ function parse(data) {
 		return '';
 	}).trim();
 
+	if (!data.match(tagRegExp)) {
+		console.log(data);
+		throw new Error('No proper component provided');
+	}
 	resultObject.tagName = data.match(/^<([\w_-]+)>/)[1].toLowerCase();
 
 	while (match = tagRegExp.exec(data)) {
@@ -730,6 +781,9 @@ function parse(data) {
 	}
 	if (tagStack.length > 0) {
 		throw new Error('Unclosed tags: ' + tagStack.join(', '));
+	}
+	if (level > 0) {
+		throw new Error('Unexpected end of block');
 	}
 	if (data.substr(lastIndex).trim().length > 0) {
 		resultObject.render += handleText(data.substr(lastIndex).replace(/^[ \t]+|[ \t]$/g, ' ').trim());
