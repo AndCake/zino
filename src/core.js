@@ -39,7 +39,7 @@ export let renderOptions = {
 export function registerTag(fn, document) {
 	let firstElement = fn(vdom.Tag),
 		tagName = firstElement.tagName;
-	
+
 	if (tagRegistry[tagName]) {
 		// tag is already registered
 		return;
@@ -123,7 +123,7 @@ function initializeTag(tag, registryEntry) {
 	}
 }
 
-export function initializeNode({tag, node: functions}) {
+function initializeNode({tag, node: functions}) {
 	// copy all defined functions/attributes
 	for (let all in functions) {
 		let entry = functions[all];
@@ -213,19 +213,9 @@ function renderTag(tag, registryEntry = tagRegistry[tag.tagName.toLowerCase()]) 
 	renderedSubElements.length > 0 && (tag.querySelectorAll && [].slice.call(tag.querySelectorAll('[__ready]')) || renderedSubElements).forEach((subEl, index) => {
 		merge(subEl, renderedSubElements[index]);
 		if (subEl.ownerDocument) {
-			try {
-				subEl.mounting = true;
-				tagRegistry[subEl.tagName.toLowerCase()].functions.mount.call(subEl);
-				delete subEl.mounting;
-			} catch (e) {
-				error('mount', subEl.tagName, e);
-			}
+			initializeNode({tag: subEl, node: tagRegistry[subEl.tagName.toLowerCase()].functions});
 		}
 		renderedSubElements[index].getHost = defaultFunctions.getHost.bind(subEl);
-		subEl.setAttribute = function(attr, val) {
-			HTMLElement.prototype.setAttribute.call(subEl, attr, val);
-			trigger('--zino-rerender-tag', subEl);
-		};
 	});
 
 	if (!this || !this.noRenderCall) {

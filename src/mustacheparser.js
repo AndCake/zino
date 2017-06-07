@@ -2,7 +2,7 @@ const tagRegExp = /<(\/?)([\w-]+)([^>]*?)(\/?)>/g;
 const attrRegExp = /([\w_-]+)=(?:'([^']*?)'|"([^"]*?)")/g;
 const commentRegExp = /<!--(?:[^-]|-[^-])*-->/g;
 const syntax = /\{\{\s*([^\}]+)\s*\}\}\}?/g;
-const safeAccess = `function safeAccess(obj, attrs, escape) {
+const safeAccess = 'function safeAccess(t,e,r){if(!e)return t;if("."===e[0])return t[e];for(e=e.split(".");e.length>0&&void 0!==(t=t[e.shift()]););return"string"==typeof t&&r===!0?t.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;").replace(/>/g,"&gt;"):"function"==typeof t?t.call(__i):t||""}'/*`function safeAccess(obj, attrs, escape) {
 	if (!attrs) return obj;
 	if (attrs[0] === '.') {
 		return obj[attrs];
@@ -16,8 +16,8 @@ const safeAccess = `function safeAccess(obj, attrs, escape) {
 	} else {
 		return obj || '';
 	}
-}`;
-const toArray = `function toArray(data, value) {
+}`*/;
+const toArray = 'function toArray(t,e){var r=safeAccess(t,e);return r?"[object Array]"===Object.prototype.toString.call(r)?r:"function"==typeof r?r():[r]:[]}'/*`function toArray(data, value) {
 	var dataValue = safeAccess(data, value);
 	if (dataValue) {
 		if (Object.prototype.toString.call(dataValue) === '[object Array]') {
@@ -28,15 +28,15 @@ const toArray = `function toArray(data, value) {
 	} else {
 		return [];
 	}
-}`;
-const spread = `function spread(array) {
+}`*/;
+const spread = 'function spread(t){var e=[];return t.forEach(function(t){e=e.concat(t)}),e}'/*`function spread(array) {
 	var result = [];
 	array.forEach(function(entry) {
 		result = result.concat(entry);
 	});
 	return result;
-}`;
-const merge = `function merge(target) {
+}`*/;
+const merge = 'function merge(t){return[].slice.call(arguments,1).forEach(function(e){for(var r in e)t[r]=e[r]}),t}'/*`function merge(target) {
 	[].slice.call(arguments, 1).forEach(function (arg) {
 		for (var all in arg) {
 			target[all] = arg[all];
@@ -44,8 +44,8 @@ const merge = `function merge(target) {
 	});
 
 	return target;
-}`;
-const renderStyle = `function renderStyle(value, context) {
+}`*/;
+const renderStyle = 'function renderStyle(t,r){var e="";if(transform=function(t){return"function"==typeof t?transform(t.apply(r)):t+("number"==typeof t&&null!==t?r.styles&&r.styles.defaultUnit||"px":"")},"object"==typeof t)for(var n in t)e+=n.replace(/[A-Z]/g,function(t){return"-"+t.toLowerCase()})+":"+transform(t[n])+";";return e}'/*`function renderStyle(value, context) {
 	var style = '';
 		transform = function(val) {
 			if (typeof val === 'function') return transform(val.apply(context));
@@ -54,13 +54,13 @@ const renderStyle = `function renderStyle(value, context) {
 
 	if (typeof value === 'object') {
 		for (var all in value) {
-			style += all.replace(/[A-Z]/g, g => '-' + g.toLowerCase()) + ':' + transform(value[all]) + ';';
+			style += all.replace(/[A-Z]/g, function(g){ return '-' + g.toLowerCase()}) + ':' + transform(value[all]) + ';';
 		}
 	}
 
 	return style;
-}`;
-const baseCode = `function(Tag) {
+}`*/;
+const baseCode = 'function (Tag){var __i;{{helperFunctions}};return{tagName:"{{tagName}}",{{styles}}render:function(data){return __i=this,[].concat({{render}})},functions:{{functions}}}}'/*`function(Tag) {
 	var instance = null;
 	{{helperFunctions}}
 
@@ -74,7 +74,7 @@ const baseCode = `function(Tag) {
 
 		functions: {{functions}}
 	};
-}`;
+}`*/;
 
 export function parse(data) {
 	let resultObject = {
@@ -107,8 +107,8 @@ export function parse(data) {
 			let key = match[1];
 			let value = key.substr(1);
 			if (key[0] === '#') {
-				result += `spread(toArray(${getData()}, '${value}').map(function (entry, index, arr) {
-						var data$${level + 1} = merge({}, data${0 <= level ? '' : '$' + level}, {'.': entry, '.index': index, '.length': arr.length}, entry);
+				result += `spread(toArray(${getData()}, '${value}').map(function (e, i, a) {
+						var data$${level + 1} = merge({}, data${0 <= level ? '' : '$' + level}, {'.': e, '.index': i, '.length': a.length}, e);
 						return [`;
 				level += 1;
 				usesMerge = true;
@@ -223,5 +223,5 @@ export function parse(data) {
 	resultObject.functions = resultObject.functions || '{}';
 	resultObject.styles = resultObject.styles.length > 0 ? 'styles: ' + JSON.stringify(resultObject.styles) + ',' : '';
 	resultObject.helperFunctions = resultObject.helperFunctions.join('\n');
-	return baseCode.replace(syntax, (g, m) => resultObject[m]);
+	return baseCode.replace(/\{\{([^\}]+)\}\}/g, (g, m) => resultObject[m]);
 }

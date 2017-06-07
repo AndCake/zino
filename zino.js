@@ -514,19 +514,9 @@ function renderTag(tag) {
 	renderedSubElements.length > 0 && (tag.querySelectorAll && [].slice.call(tag.querySelectorAll('[__ready]')) || renderedSubElements).forEach(function (subEl, index) {
 		merge(subEl, renderedSubElements[index]);
 		if (subEl.ownerDocument) {
-			try {
-				subEl.mounting = true;
-				tagRegistry[subEl.tagName.toLowerCase()].functions.mount.call(subEl);
-				delete subEl.mounting;
-			} catch (e) {
-				error$1('mount', subEl.tagName, e);
-			}
+			initializeNode({ tag: subEl, node: tagRegistry[subEl.tagName.toLowerCase()].functions });
 		}
 		renderedSubElements[index].getHost = defaultFunctions.getHost.bind(subEl);
-		subEl.setAttribute = function (attr, val) {
-			HTMLElement.prototype.setAttribute.call(subEl, attr, val);
-			trigger('--zino-rerender-tag', subEl);
-		};
 	});
 
 	if (!this || !this.noRenderCall) {
@@ -642,12 +632,12 @@ var tagRegExp = /<(\/?)([\w-]+)([^>]*?)(\/?)>/g;
 var attrRegExp = /([\w_-]+)=(?:'([^']*?)'|"([^"]*?)")/g;
 var commentRegExp = /<!--(?:[^-]|-[^-])*-->/g;
 var syntax = /\{\{\s*([^\}]+)\s*\}\}\}?/g;
-var safeAccess$1 = 'function safeAccess(obj, attrs, escape) {\n\tif (!attrs) return obj;\n\tif (attrs[0] === \'.\') {\n\t\treturn obj[attrs];\n\t}\n\tattrs = attrs.split(\'.\');\n\twhile (attrs.length > 0 && typeof (obj = obj[attrs.shift()]) !== \'undefined\');\n\tif (typeof obj === \'string\' && escape === true) {\n\t\treturn obj.replace(/&/g, \'&amp;\').replace(/</g, \'&lt;\').replace(/"/g, \'&quot;\').replace(/>/g, \'&gt;\');\n\t} else if (typeof obj === \'function\') {\n\t\treturn obj.call(instance);\n\t} else {\n\t\treturn obj || \'\';\n\t}\n}';
-var toArray$1 = 'function toArray(data, value) {\n\tvar dataValue = safeAccess(data, value);\n\tif (dataValue) {\n\t\tif (Object.prototype.toString.call(dataValue) === \'[object Array]\') {\n\t\t\treturn dataValue;\n\t\t} else if (typeof dataValue === \'function\') {\n\t\t\treturn dataValue();\n\t\t} else return [dataValue];\n\t} else {\n\t\treturn [];\n\t}\n}';
-var spread = 'function spread(array) {\n\tvar result = [];\n\tarray.forEach(function(entry) {\n\t\tresult = result.concat(entry);\n\t});\n\treturn result;\n}';
-var merge$1 = 'function merge(target) {\n\t[].slice.call(arguments, 1).forEach(function (arg) {\n\t\tfor (var all in arg) {\n\t\t\ttarget[all] = arg[all];\n\t\t}\n\t});\n\n\treturn target;\n}';
-var renderStyle = 'function renderStyle(value, context) {\n\tvar style = \'\';\n\t\ttransform = function(val) {\n\t\t\tif (typeof val === \'function\') return transform(val.apply(context));\n\t\t\treturn val + (typeof val === \'number\' && val !== null ? context.styles && context.styles.defaultUnit || \'px\' : \'\');\n\t\t};\n\n\tif (typeof value === \'object\') {\n\t\tfor (var all in value) {\n\t\t\tstyle += all.replace(/[A-Z]/g, g => \'-\' + g.toLowerCase()) + \':\' + transform(value[all]) + \';\';\n\t\t}\n\t}\n\n\treturn style;\n}';
-var baseCode = 'function(Tag) {\n\tvar instance = null;\n\t{{helperFunctions}}\n\n\treturn {\n\t\ttagName: \'{{tagName}}\',\n\t\t{{styles}}\n\t\trender: function(data) {\n\t\t\tinstance = this;\n\t\t\treturn [].concat({{render}})\n\t\t},\n\n\t\tfunctions: {{functions}}\n\t};\n}';
+var safeAccess$1 = 'function safeAccess(t,e,r){if(!e)return t;if("."===e[0])return t[e];for(e=e.split(".");e.length>0&&void 0!==(t=t[e.shift()]););return"string"==typeof t&&r===!0?t.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;").replace(/>/g,"&gt;"):"function"==typeof t?t.call(__i):t||""}';
+var toArray$1 = 'function toArray(t,e){var r=safeAccess(t,e);return r?"[object Array]"===Object.prototype.toString.call(r)?r:"function"==typeof r?r():[r]:[]}';
+var spread = 'function spread(t){var e=[];return t.forEach(function(t){e=e.concat(t)}),e}';
+var merge$1 = 'function merge(t){return[].slice.call(arguments,1).forEach(function(e){for(var r in e)t[r]=e[r]}),t}';
+var renderStyle = 'function renderStyle(t,r){var e="";if(transform=function(t){return"function"==typeof t?transform(t.apply(r)):t+("number"==typeof t&&null!==t?r.styles&&r.styles.defaultUnit||"px":"")},"object"==typeof t)for(var n in t)e+=n.replace(/[A-Z]/g,function(t){return"-"+t.toLowerCase()})+":"+transform(t[n])+";";return e}';
+var baseCode = 'function (Tag){var __i;{{helperFunctions}};return{tagName:"{{tagName}}",{{styles}}render:function(data){return __i=this,[].concat({{render}})},functions:{{functions}}}}';
 
 function parse(data) {
 	var resultObject = {
@@ -687,7 +677,7 @@ function parse(data) {
 			var key = match[1];
 			var value = key.substr(1);
 			if (key[0] === '#') {
-				result += 'spread(toArray(' + getData() + ', \'' + value + '\').map(function (entry, index, arr) {\n\t\t\t\t\t\tvar data$' + (level + 1) + ' = merge({}, data' + (0 <= level ? '' : '$' + level) + ', {\'.\': entry, \'.index\': index, \'.length\': arr.length}, entry);\n\t\t\t\t\t\treturn [';
+				result += 'spread(toArray(' + getData() + ', \'' + value + '\').map(function (e, i, a) {\n\t\t\t\t\t\tvar data$' + (level + 1) + ' = merge({}, data' + (0 <= level ? '' : '$' + level) + ', {\'.\': e, \'.index\': i, \'.length\': a.length}, e);\n\t\t\t\t\t\treturn [';
 				level += 1;
 				usesMerge = true;
 				usesSpread = true;
@@ -803,7 +793,7 @@ function parse(data) {
 	resultObject.functions = resultObject.functions || '{}';
 	resultObject.styles = resultObject.styles.length > 0 ? 'styles: ' + JSON.stringify(resultObject.styles) + ',' : '';
 	resultObject.helperFunctions = resultObject.helperFunctions.join('\n');
-	return baseCode.replace(syntax, function (g, m) {
+	return baseCode.replace(/\{\{([^\}]+)\}\}/g, function (g, m) {
 		return resultObject[m];
 	});
 }
