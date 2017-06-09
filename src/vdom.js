@@ -17,10 +17,12 @@ export function setDataResolver(resolver) {
 
 export function Tag(tagName, attributes, children) {
 	tagName = tagName.toLowerCase();
+	children = children && (typeof children !== 'object' || children.tagName) ? [children] : children || [];
 	let tag = {
 		tagName,
 		attributes: attributes || {},
-		children: children || []
+		children: children,
+		__complexity: children.reduce(((a, b) => a + (b.__complexity || 1)), 0) + children.length
 	};
 	if (tagFilter.indexOf(tagName) >= 0) tagsCreated.push(tag);
 	return tag;
@@ -120,19 +122,20 @@ export function applyDOM(dom, vdom, document) {
 	let children = (isArray(vdom) ? vdom : vdom.children);
 	children.forEach((node, index) => {
 		if (isArray(node)) return applyDOM(dom, node, document);
-		if (typeof dom.childNodes[index] === 'undefined') {	// does not exist
+		let domChild = dom.childNodes[index];
+		if (typeof domChild === 'undefined') {	// does not exist
 			dom.appendChild(createElement(node, document));
-		} else if (dom.childNodes[index].nodeType === 3) {	// is a text node
-			if (typeof node === 'string' && dom.childNodes[index].nodeValue !== node) {
-				dom.childNodes[index].nodeValue = node;
+		} else if (domChild.nodeType === 3) {	// is a text node
+			if (typeof node === 'string' && domChild.nodeValue !== node) {
+				domChild.nodeValue = node;
 			} else if (typeof node !== 'string') {
-				dom.replaceChild(createElement(node, document), dom.childNodes[index]);
+				dom.replaceChild(createElement(node, document), domChild);
 			}
-		} else if (dom.childNodes[index].nodeType === 1) {	// is a normal HTML tag
+		} else if (domChild.nodeType === 1) {	// is a normal HTML tag
 			if (typeof node === 'object') {
-				applyDOM(dom.childNodes[index], node, document);
+				applyDOM(domChild, node, document);
 			} else {
-				dom.replaceChild(createElement(node, document), dom.childNodes[index]);
+				dom.replaceChild(createElement(node, document), domChild);
 			}
 		}
 	});

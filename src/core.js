@@ -136,20 +136,32 @@ function initializeNode({tag, node: functions}) {
 		}
 	}
 	// define basic properties
-	Object.defineProperty(tag, 'body', {
-		set(val) {
-			tag.__i = val;
-			setElementAttr(tag);
-			trigger('--zino-rerender-tag', tag.getHost());
-		},
-		get() { return tag.__i; }
-	});
+	let desc = Object.getOwnPropertyDescriptor(tag, 'body');
+	if (!desc || typeof desc.get === 'undefined') {
+		Object.defineProperty(tag, 'body', {
+			set(val) {
+				tag.__i = val;
+				setElementAttr(tag);
+				trigger('--zino-rerender-tag', tag.getHost());
+			},
+			get() { return tag.__i; }
+		});
+	}
 	tag.__s = tag.setAttribute;
 	tag.setAttribute = function(attr, val) {
-		if (isFn(this.__s)) {
-			this.__s(attr, val);
+		if (isFn(tag.__s)) {
+			if (tag.__s === this.setAttribute) {
+				HTMLElement.prototype.setAttribute.call(this, attr, val);
+			} else {
+				tag.__s(attr, val);
+			}
 		} else {
-			this.attributes[attr] = val;
+			let desc = Object.getOwnPropertyDescriptor(this.attributes, attr);
+			if (desc && !desc.writable) {
+				HTMLElement.prototype.setAttribute.call(this, attr, val);
+			} else {
+				this.attributes[attr] = val;
+			}
 		}
 		trigger('--zino-rerender-tag', this);
 	};
@@ -175,6 +187,7 @@ function renderTag(tag, registryEntry = tagRegistry[tag.tagName.toLowerCase()]) 
 		renderedDOM;
 
 	// do the actual rendering of the component
+	//let start = +new Date;
 	vdom.setDataResolver(renderOptions.resolveData);
 	let data = getAttributes(tag);
 	if (isFn(registryEntry.render)) {
@@ -196,11 +209,17 @@ function renderTag(tag, registryEntry = tagRegistry[tag.tagName.toLowerCase()]) 
 		renderCallbacks = renderCallbacks.concat(subElEvents.renderCallbacks);
 	});
 
-	if (tag.attributes.__ready && tag.ownerDocument) {
+	//typeof console !== 'undefined' && console.debug('VDOM creation took ', (+new Date - start) + 'ms');
+	//typeof console !== 'undefined' && console.debug('Tag ' + tag.tagName + ' complexity (new, old, diff): ', renderedDOM.__complexity, tag.__complexity, (renderedDOM.__complexity - (tag.__complexity || 0)));
+
+	//start = +new Date;
+	if (tag.attributes.__ready && (Math.abs(renderedDOM.__complexity - (tag.__complexity || 0)) < 50) && tag.ownerDocument) {
 		// has been rendered before, so just apply diff
+		//typeof console !== 'undefined' && console.debug('VDOM dynamic');
 		vdom.applyDOM(tag.children[0], renderedDOM, tag.ownerDocument);
 	} else {
 		// simply render everything inside
+		//typeof console !== 'undefined' && console.debug('VDOM static');
 		if (tag.ownerDocument) {
 			tag.children[0].innerHTML = vdom.getInnerHTML(renderedDOM);
 		} else {
@@ -208,7 +227,10 @@ function renderTag(tag, registryEntry = tagRegistry[tag.tagName.toLowerCase()]) 
 		}
 	}
 	tag.__vdom = renderedDOM;
+	tag.__complexity = renderedDOM.__complexity;
 	tag.__subElements = renderedSubElements;
+
+	//typeof console !== 'undefined' && console.debug('Apply VDOM took ', (+new Date - start) + 'ms');
 
 	renderedSubElements.length > 0 && (tag.querySelectorAll && [].slice.call(tag.querySelectorAll('[__ready]')) || renderedSubElements).forEach((subEl, index) => {
 		merge(subEl, renderedSubElements[index]);
@@ -268,7 +290,11 @@ function getAttributes(tag, propsOnly) {
 
 	[].forEach.call(tag.nodeType === 1 && tag.attributes || Object.keys(tag.attributes).map(attr => ({name: attr, value: tag.attributes[attr]})), attribute => {
 		let isComplex = attribute.name.indexOf('data-') >= 0 && typeof attribute.value === 'string' && attribute.value.substr(0, 2) === '--';
-		attrs[attribute.name] || (attrs[attribute.name] = isComplex ? dataRegistry[attribute.value.replace(/^--|--$/g, '')] : attribute.value);
+		let value = tag.attributes[attribute.name];
+		if (value.toString() === '[object Attr]') {
+			value = value.value;
+		}
+		attrs[attribute.name] || (attrs[attribute.name] = isComplex && typeof value === 'string' && dataRegistry[value.replace(/^--|--$/g, '')] || value);
 		if (attribute.name.indexOf('data-') === 0) {
 			props[attribute.name.replace(/^data-/g, '').replace(/(\w)-(\w)/g, (g, m1, m2) => m1 + m2.toUpperCase())] = attrs[attribute.name];
 		}

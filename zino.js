@@ -160,10 +160,14 @@ function setDataResolver(resolver) {
 
 function Tag(tagName, attributes, children) {
 	tagName = tagName.toLowerCase();
+	children = children && ((typeof children === 'undefined' ? 'undefined' : _typeof(children)) !== 'object' || children.tagName) ? [children] : children || [];
 	var tag = {
 		tagName: tagName,
 		attributes: attributes || {},
-		children: children || []
+		children: children,
+		__complexity: children.reduce(function (a, b) {
+			return a + (b.__complexity || 1);
+		}, 0) + children.length
 	};
 	if (tagFilter.indexOf(tagName) >= 0) tagsCreated.push(tag);
 	return tag;
@@ -265,22 +269,23 @@ function applyDOM(dom, vdom, document) {
 	var children = isArray(vdom) ? vdom : vdom.children;
 	children.forEach(function (node, index) {
 		if (isArray(node)) return applyDOM(dom, node, document);
-		if (typeof dom.childNodes[index] === 'undefined') {
+		var domChild = dom.childNodes[index];
+		if (typeof domChild === 'undefined') {
 			// does not exist
 			dom.appendChild(createElement(node, document));
-		} else if (dom.childNodes[index].nodeType === 3) {
+		} else if (domChild.nodeType === 3) {
 			// is a text node
-			if (typeof node === 'string' && dom.childNodes[index].nodeValue !== node) {
-				dom.childNodes[index].nodeValue = node;
+			if (typeof node === 'string' && domChild.nodeValue !== node) {
+				domChild.nodeValue = node;
 			} else if (typeof node !== 'string') {
-				dom.replaceChild(createElement(node, document), dom.childNodes[index]);
+				dom.replaceChild(createElement(node, document), domChild);
 			}
-		} else if (dom.childNodes[index].nodeType === 1) {
+		} else if (domChild.nodeType === 1) {
 			// is a normal HTML tag
 			if ((typeof node === 'undefined' ? 'undefined' : _typeof(node)) === 'object') {
-				applyDOM(dom.childNodes[index], node, document);
+				applyDOM(domChild, node, document);
 			} else {
-				dom.replaceChild(createElement(node, document), dom.childNodes[index]);
+				dom.replaceChild(createElement(node, document), domChild);
 			}
 		}
 	});
@@ -433,22 +438,34 @@ function initializeNode(_ref) {
 		}
 	}
 	// define basic properties
-	Object.defineProperty(tag, 'body', {
-		set: function set(val) {
-			tag.__i = val;
-			setElementAttr(tag);
-			trigger('--zino-rerender-tag', tag.getHost());
-		},
-		get: function get() {
-			return tag.__i;
-		}
-	});
+	var desc = Object.getOwnPropertyDescriptor(tag, 'body');
+	if (!desc || typeof desc.get === 'undefined') {
+		Object.defineProperty(tag, 'body', {
+			set: function set(val) {
+				tag.__i = val;
+				setElementAttr(tag);
+				trigger('--zino-rerender-tag', tag.getHost());
+			},
+			get: function get() {
+				return tag.__i;
+			}
+		});
+	}
 	tag.__s = tag.setAttribute;
 	tag.setAttribute = function (attr, val) {
-		if (isFn(this.__s)) {
-			this.__s(attr, val);
+		if (isFn(tag.__s)) {
+			if (tag.__s === this.setAttribute) {
+				HTMLElement.prototype.setAttribute.call(this, attr, val);
+			} else {
+				tag.__s(attr, val);
+			}
 		} else {
-			this.attributes[attr] = val;
+			var _desc = Object.getOwnPropertyDescriptor(this.attributes, attr);
+			if (_desc && !_desc.writable) {
+				HTMLElement.prototype.setAttribute.call(this, attr, val);
+			} else {
+				this.attributes[attr] = val;
+			}
 		}
 		trigger('--zino-rerender-tag', this);
 	};
@@ -476,6 +493,7 @@ function renderTag(tag) {
 	    renderedDOM = void 0;
 
 	// do the actual rendering of the component
+	//let start = +new Date;
 	setDataResolver(renderOptions.resolveData);
 	var data = getAttributes(tag);
 	if (isFn(registryEntry.render)) {
@@ -497,11 +515,17 @@ function renderTag(tag) {
 		renderCallbacks = renderCallbacks.concat(subElEvents.renderCallbacks);
 	});
 
-	if (tag.attributes.__ready && tag.ownerDocument) {
+	//typeof console !== 'undefined' && console.debug('VDOM creation took ', (+new Date - start) + 'ms');
+	//typeof console !== 'undefined' && console.debug('Tag ' + tag.tagName + ' complexity (new, old, diff): ', renderedDOM.__complexity, tag.__complexity, (renderedDOM.__complexity - (tag.__complexity || 0)));
+
+	//start = +new Date;
+	if (tag.attributes.__ready && Math.abs(renderedDOM.__complexity - (tag.__complexity || 0)) < 50 && tag.ownerDocument) {
 		// has been rendered before, so just apply diff
+		//typeof console !== 'undefined' && console.debug('VDOM dynamic');
 		applyDOM(tag.children[0], renderedDOM, tag.ownerDocument);
 	} else {
 		// simply render everything inside
+		//typeof console !== 'undefined' && console.debug('VDOM static');
 		if (tag.ownerDocument) {
 			tag.children[0].innerHTML = getInnerHTML(renderedDOM);
 		} else {
@@ -509,7 +533,10 @@ function renderTag(tag) {
 		}
 	}
 	tag.__vdom = renderedDOM;
+	tag.__complexity = renderedDOM.__complexity;
 	tag.__subElements = renderedSubElements;
+
+	//typeof console !== 'undefined' && console.debug('Apply VDOM took ', (+new Date - start) + 'ms');
 
 	renderedSubElements.length > 0 && (tag.querySelectorAll && [].slice.call(tag.querySelectorAll('[__ready]')) || renderedSubElements).forEach(function (subEl, index) {
 		merge(subEl, renderedSubElements[index]);
@@ -575,7 +602,11 @@ function getAttributes(tag, propsOnly) {
 		return { name: attr, value: tag.attributes[attr] };
 	}), function (attribute) {
 		var isComplex = attribute.name.indexOf('data-') >= 0 && typeof attribute.value === 'string' && attribute.value.substr(0, 2) === '--';
-		attrs[attribute.name] || (attrs[attribute.name] = isComplex ? dataRegistry[attribute.value.replace(/^--|--$/g, '')] : attribute.value);
+		var value = tag.attributes[attribute.name];
+		if (value.toString() === '[object Attr]') {
+			value = value.value;
+		}
+		attrs[attribute.name] || (attrs[attribute.name] = isComplex && typeof value === 'string' && dataRegistry[value.replace(/^--|--$/g, '')] || value);
 		if (attribute.name.indexOf('data-') === 0) {
 			props[attribute.name.replace(/^data-/g, '').replace(/(\w)-(\w)/g, function (g, m1, m2) {
 				return m1 + m2.toUpperCase();
@@ -808,9 +839,7 @@ var tagObserver = new MutationObserver(function (records) {
 
 		if (added.length > 0) {
 			[].forEach.call(added, function (tag) {
-				(tag.children && $('*', tag) || []).concat(tag).forEach(function (subTag) {
-					return trigger('--zino-mount-tag', subTag);
-				});
+				trigger('--zino-mount-tag', tag);
 			});
 		} else if (removed.length > 0) {
 			[].forEach.call(removed, function (tag) {

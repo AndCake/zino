@@ -13,7 +13,7 @@ let urlRegistry = window.zinoTagRegistry || {},
 
 			if (added.length > 0) {
 				[].forEach.call(added, tag => {
-					(tag.children && $('*', tag) || []).concat(tag).forEach(subTag => trigger('--zino-mount-tag', subTag));
+					trigger('--zino-mount-tag', tag);
 				});
 			} else if (removed.length > 0) {
 				[].forEach.call(removed, tag => {
