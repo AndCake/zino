@@ -12,9 +12,7 @@ let urlRegistry = window.zinoTagRegistry || {},
 				removed = record.removedNodes;
 
 			if (added.length > 0) {
-				[].forEach.call(added, tag => {
-					trigger('--zino-mount-tag', tag);
-				});
+				[].forEach.call(added, tag => trigger('--zino-mount-tag', tag));
 			} else if (removed.length > 0) {
 				[].forEach.call(removed, tag => {
 					(tag.children && $('[__ready]', tag) || []).concat(tag).forEach(subTag => trigger('--zino-unmount-tag', subTag));

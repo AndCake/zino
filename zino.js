@@ -87,6 +87,7 @@ var eventQueue = {};
 function trigger(name, data) {
 	if (!eventQueue[name]) return;
 	for (var index in eventQueue[name]) {
+		name.indexOf('--event-') && trigger('--event-trigger', { name: name, fn: eventQueue[name][index], data: data });
 		var result = eventQueue[name][index](data);
 		if (result === false) break;
 	}
@@ -97,17 +98,18 @@ function on(name, fn) {
 		eventQueue[name] = [];
 	}
 	eventQueue[name].push(fn);
+	name.indexOf('--event-') && trigger('--event-register', { name: name, fn: fn });
 }
 
 function off(name, fn) {
 	if (!isFn(fn)) {
 		delete eventQueue[name];
-		return;
+		return name.indexOf('--event-') && trigger('--event-unregister', { name: name });
 	}
 	for (var index in eventQueue[name]) {
 		if (eventQueue[name][index] === fn) {
 			delete eventQueue[name][index];
-			return;
+			return name.indexOf('--event-') && trigger('--event-unregister', { name: name, fn: fn });
 		}
 	}
 }
@@ -663,7 +665,7 @@ var tagRegExp = /<(\/?)([\w-]+)([^>]*?)(\/?)>/g;
 var attrRegExp = /([\w_-]+)=(?:'([^']*?)'|"([^"]*?)")/g;
 var commentRegExp = /<!--(?:[^-]|-[^-])*-->/g;
 var syntax = /\{\{\s*([^\}]+)\s*\}\}\}?/g;
-var safeAccess$1 = 'function safeAccess(t,e,r){if(!e)return t;if("."===e[0])return t[e];for(e=e.split(".");e.length>0&&void 0!==(t=t[e.shift()]););return"string"==typeof t&&r===!0?t.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;").replace(/>/g,"&gt;"):"function"==typeof t?t.call(__i):t||""}';
+var safeAccess$1 = 'function safeAccess(t,e,r){if(!e)return t;if("."===e[0])return t[e];for(e=e.split(".");e.length>0&&void 0!==(t=t[e.shift()]););return"string"==typeof t&&r===!0?t.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;").replace(/>/g,"&gt;"):"function"==typeof t?t.call(__i):"number"==typeof t?t:t||""}';
 var toArray$1 = 'function toArray(t,e){var r=safeAccess(t,e);return r?"[object Array]"===Object.prototype.toString.call(r)?r:"function"==typeof r?r():[r]:[]}';
 var spread = 'function spread(t){var e=[];return t.forEach(function(t){e=e.concat(t)}),e}';
 var merge$1 = 'function merge(t){return[].slice.call(arguments,1).forEach(function(e){for(var r in e)t[r]=e[r]}),t}';

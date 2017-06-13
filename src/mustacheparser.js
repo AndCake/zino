@@ -2,7 +2,7 @@ const tagRegExp = /<(\/?)([\w-]+)([^>]*?)(\/?)>/g;
 const attrRegExp = /([\w_-]+)=(?:'([^']*?)'|"([^"]*?)")/g;
 const commentRegExp = /<!--(?:[^-]|-[^-])*-->/g;
 const syntax = /\{\{\s*([^\}]+)\s*\}\}\}?/g;
-const safeAccess = 'function safeAccess(t,e,r){if(!e)return t;if("."===e[0])return t[e];for(e=e.split(".");e.length>0&&void 0!==(t=t[e.shift()]););return"string"==typeof t&&r===!0?t.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;").replace(/>/g,"&gt;"):"function"==typeof t?t.call(__i):t||""}'/*`function safeAccess(obj, attrs, escape) {
+const safeAccess = 'function safeAccess(t,e,r){if(!e)return t;if("."===e[0])return t[e];for(e=e.split(".");e.length>0&&void 0!==(t=t[e.shift()]););return"string"==typeof t&&r===!0?t.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;").replace(/>/g,"&gt;"):"function"==typeof t?t.call(__i):"number"==typeof t?t:t||""}'/*`function safeAccess(obj, attrs, escape) {
 	if (!attrs) return obj;
 	if (attrs[0] === '.') {
 		return obj[attrs];
@@ -14,7 +14,7 @@ const safeAccess = 'function safeAccess(t,e,r){if(!e)return t;if("."===e[0])retu
 	} else if (typeof obj === 'function') {
 		return obj.call(instance);
 	} else {
-		return obj || '';
+		return typeof obj === 'number' ? obj : (obj || '');
 	}
 }`*/;
 const toArray = 'function toArray(t,e){var r=safeAccess(t,e);return r?"[object Array]"===Object.prototype.toString.call(r)?r:"function"==typeof r?r():[r]:[]}'/*`function toArray(data, value) {

@@ -98,6 +98,7 @@ var eventQueue = {};
 function trigger(name, data) {
 	if (!eventQueue[name]) return;
 	for (var index in eventQueue[name]) {
+		name.indexOf('--event-') && trigger('--event-trigger', { name: name, fn: eventQueue[name][index], data: data });
 		var result = eventQueue[name][index](data);
 		if (result === false) break;
 	}
@@ -108,17 +109,18 @@ function on(name, fn) {
 		eventQueue[name] = [];
 	}
 	eventQueue[name].push(fn);
+	name.indexOf('--event-') && trigger('--event-register', { name: name, fn: fn });
 }
 
 function off(name, fn) {
 	if (!isFn(fn)) {
 		delete eventQueue[name];
-		return;
+		return name.indexOf('--event-') && trigger('--event-unregister', { name: name });
 	}
 	for (var index in eventQueue[name]) {
 		if (eventQueue[name][index] === fn) {
 			delete eventQueue[name][index];
-			return;
+			return name.indexOf('--event-') && trigger('--event-unregister', { name: name, fn: fn });
 		}
 	}
 }

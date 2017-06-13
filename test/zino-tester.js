@@ -1,4 +1,5 @@
 import * as zino from '../src/zino-tester';
+import {JSDOM} from 'jsdom';
 import test from './test';
 
 test('Zino Snapshotting');
@@ -22,4 +23,27 @@ test('renders styles and events properly', t => {
 
 	zino.importTag('test/components/second-tag.html');
 	zino.matchesSnapshot('<second-tag me="Welt!"></second-tag>');
+});
+test('uses the provided name attribute', t => {
+	zino.matchesSnapshot('<second-tag me="Welt!"></second-tag>', {}, 'name parameter test');
+});
+test('calls the callback function', t => {
+	let called = false;
+	zino.matchesSnapshot('<second-tag me="Welt!"></second-tag>', {}, '', tag => {
+		called = true;
+		tag.children[0].innerHTML = 'content removed in callback!';
+	});
+	t.true(called, 'Callback function was called');
+});
+
+test('supports object notation for matchesSnapshot', t => {
+	// test implementation missing
+});
+
+test('allows for non-snapshot testing', t => {
+	let document = new JSDOM('<comment author="Bucks Bunny">I love carrots!</comment>').window.document;
+	zino.clearImports();
+	zino.importTag('test/components/comment.html', document);
+	let comment = document.body.children[0];
+	t.is(comment.children[0].children[0].innerHTML, '"Bucks Bunny"', 'rendered the tag into the DOM');
 });
