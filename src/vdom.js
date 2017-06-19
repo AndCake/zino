@@ -62,9 +62,16 @@ export function setFilter(filter) {
  * retrieves the list of tags that have been created since the last call of getTagsCreated()
  * @return {Array} - an array of VDOM nodes that were created
  */
+export function clearTagsCreated() {
+	tagsCreated = [];
+}
+
+/**
+ * retrieves the list of tags that have been created since the last call of getTagsCreated()
+ * @return {Array} - an array of VDOM nodes that were created
+ */
 export function getTagsCreated() {
 	let created = tagsCreated;
-	tagsCreated = [];
 	return created;
 }
 
@@ -116,7 +123,7 @@ function createElement(node, document) {
 		});
 		if (node.__vdom) {
 			// it's a component, so don't forget to initialize this new instance
-			trigger('--zino-initialize-node', {tag, node});
+			trigger('--zino-initialize-node', {tag, node: node.functions});
 		}
 		// define it's inner structure
 		tag.innerHTML = getInnerHTML(node);

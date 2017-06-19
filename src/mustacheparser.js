@@ -91,17 +91,17 @@ export function parse(data) {
 		return `data${level === 0 ? '' : '$' + level}`;
 	}
 
-	function handleText(text) {
+	function handleText(text, isAttr) {
 		let match, result = '', lastIndex = 0;
-
+		let cat = isAttr ? ' + ' : ', ';
 		if (!text.match(syntax)) {
-			return result += "'" + text.substr(lastIndex).replace(/\n/g, '').replace(/'/g, '\\\'') + "', ";
+			return result += "'" + text.substr(lastIndex).replace(/\n/g, '').replace(/'/g, '\\\'') + "'" + cat;
 		}
 		while (match = syntax.exec(text)) {
 			if (match.index < lastIndex) continue;
 			let frag = text.substring(lastIndex, match.index).trim()
 			if (frag.length > 0) {
-				result += "'" + frag.replace(/\n/g, '').replace(/'/g, '\\\'') + "', ";
+				result += "'" + frag.replace(/\n/g, '').replace(/'/g, '\\\'') + "'" + cat;
 			}
 			lastIndex = match.index + match[0].length;
 			let key = match[1];
@@ -114,7 +114,7 @@ export function parse(data) {
 				usesMerge = true;
 				usesSpread = true;
 			} else if (key[0] === '/') {
-				result += '\'\']; })), ';
+				result += '\'\']; }))' + (isAttr ? '.join("")' : '') + cat;
 				level -= 1;
 				if (level < 0) {
 					throw new Error('Unexpected end of block: ' + key.substr(1));
@@ -130,16 +130,16 @@ export function parse(data) {
 				result += key.substr(1).split(/\s*,\s*/).map(value => `renderStyle(safeAccess(${getData()}, '${value}'), ${getData()})`).join(' + ');
 				usesRenderStyle = true;
 			} else if (key[0] === '+') {
-				result += `safeAccess(${getData()}, '${value}'), `;
+				result += `safeAccess(${getData()}, '${value}')${cat}`;
 			} else if (key[0] !== '{') {
 				value = key;
-				result += `safeAccess(${getData()}, '${value}', true), `
+				result += `''+safeAccess(${getData()}, '${value}', true)${cat}`
 			} else {
-				result += `safeAccess(${getData()}, '${value}'), `;
+				result += `''+safeAccess(${getData()}, '${value}')${cat}`;
 			}
 		}
 		if (text.substr(lastIndex).length > 0) {
-			result += "'" + text.substr(lastIndex).replace(/\n/g, '').replace(/'/g, '\\\'') + "', ";
+			result += "'" + text.substr(lastIndex).replace(/\n/g, '').replace(/'/g, '\\\'') + "'" + cat;
 		}
 		return result;
 	}
@@ -150,7 +150,7 @@ export function parse(data) {
 
 		while ((attr = attrRegExp.exec(attrs))) {
 			if (attributes !== '{') attributes += ', ';
-			attributes += '"' + attr[1].toLowerCase() + '": ' + handleText(attr[2] || attr[3]).replace(/,\s*$/, '');
+			attributes += '"' + attr[1].toLowerCase() + '": ' + handleText(attr[2] || attr[3], true).replace(/\s*[,+]\s*$/g, '');
 		}
 		return attributes + '}';
 	}

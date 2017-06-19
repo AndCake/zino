@@ -173,15 +173,27 @@ function setDataResolver(resolver) {
 
 function Tag(tagName, attributes, children) {
 	tagName = tagName.toLowerCase();
+	children = children && ((typeof children === 'undefined' ? 'undefined' : _typeof(children)) !== 'object' || children.tagName) ? [children] : children || [];
 	var tag = {
 		tagName: tagName,
 		attributes: attributes || {},
-		children: children || []
+		children: children,
+		__complexity: children.reduce(function (a, b) {
+			return a + (b.__complexity || 1);
+		}, 0) + children.length
 	};
 	if (tagFilter.indexOf(tagName) >= 0) tagsCreated.push(tag);
 	return tag;
 }
 
+/**
+ * Returns all tags with a given tag name. If the provided context contains a getElementsByTagName() function,
+ * that will be used to retrieve the data, else a manual recursive lookup will be done
+ * 
+ * @param  {String} name - name of the tag to retrieve the elements  of
+ * @param  {Object} dom - either a VDOM node or a DOM node
+ * @return {Array} - list of elements that match the provided tag name
+ */
 function getElementsByTagName(name, dom) {
 	var result = [];
 	name = (name || '').toLowerCase();
@@ -198,16 +210,37 @@ function getElementsByTagName(name, dom) {
 	return result;
 }
 
+/**
+ * defines which VDOM nodes should be captured for getTagsCreated()
+ * @param {Array} filter - an array of strings representing the tag names of the tags to be captured
+ */
 function setFilter(filter) {
 	tagFilter = filter;
 }
 
+/**
+ * retrieves the list of tags that have been created since the last call of getTagsCreated()
+ * @return {Array} - an array of VDOM nodes that were created
+ */
+function clearTagsCreated() {
+	tagsCreated = [];
+}
+
+/**
+ * retrieves the list of tags that have been created since the last call of getTagsCreated()
+ * @return {Array} - an array of VDOM nodes that were created
+ */
 function getTagsCreated() {
 	var created = tagsCreated;
-	tagsCreated = [];
 	return created;
 }
 
+/**
+ * Calculates the HTML structure as a String represented by the VDOM
+ * 
+ * @param  {Object} node - the VDOM node whose inner HTML to generate
+ * @return {String} - the HTML structure representing the VDOM
+ */
 function getInnerHTML(node) {
 	if (!node.children) return '';
 	if (!isArray(node.children)) node.children = [node.children];
@@ -230,70 +263,111 @@ function getInnerHTML(node) {
 	}).join('');
 }
 
+/**
+ * Creates a new DOM node
+ * 
+ * @param  {Object|String} node - a VDOM node
+ * @param  {Document} document - the document in which to create the DOM node
+ * @return {Node} - the DOM node created (either a text element or an HTML element)
+ */
 function createElement(node, document) {
 	var tag = void 0;
 	if ((typeof node === 'undefined' ? 'undefined' : _typeof(node)) !== 'object') {
+		// we have a text node, so create one
 		tag = document.createTextNode('' + node);
 	} else {
 		tag = document.createElement(node.tagName);
+		// add all required attributes
 		Object.keys(node.attributes).forEach(function (attr) {
 			tag.setAttribute(attr, node.attributes[attr]);
 		});
 		if (node.__vdom) {
-			trigger('--zino-initialize-node', { tag: tag, node: node });
+			// it's a component, so don't forget to initialize this new instance
+			trigger('--zino-initialize-node', { tag: tag, node: node.functions });
 		}
+		// define it's inner structure
 		tag.innerHTML = getInnerHTML(node);
 	}
 
 	return tag;
 }
 
+/**
+ * Applies a VDOM to an actual DOM, meaning that the state of the VDOM will be recreated on the DOM.
+ * The end result is, that the DOM structure is the same as the VDOM structure. Existing elements will
+ * be repurposed, new elements created where necessary.
+ * 
+ * @param  {DOM} dom - the DOM to which the VDOM should be applied
+ * @param  {Object} vdom - the VDOM to apply to the DOM
+ * @param  {Document} document - the document that the DOM is based on, used for createElement() and createTextNode() calls
+ */
 function applyDOM(dom, vdom, document) {
 	if (!isArray(vdom)) {
+		// if we have a node
 		if (!isArray(vdom.children)) vdom.children = [vdom.children];
+		// if the tag name is not the same
 		if (vdom.tagName !== dom.tagName.toLowerCase()) {
+			// replace the node entirely
 			dom.parentNode.replaceChild(createElement(vdom, document), dom);
 		} else {
+			// check all vdom attributes
 			Object.keys(vdom.attributes).forEach(function (attr) {
+				// if the VDOM attribute is a non-object
 				if (_typeof(vdom.attributes[attr]) !== 'object') {
+					// check if it differs
 					if (dom.getAttribute(attr) != vdom.attributes[attr]) {
+						// if so, apply it
 						dom.setAttribute(attr, vdom.attributes[attr]);
 					}
 				} else {
+					// the attribute is an object
 					if (dom.getAttribute(attr) && dom.getAttribute(attr).match(/^--|--$/g)) {
+						// if it has a complex value, use the data resolver to define it on the DOM
 						var id = dataResolver(attr, vdom.attributes[attr], dom.getAttribute(attr).replace(/^--|--$/g, ''));
+						// only set the ID with markers so that we know it is supposed to be a complex value
 						dom.setAttribute(attr, '--' + id + '--');
 					}
 				}
 			});
+			// if we have too many attributes in our DOM
 			if (dom.attributes.length > Object.keys(vdom.attributes)) {
 				[].forEach.call(dom.attributes, function (attr) {
+					// if the respective attribute does not exist on the VDOM
 					if (typeof vdom.attributes[attr.name] === 'undefined') {
+						// remove it
 						dom.removeAttribute(attr.name);
 					}
 				});
 			}
 		}
 	}
+
+	// deal with the vdom's children
 	var children = isArray(vdom) ? vdom : vdom.children;
 	children.forEach(function (node, index) {
 		if (isArray(node)) return applyDOM(dom, node, document);
-		if (typeof dom.childNodes[index] === 'undefined') {
-			// does not exist
+		var domChild = dom.childNodes[index];
+		if (typeof domChild === 'undefined') {
+			// does not exist, so it needs to be appended
 			dom.appendChild(createElement(node, document));
-		} else if (dom.childNodes[index].nodeType === 3) {
+		} else if (domChild.nodeType === 3) {
 			// is a text node
-			if (typeof node === 'string' && dom.childNodes[index].nodeValue !== node) {
-				dom.childNodes[index].nodeValue = node;
+			// if the VDOM node is also a text node
+			if (typeof node === 'string' && domChild.nodeValue !== node) {
+				// simply apply the value
+				domChild.nodeValue = node;
 			} else if (typeof node !== 'string') {
-				dom.replaceChild(createElement(node, document), dom.childNodes[index]);
+				// else replace with a new element
+				dom.replaceChild(createElement(node, document), domChild);
 			}
-		} else if (dom.childNodes[index].nodeType === 1) {
+		} else if (domChild.nodeType === 1) {
 			// is a normal HTML tag
 			if ((typeof node === 'undefined' ? 'undefined' : _typeof(node)) === 'object') {
-				applyDOM(dom.childNodes[index], node, document);
+				// the VDOM is also a tag, apply it recursively
+				applyDOM(domChild, node, document);
 			} else {
-				dom.replaceChild(createElement(node, document), dom.childNodes[index]);
+				// it's just a text node, so simply replace the element with the text node
+				dom.replaceChild(createElement(node, document), domChild);
 			}
 		}
 	});
@@ -434,7 +508,8 @@ function initializeTag(tag, registryEntry) {
 
 function initializeNode(_ref) {
 	var tag = _ref.tag,
-	    functions = _ref.node;
+	    _ref$node = _ref.node,
+	    functions = _ref$node === undefined ? defaultFunctions : _ref$node;
 
 	// copy all defined functions/attributes
 	for (var all in functions) {
@@ -448,22 +523,34 @@ function initializeNode(_ref) {
 		}
 	}
 	// define basic properties
-	Object.defineProperty(tag, 'body', {
-		set: function set(val) {
-			tag.__i = val;
-			setElementAttr(tag);
-			trigger('--zino-rerender-tag', tag.getHost());
-		},
-		get: function get() {
-			return tag.__i;
-		}
-	});
+	var desc = Object.getOwnPropertyDescriptor(tag, 'body');
+	if (!desc || typeof desc.get === 'undefined') {
+		Object.defineProperty(tag, 'body', {
+			set: function set(val) {
+				tag.__i = val;
+				setElementAttr(tag);
+				trigger('--zino-rerender-tag', tag.getHost());
+			},
+			get: function get() {
+				return tag.__i;
+			}
+		});
+	}
 	tag.__s = tag.setAttribute;
 	tag.setAttribute = function (attr, val) {
-		if (isFn(this.__s)) {
-			this.__s(attr, val);
+		if (isFn(tag.__s)) {
+			if (tag.__s === this.setAttribute) {
+				HTMLElement.prototype.setAttribute.call(this, attr, val);
+			} else {
+				tag.__s(attr, val);
+			}
 		} else {
-			this.attributes[attr] = val;
+			var _desc = Object.getOwnPropertyDescriptor(this.attributes, attr);
+			if (_desc && !_desc.writable) {
+				HTMLElement.prototype.setAttribute.call(this, attr, val);
+			} else {
+				this.attributes[attr] = val;
+			}
 		}
 		trigger('--zino-rerender-tag', this);
 	};
@@ -491,8 +578,12 @@ function renderTag(tag) {
 	    renderedDOM = void 0;
 
 	// do the actual rendering of the component
+	//let start = +new Date;
 	setDataResolver(renderOptions.resolveData);
 	var data = getAttributes(tag);
+	if (tag.ownerDocument || !tag.__vdom) {
+		clearTagsCreated();
+	}
 	if (isFn(registryEntry.render)) {
 		setFilter(Object.keys(tagRegistry));
 		renderedDOM = Tag('div', { 'class': '-shadow-root' }, registryEntry.render.call(tag, data));
@@ -507,16 +598,24 @@ function renderTag(tag) {
 			noRenderCallback: true,
 			noEvents: true
 		}, subEl, tagRegistry[subEl.tagName]);
-		renderedSubElements = renderedSubElements.concat(getTagsCreated());
-		events = events.concat(subElEvents.events);
-		renderCallbacks = renderCallbacks.concat(subElEvents.renderCallbacks);
+		if (subElEvents) {
+			renderedSubElements = renderedSubElements.concat(getTagsCreated());
+			events = events.concat(subElEvents.events);
+			renderCallbacks = renderCallbacks.concat(subElEvents.renderCallbacks);
+		}
 	});
 
-	if (tag.attributes.__ready && tag.ownerDocument) {
+	//typeof console !== 'undefined' && console.debug('VDOM creation took ', (+new Date - start) + 'ms');
+	//typeof console !== 'undefined' && console.debug('Tag ' + tag.tagName + ' complexity (new, old, diff): ', renderedDOM.__complexity, tag.__complexity, (renderedDOM.__complexity - (tag.__complexity || 0)));
+
+	//start = +new Date;
+	if (tag.attributes.__ready && Math.abs(renderedDOM.__complexity - (tag.__complexity || 0)) < 50 && tag.ownerDocument) {
 		// has been rendered before, so just apply diff
+		//typeof console !== 'undefined' && console.debug('VDOM dynamic');
 		applyDOM(tag.children[0], renderedDOM, tag.ownerDocument);
 	} else {
 		// simply render everything inside
+		//typeof console !== 'undefined' && console.debug('VDOM static');
 		if (tag.ownerDocument) {
 			tag.children[0].innerHTML = getInnerHTML(renderedDOM);
 		} else {
@@ -524,7 +623,10 @@ function renderTag(tag) {
 		}
 	}
 	tag.__vdom = renderedDOM;
+	tag.__complexity = renderedDOM.__complexity;
 	tag.__subElements = renderedSubElements;
+
+	//typeof console !== 'undefined' && console.debug('Apply VDOM took ', (+new Date - start) + 'ms');
 
 	renderedSubElements.length > 0 && (tag.querySelectorAll && [].slice.call(tag.querySelectorAll('[__ready]')) || renderedSubElements).forEach(function (subEl, index) {
 		merge(subEl, renderedSubElements[index]);
@@ -590,7 +692,11 @@ function getAttributes(tag, propsOnly) {
 		return { name: attr, value: tag.attributes[attr] };
 	}), function (attribute) {
 		var isComplex = attribute.name.indexOf('data-') >= 0 && typeof attribute.value === 'string' && attribute.value.substr(0, 2) === '--';
-		attrs[attribute.name] || (attrs[attribute.name] = isComplex ? dataRegistry[attribute.value.replace(/^--|--$/g, '')] : attribute.value);
+		var value = tag.attributes[attribute.name];
+		if (value.toString() === '[object Attr]') {
+			value = value.value;
+		}
+		attrs[attribute.name] || (attrs[attribute.name] = isComplex && typeof value === 'string' && dataRegistry[value.replace(/^--|--$/g, '')] || value);
 		if (attribute.name.indexOf('data-') === 0) {
 			props[attribute.name.replace(/^data-/g, '').replace(/(\w)-(\w)/g, function (g, m1, m2) {
 				return m1 + m2.toUpperCase();
@@ -626,7 +732,10 @@ function handleStyles(element) {
 	var tagName = element.tagName;
 	trigger('publish-style', (element.styles || []).map(function (style) {
 		var code = style;
-		return code.replace(/[\r\n]*([^@%\{;\}]+?)\{/gm, function (global, match) {
+		return code.replace(/[\r\n]*([^%\{;\}]+?)\{/gm, function (global, match) {
+			if (match.trim().match(/^@/)) {
+				return match + '{';
+			}
 			var selectors = match.split(',').map(function (selector) {
 				selector = selector.trim();
 				if (selector.match(/:host\b/) || selector.match(new RegExp('^\\s*' + tagName + '\\b')) || selector.match(/^\s*(?:(?:\d+%)|(?:from)|(?:to)|(?:@\w+)|\})\s*$/)) {
@@ -647,12 +756,12 @@ var tagRegExp = /<(\/?)([\w-]+)([^>]*?)(\/?)>/g;
 var attrRegExp = /([\w_-]+)=(?:'([^']*?)'|"([^"]*?)")/g;
 var commentRegExp = /<!--(?:[^-]|-[^-])*-->/g;
 var syntax = /\{\{\s*([^\}]+)\s*\}\}\}?/g;
-var safeAccess$1 = 'function safeAccess(obj, attrs, escape) {\n\tif (!attrs) return obj;\n\tif (attrs[0] === \'.\') {\n\t\treturn obj[attrs];\n\t}\n\tattrs = attrs.split(\'.\');\n\twhile (attrs.length > 0 && typeof (obj = obj[attrs.shift()]) !== \'undefined\');\n\tif (typeof obj === \'string\' && escape === true) {\n\t\treturn obj.replace(/&/g, \'&amp;\').replace(/</g, \'&lt;\').replace(/"/g, \'&quot;\').replace(/>/g, \'&gt;\');\n\t} else if (typeof obj === \'function\') {\n\t\treturn obj.call(instance);\n\t} else {\n\t\treturn obj || \'\';\n\t}\n}';
-var toArray$1 = 'function toArray(data, value) {\n\tvar dataValue = safeAccess(data, value);\n\tif (dataValue) {\n\t\tif (Object.prototype.toString.call(dataValue) === \'[object Array]\') {\n\t\t\treturn dataValue;\n\t\t} else if (typeof dataValue === \'function\') {\n\t\t\treturn dataValue();\n\t\t} else return [dataValue];\n\t} else {\n\t\treturn [];\n\t}\n}';
-var spread = 'function spread(array) {\n\tvar result = [];\n\tarray.forEach(function(entry) {\n\t\tresult = result.concat(entry);\n\t});\n\treturn result;\n}';
-var merge$1 = 'function merge(target) {\n\t[].slice.call(arguments, 1).forEach(function (arg) {\n\t\tfor (var all in arg) {\n\t\t\ttarget[all] = arg[all];\n\t\t}\n\t});\n\n\treturn target;\n}';
-var renderStyle = 'function renderStyle(value, context) {\n\tvar style = \'\';\n\t\ttransform = function(val) {\n\t\t\tif (typeof val === \'function\') return transform(val.apply(context));\n\t\t\treturn val + (typeof val === \'number\' && val !== null ? context.styles && context.styles.defaultUnit || \'px\' : \'\');\n\t\t};\n\n\tif (typeof value === \'object\') {\n\t\tfor (var all in value) {\n\t\t\tstyle += all.replace(/[A-Z]/g, function(g){ return \'-\' + g.toLowerCase()}) + \':\' + transform(value[all]) + \';\';\n\t\t}\n\t}\n\n\treturn style;\n}';
-var baseCode = 'function(Tag) {\n\tvar instance = null;\n\t{{helperFunctions}}\n\n\treturn {\n\t\ttagName: \'{{tagName}}\',\n\t\t{{styles}}\n\t\trender: function(data) {\n\t\t\tinstance = this;\n\t\t\treturn [].concat({{render}})\n\t\t},\n\n\t\tfunctions: {{functions}}\n\t};\n}';
+var safeAccess$1 = 'function safeAccess(t,e,r){if(!e)return t;if("."===e[0])return t[e];for(e=e.split(".");e.length>0&&void 0!==(t=t[e.shift()]););return"string"==typeof t&&r===!0?t.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;").replace(/>/g,"&gt;"):"function"==typeof t?t.call(__i):"number"==typeof t?t:t||""}';
+var toArray$1 = 'function toArray(t,e){var r=safeAccess(t,e);return r?"[object Array]"===Object.prototype.toString.call(r)?r:"function"==typeof r?r():[r]:[]}';
+var spread = 'function spread(t){var e=[];return t.forEach(function(t){e=e.concat(t)}),e}';
+var merge$1 = 'function merge(t){return[].slice.call(arguments,1).forEach(function(e){for(var r in e)t[r]=e[r]}),t}';
+var renderStyle = 'function renderStyle(t,r){var e="";if(transform=function(t){return"function"==typeof t?transform(t.apply(r)):t+("number"==typeof t&&null!==t?r.styles&&r.styles.defaultUnit||"px":"")},"object"==typeof t)for(var n in t)e+=n.replace(/[A-Z]/g,function(t){return"-"+t.toLowerCase()})+":"+transform(t[n])+";";return e}';
+var baseCode = 'function (Tag){var __i;{{helperFunctions}};return{tagName:"{{tagName}}",{{styles}}render:function(data){return __i=this,[].concat({{render}})},functions:{{functions}}}}';
 
 function parse(data) {
 	var resultObject = {
@@ -674,30 +783,30 @@ function parse(data) {
 		return 'data' + (level === 0 ? '' : '$' + level);
 	}
 
-	function handleText(text) {
+	function handleText(text, isAttr) {
 		var match = void 0,
 		    result = '',
 		    lastIndex = 0;
-
+		var cat = isAttr ? ' + ' : ', ';
 		if (!text.match(syntax)) {
-			return result += "'" + text.substr(lastIndex).replace(/\n/g, '').replace(/'/g, '\\\'') + "', ";
+			return result += "'" + text.substr(lastIndex).replace(/\n/g, '').replace(/'/g, '\\\'') + "'" + cat;
 		}
 		while (match = syntax.exec(text)) {
 			if (match.index < lastIndex) continue;
 			var frag = text.substring(lastIndex, match.index).trim();
 			if (frag.length > 0) {
-				result += "'" + frag.replace(/\n/g, '').replace(/'/g, '\\\'') + "', ";
+				result += "'" + frag.replace(/\n/g, '').replace(/'/g, '\\\'') + "'" + cat;
 			}
 			lastIndex = match.index + match[0].length;
 			var key = match[1];
 			var value = key.substr(1);
 			if (key[0] === '#') {
-				result += 'spread(toArray(' + getData() + ', \'' + value + '\').map(function (entry, index, arr) {\n\t\t\t\t\t\tvar data$' + (level + 1) + ' = merge({}, data' + (0 <= level ? '' : '$' + level) + ', {\'.\': entry, \'.index\': index, \'.length\': arr.length}, entry);\n\t\t\t\t\t\treturn [';
+				result += 'spread(toArray(' + getData() + ', \'' + value + '\').map(function (e, i, a) {\n\t\t\t\t\t\tvar data$' + (level + 1) + ' = merge({}, data' + (0 <= level ? '' : '$' + level) + ', {\'.\': e, \'.index\': i, \'.length\': a.length}, e);\n\t\t\t\t\t\treturn [';
 				level += 1;
 				usesMerge = true;
 				usesSpread = true;
 			} else if (key[0] === '/') {
-				result += '\'\']; })), ';
+				result += '\'\']; }))' + (isAttr ? '.join("")' : '') + cat;
 				level -= 1;
 				if (level < 0) {
 					throw new Error('Unexpected end of block: ' + key.substr(1));
@@ -715,16 +824,16 @@ function parse(data) {
 				}).join(' + ');
 				usesRenderStyle = true;
 			} else if (key[0] === '+') {
-				result += 'safeAccess(' + getData() + ', \'' + value + '\'), ';
+				result += 'safeAccess(' + getData() + ', \'' + value + '\')' + cat;
 			} else if (key[0] !== '{') {
 				value = key;
-				result += 'safeAccess(' + getData() + ', \'' + value + '\', true), ';
+				result += '\'\'+safeAccess(' + getData() + ', \'' + value + '\', true)' + cat;
 			} else {
-				result += 'safeAccess(' + getData() + ', \'' + value + '\'), ';
+				result += '\'\'+safeAccess(' + getData() + ', \'' + value + '\')' + cat;
 			}
 		}
 		if (text.substr(lastIndex).length > 0) {
-			result += "'" + text.substr(lastIndex).replace(/\n/g, '').replace(/'/g, '\\\'') + "', ";
+			result += "'" + text.substr(lastIndex).replace(/\n/g, '').replace(/'/g, '\\\'') + "'" + cat;
 		}
 		return result;
 	}
@@ -735,7 +844,7 @@ function parse(data) {
 
 		while (attr = attrRegExp.exec(attrs)) {
 			if (attributes !== '{') attributes += ', ';
-			attributes += '"' + attr[1].toLowerCase() + '": ' + handleText(attr[2] || attr[3]).replace(/,\s*$/, '');
+			attributes += '"' + attr[1].toLowerCase() + '": ' + handleText(attr[2] || attr[3], true).replace(/\s*[,+]\s*$/g, '');
 		}
 		return attributes + '}';
 	}
@@ -808,7 +917,7 @@ function parse(data) {
 	resultObject.functions = resultObject.functions || '{}';
 	resultObject.styles = resultObject.styles.length > 0 ? 'styles: ' + JSON.stringify(resultObject.styles) + ',' : '';
 	resultObject.helperFunctions = resultObject.helperFunctions.join('\n');
-	return baseCode.replace(syntax, function (g, m) {
+	return baseCode.replace(/\{\{([^\}]+)\}\}/g, function (g, m) {
 		return resultObject[m];
 	});
 }
@@ -826,9 +935,7 @@ merge(global, {
 	},
 	require: function require() {
 		return emptyFunc;
-	},
-	setTimeout: emptyFunc,
-	setInterval: emptyFunc
+	}
 });
 
 function importTag(tagFile, document) {

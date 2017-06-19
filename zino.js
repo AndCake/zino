@@ -175,6 +175,14 @@ function Tag(tagName, attributes, children) {
 	return tag;
 }
 
+/**
+ * Returns all tags with a given tag name. If the provided context contains a getElementsByTagName() function,
+ * that will be used to retrieve the data, else a manual recursive lookup will be done
+ * 
+ * @param  {String} name - name of the tag to retrieve the elements  of
+ * @param  {Object} dom - either a VDOM node or a DOM node
+ * @return {Array} - list of elements that match the provided tag name
+ */
 function getElementsByTagName(name, dom) {
 	var result = [];
 	name = (name || '').toLowerCase();
@@ -191,16 +199,37 @@ function getElementsByTagName(name, dom) {
 	return result;
 }
 
+/**
+ * defines which VDOM nodes should be captured for getTagsCreated()
+ * @param {Array} filter - an array of strings representing the tag names of the tags to be captured
+ */
 function setFilter(filter) {
 	tagFilter = filter;
 }
 
+/**
+ * retrieves the list of tags that have been created since the last call of getTagsCreated()
+ * @return {Array} - an array of VDOM nodes that were created
+ */
+function clearTagsCreated() {
+	tagsCreated = [];
+}
+
+/**
+ * retrieves the list of tags that have been created since the last call of getTagsCreated()
+ * @return {Array} - an array of VDOM nodes that were created
+ */
 function getTagsCreated() {
 	var created = tagsCreated;
-	tagsCreated = [];
 	return created;
 }
 
+/**
+ * Calculates the HTML structure as a String represented by the VDOM
+ * 
+ * @param  {Object} node - the VDOM node whose inner HTML to generate
+ * @return {String} - the HTML structure representing the VDOM
+ */
 function getInnerHTML(node) {
 	if (!node.children) return '';
 	if (!isArray(node.children)) node.children = [node.children];
@@ -223,70 +252,110 @@ function getInnerHTML(node) {
 	}).join('');
 }
 
+/**
+ * Creates a new DOM node
+ * 
+ * @param  {Object|String} node - a VDOM node
+ * @param  {Document} document - the document in which to create the DOM node
+ * @return {Node} - the DOM node created (either a text element or an HTML element)
+ */
 function createElement(node, document) {
 	var tag = void 0;
 	if ((typeof node === 'undefined' ? 'undefined' : _typeof(node)) !== 'object') {
+		// we have a text node, so create one
 		tag = document.createTextNode('' + node);
 	} else {
 		tag = document.createElement(node.tagName);
+		// add all required attributes
 		Object.keys(node.attributes).forEach(function (attr) {
 			tag.setAttribute(attr, node.attributes[attr]);
 		});
 		if (node.__vdom) {
-			trigger('--zino-initialize-node', { tag: tag, node: node });
+			// it's a component, so don't forget to initialize this new instance
+			trigger('--zino-initialize-node', { tag: tag, node: node.functions });
 		}
+		// define it's inner structure
 		tag.innerHTML = getInnerHTML(node);
 	}
 
 	return tag;
 }
 
+/**
+ * Applies a VDOM to an actual DOM, meaning that the state of the VDOM will be recreated on the DOM.
+ * The end result is, that the DOM structure is the same as the VDOM structure. Existing elements will
+ * be repurposed, new elements created where necessary.
+ * 
+ * @param  {DOM} dom - the DOM to which the VDOM should be applied
+ * @param  {Object} vdom - the VDOM to apply to the DOM
+ * @param  {Document} document - the document that the DOM is based on, used for createElement() and createTextNode() calls
+ */
 function applyDOM(dom, vdom, document) {
 	if (!isArray(vdom)) {
+		// if we have a node
 		if (!isArray(vdom.children)) vdom.children = [vdom.children];
+		// if the tag name is not the same
 		if (vdom.tagName !== dom.tagName.toLowerCase()) {
+			// replace the node entirely
 			dom.parentNode.replaceChild(createElement(vdom, document), dom);
 		} else {
+			// check all vdom attributes
 			Object.keys(vdom.attributes).forEach(function (attr) {
+				// if the VDOM attribute is a non-object
 				if (_typeof(vdom.attributes[attr]) !== 'object') {
+					// check if it differs
 					if (dom.getAttribute(attr) != vdom.attributes[attr]) {
+						// if so, apply it
 						dom.setAttribute(attr, vdom.attributes[attr]);
 					}
 				} else {
+					// the attribute is an object
 					if (dom.getAttribute(attr) && dom.getAttribute(attr).match(/^--|--$/g)) {
+						// if it has a complex value, use the data resolver to define it on the DOM
 						var id = dataResolver(attr, vdom.attributes[attr], dom.getAttribute(attr).replace(/^--|--$/g, ''));
+						// only set the ID with markers so that we know it is supposed to be a complex value
 						dom.setAttribute(attr, '--' + id + '--');
 					}
 				}
 			});
+			// if we have too many attributes in our DOM
 			if (dom.attributes.length > Object.keys(vdom.attributes)) {
 				[].forEach.call(dom.attributes, function (attr) {
+					// if the respective attribute does not exist on the VDOM
 					if (typeof vdom.attributes[attr.name] === 'undefined') {
+						// remove it
 						dom.removeAttribute(attr.name);
 					}
 				});
 			}
 		}
 	}
+
+	// deal with the vdom's children
 	var children = isArray(vdom) ? vdom : vdom.children;
 	children.forEach(function (node, index) {
 		if (isArray(node)) return applyDOM(dom, node, document);
 		var domChild = dom.childNodes[index];
 		if (typeof domChild === 'undefined') {
-			// does not exist
+			// does not exist, so it needs to be appended
 			dom.appendChild(createElement(node, document));
 		} else if (domChild.nodeType === 3) {
 			// is a text node
+			// if the VDOM node is also a text node
 			if (typeof node === 'string' && domChild.nodeValue !== node) {
+				// simply apply the value
 				domChild.nodeValue = node;
 			} else if (typeof node !== 'string') {
+				// else replace with a new element
 				dom.replaceChild(createElement(node, document), domChild);
 			}
 		} else if (domChild.nodeType === 1) {
 			// is a normal HTML tag
 			if ((typeof node === 'undefined' ? 'undefined' : _typeof(node)) === 'object') {
+				// the VDOM is also a tag, apply it recursively
 				applyDOM(domChild, node, document);
 			} else {
+				// it's just a text node, so simply replace the element with the text node
 				dom.replaceChild(createElement(node, document), domChild);
 			}
 		}
@@ -426,7 +495,8 @@ function initializeTag(tag, registryEntry) {
 
 function initializeNode(_ref) {
 	var tag = _ref.tag,
-	    functions = _ref.node;
+	    _ref$node = _ref.node,
+	    functions = _ref$node === undefined ? defaultFunctions : _ref$node;
 
 	// copy all defined functions/attributes
 	for (var all in functions) {
@@ -498,6 +568,9 @@ function renderTag(tag) {
 	//let start = +new Date;
 	setDataResolver(renderOptions.resolveData);
 	var data = getAttributes(tag);
+	if (tag.ownerDocument || !tag.__vdom) {
+		clearTagsCreated();
+	}
 	if (isFn(registryEntry.render)) {
 		setFilter(Object.keys(tagRegistry));
 		renderedDOM = Tag('div', { 'class': '-shadow-root' }, registryEntry.render.call(tag, data));
@@ -512,9 +585,11 @@ function renderTag(tag) {
 			noRenderCallback: true,
 			noEvents: true
 		}, subEl, tagRegistry[subEl.tagName]);
-		renderedSubElements = renderedSubElements.concat(getTagsCreated());
-		events = events.concat(subElEvents.events);
-		renderCallbacks = renderCallbacks.concat(subElEvents.renderCallbacks);
+		if (subElEvents) {
+			renderedSubElements = renderedSubElements.concat(getTagsCreated());
+			events = events.concat(subElEvents.events);
+			renderCallbacks = renderCallbacks.concat(subElEvents.renderCallbacks);
+		}
 	});
 
 	//typeof console !== 'undefined' && console.debug('VDOM creation took ', (+new Date - start) + 'ms');
@@ -644,7 +719,10 @@ function handleStyles(element) {
 	var tagName = element.tagName;
 	trigger('publish-style', (element.styles || []).map(function (style) {
 		var code = style;
-		return code.replace(/[\r\n]*([^@%\{;\}]+?)\{/gm, function (global, match) {
+		return code.replace(/[\r\n]*([^%\{;\}]+?)\{/gm, function (global, match) {
+			if (match.trim().match(/^@/)) {
+				return match + '{';
+			}
 			var selectors = match.split(',').map(function (selector) {
 				selector = selector.trim();
 				if (selector.match(/:host\b/) || selector.match(new RegExp('^\\s*' + tagName + '\\b')) || selector.match(/^\s*(?:(?:\d+%)|(?:from)|(?:to)|(?:@\w+)|\})\s*$/)) {
@@ -692,19 +770,19 @@ function parse(data) {
 		return 'data' + (level === 0 ? '' : '$' + level);
 	}
 
-	function handleText(text) {
+	function handleText(text, isAttr) {
 		var match = void 0,
 		    result = '',
 		    lastIndex = 0;
-
+		var cat = isAttr ? ' + ' : ', ';
 		if (!text.match(syntax)) {
-			return result += "'" + text.substr(lastIndex).replace(/\n/g, '').replace(/'/g, '\\\'') + "', ";
+			return result += "'" + text.substr(lastIndex).replace(/\n/g, '').replace(/'/g, '\\\'') + "'" + cat;
 		}
 		while (match = syntax.exec(text)) {
 			if (match.index < lastIndex) continue;
 			var frag = text.substring(lastIndex, match.index).trim();
 			if (frag.length > 0) {
-				result += "'" + frag.replace(/\n/g, '').replace(/'/g, '\\\'') + "', ";
+				result += "'" + frag.replace(/\n/g, '').replace(/'/g, '\\\'') + "'" + cat;
 			}
 			lastIndex = match.index + match[0].length;
 			var key = match[1];
@@ -715,7 +793,7 @@ function parse(data) {
 				usesMerge = true;
 				usesSpread = true;
 			} else if (key[0] === '/') {
-				result += '\'\']; })), ';
+				result += '\'\']; }))' + (isAttr ? '.join("")' : '') + cat;
 				level -= 1;
 				if (level < 0) {
 					throw new Error('Unexpected end of block: ' + key.substr(1));
@@ -733,16 +811,16 @@ function parse(data) {
 				}).join(' + ');
 				usesRenderStyle = true;
 			} else if (key[0] === '+') {
-				result += 'safeAccess(' + getData() + ', \'' + value + '\'), ';
+				result += 'safeAccess(' + getData() + ', \'' + value + '\')' + cat;
 			} else if (key[0] !== '{') {
 				value = key;
-				result += 'safeAccess(' + getData() + ', \'' + value + '\', true), ';
+				result += '\'\'+safeAccess(' + getData() + ', \'' + value + '\', true)' + cat;
 			} else {
-				result += 'safeAccess(' + getData() + ', \'' + value + '\'), ';
+				result += '\'\'+safeAccess(' + getData() + ', \'' + value + '\')' + cat;
 			}
 		}
 		if (text.substr(lastIndex).length > 0) {
-			result += "'" + text.substr(lastIndex).replace(/\n/g, '').replace(/'/g, '\\\'') + "', ";
+			result += "'" + text.substr(lastIndex).replace(/\n/g, '').replace(/'/g, '\\\'') + "'" + cat;
 		}
 		return result;
 	}
@@ -753,7 +831,7 @@ function parse(data) {
 
 		while (attr = attrRegExp.exec(attrs)) {
 			if (attributes !== '{') attributes += ', ';
-			attributes += '"' + attr[1].toLowerCase() + '": ' + handleText(attr[2] || attr[3]).replace(/,\s*$/, '');
+			attributes += '"' + attr[1].toLowerCase() + '": ' + handleText(attr[2] || attr[3], true).replace(/\s*[,+]\s*$/g, '');
 		}
 		return attributes + '}';
 	}
@@ -841,7 +919,7 @@ var tagObserver = new MutationObserver(function (records) {
 
 		if (added.length > 0) {
 			[].forEach.call(added, function (tag) {
-				trigger('--zino-mount-tag', tag);
+				return trigger('--zino-mount-tag', tag);
 			});
 		} else if (removed.length > 0) {
 			[].forEach.call(removed, function (tag) {

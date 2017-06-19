@@ -30,6 +30,10 @@ test('simple component', t => {
 	let dom = result.render({body: 'XXX'});
 	t.is(dom[0].tagName, 'button', 'generated virtual DOM has content');
 	t.is(getInnerHTML(Tag('div', {}, dom)), '<button class="special-button" type="button">XXX</button>', 'renders correct data');
+
+	t.is(render(`<a><btn type="XX{{test}}YY">A</btn></a>`, {test: 2}), '<btn type="XX2YY">A</btn>', 'can have mixed variable and static content in attribute');
+	t.is(render(`<a><btn type="XX{{#test}}{{.}}{{/test}}YY">A</btn></a>`, {test: 2}), '<btn type="XX2YY">A</btn>', 'can have mixed variable and static content in attribute');
+	t.is(render(`<a><btn type="XX{{#test}}A{{.}}B{{/test}}YY">A</btn></a>`, {test: [1, 2]}), '<btn type="XXA1BA2BYY">A</btn>', 'can have mixed variable and static content in attribute');	
 });
 
 test('script added', t => {

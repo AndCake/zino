@@ -123,7 +123,7 @@ function initializeTag(tag, registryEntry) {
 	}
 }
 
-function initializeNode({tag, node: functions}) {
+function initializeNode({tag, node: functions = defaultFunctions}) {
 	// copy all defined functions/attributes
 	for (let all in functions) {
 		let entry = functions[all];
@@ -190,6 +190,9 @@ function renderTag(tag, registryEntry = tagRegistry[tag.tagName.toLowerCase()]) 
 	//let start = +new Date;
 	vdom.setDataResolver(renderOptions.resolveData);
 	let data = getAttributes(tag);
+	if (tag.ownerDocument || !tag.__vdom) {
+		vdom.clearTagsCreated();
+	}
 	if (isFn(registryEntry.render)) {
 		vdom.setFilter(Object.keys(tagRegistry));
 		renderedDOM = vdom.Tag('div', {'class': '-shadow-root'}, registryEntry.render.call(tag, data));
@@ -204,9 +207,11 @@ function renderTag(tag, registryEntry = tagRegistry[tag.tagName.toLowerCase()]) 
 			noRenderCallback: true,
 			noEvents: true
 		}, subEl, tagRegistry[subEl.tagName]);
-		renderedSubElements = renderedSubElements.concat(vdom.getTagsCreated());
-		events = events.concat(subElEvents.events);
-		renderCallbacks = renderCallbacks.concat(subElEvents.renderCallbacks);
+		if (subElEvents) {
+			renderedSubElements = renderedSubElements.concat(vdom.getTagsCreated());
+			events = events.concat(subElEvents.events);
+			renderCallbacks = renderCallbacks.concat(subElEvents.renderCallbacks);
+		}
 	});
 
 	//typeof console !== 'undefined' && console.debug('VDOM creation took ', (+new Date - start) + 'ms');
@@ -327,7 +332,10 @@ function handleStyles(element) {
 	trigger('publish-style',
 		(element.styles || []).map(style => {
 			let code = style;
-			return code.replace(/[\r\n]*([^@%\{;\}]+?)\{/gm, (global, match) => {
+			return code.replace(/[\r\n]*([^%\{;\}]+?)\{/gm, (global, match) => {
+				if (match.trim().match(/^@/)) {
+					return match + '{';
+				}
 				var selectors = match.split(',').map(selector => {
 					selector = selector.trim();
 					if (selector.match(/:host\b/) ||
