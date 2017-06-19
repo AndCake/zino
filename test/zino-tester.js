@@ -10,10 +10,13 @@ test('can import a tag', t => {
 });
 
 test('can create a snapshot', t => {
+	let interval = global.setInterval;
+	global.setInterval = () => {};
 	zino.matchesSnapshot('<my-new-tag></my-new-tag>');
 	zino.matchesSnapshot('<my-new-tag>with content</my-new-tag>');
 	zino.matchesSnapshot('<my-new-tag test="me"></my-new-tag>');
 	zino.matchesSnapshot('<my-new-tag></my-new-tag>', {test: 2});
+	global.setInterval = interval;
 });
 
 test('renders styles and events properly', t => {
