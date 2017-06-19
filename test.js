@@ -868,9 +868,7 @@ merge(global, {
 	},
 	require: function require() {
 		return emptyFunc;
-	},
-	setTimeout: emptyFunc,
-	setInterval: emptyFunc
+	}
 });
 
 function importTag(tagFile, document) {

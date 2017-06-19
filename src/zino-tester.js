@@ -18,9 +18,7 @@ merge(global, {
 		import: emptyFunc,
 		fetch: emptyFunc
 	},
-	require: () => emptyFunc,
-	setTimeout: emptyFunc,
-	setInterval: emptyFunc
+	require: () => emptyFunc
 });
 
 export function importTag(tagFile, document) {
