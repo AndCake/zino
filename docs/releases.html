@@ -6,12 +6,12 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <title>Tutorial</title>
+  <title>Release Notes</title>
   <meta name="description" content="A micro component framework - easy to learn and powerful.
 ">
 
   <link rel="stylesheet" href="/zino/css/main.css">
-  <link rel="canonical" href="https://andcake.github.io/zino/tutorial">
+  <link rel="canonical" href="https://andcake.github.io/zino/releases">
   <link rel="alternate" type="application/rss+xml" title="zino" href="https://andcake.github.io/zino/feed.xml">
 </head>
 
@@ -188,32 +188,88 @@
         <article class="post">
 
   <header class="post-header">
-    <h1 class="post-title">Tutorial</h1>
+    <h1 class="post-title">Release Notes</h1>
   </header>
 
   <div class="post-content">
-    <p>For this tutorial you will need a running server to serve your static files. You can use the Gruntfile from this repository and adapt it to your needs. Don’t forget to take over
-the dev dependencies from the package.json, though.</p>
+    <p>This page contains a summary of changes to the previous version</p>
 
-<p>In this tutorial, we will be creating a simple comment component where you can see
-all the comments that have been entered before, enter a new comment and functionality
-to bind it to your backend.</p>
+<h1 id="version-300">Version 3.0.0</h1>
 
-<p>Create your tutorial HTML file that looks like this:</p>
+<ul>
+  <li>DOM-based mustache parser
+    <ul>
+      <li>templates are no longer being parsed and evaluated during re-rendering but instead at component registration</li>
+      <li>impact on syntax: it is no longer possible to have dynamic tag names as in the following example:</li>
+    </ul>
+  </li>
+</ul>
 
-<div class="highlighter-rouge"><pre class="highlight"><code><span class="cp">&lt;!DOCTYPE html&gt;</span>
-<span class="nt">&lt;html&gt;</span>
-	<span class="nt">&lt;head&gt;</span>
-		<span class="nt">&lt;link</span> <span class="na">rel=</span><span class="s">"zino-tag"</span> <span class="na">href=</span><span class="s">"comment-box.html"</span><span class="nt">/&gt;</span>
-	<span class="nt">&lt;/head&gt;</span>
-	<span class="nt">&lt;body&gt;</span>
-		<span class="nt">&lt;comment-box&gt;&lt;/comment-box&gt;</span>
+<figure class="highlight"><pre><code class="language-mustache" data-lang="mustache">		<span class="c">&lt;!-- DON'T DO THIS --&gt;</span>
+		<span class="nt">&lt;my-component&gt;</span>
+			<span class="nt">&lt;div</span> <span class="na">class=</span><span class="s">'content'</span><span class="nt">&gt;</span>
+				<span class="err">&lt;</span><span class="k">{{</span><span class="nv">props</span><span class="p">.</span><span class="nv">tag</span><span class="k">}}</span>&gt;<span class="err">&lt;</span>/<span class="k">{{</span><span class="nv">props</span><span class="p">.</span><span class="nv">tag</span><span class="k">}}</span>&gt;
+			<span class="nt">&lt;/div&gt;</span>
+			<span class="nt">&lt;script&gt;</span>
+			<span class="p">{</span>
+				<span class="nl">props</span><span class="p">:</span> <span class="p">{</span><span class="nl">tag</span><span class="p">:</span> <span class="s1">'some-random-component'</span><span class="p">}</span>
+			<span class="p">}</span>
+			<span class="nt">&lt;/script&gt;</span>
+		<span class="nt">&lt;/my-component&gt;</span>
 
-		<span class="nt">&lt;script </span><span class="na">src=</span><span class="s">"zino.js"</span><span class="nt">&gt;&lt;/script&gt;</span>
-	<span class="nt">&lt;/body&gt;</span>
-<span class="nt">&lt;/html&gt;</span>
-</code></pre>
-</div>
+		<span class="c">&lt;!-- instead do this: --&gt;</span>
+		<span class="nt">&lt;my-component&gt;</span>
+			<span class="nt">&lt;div</span> <span class="na">class=</span><span class="s">'content'</span><span class="nt">&gt;&lt;/div&gt;</span>
+			<span class="nt">&lt;script&gt;</span>
+			<span class="p">{</span>
+				<span class="nl">props</span><span class="p">:</span> <span class="p">{</span><span class="nl">tag</span><span class="p">:</span> <span class="s1">'some-random-component'</span><span class="p">},</span>
+				<span class="nx">render</span><span class="err">:</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+					<span class="kd">var</span> <span class="nx">element</span> <span class="o">=</span> <span class="nb">document</span><span class="p">.</span><span class="nx">createElement</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">props</span><span class="p">.</span><span class="nx">tag</span><span class="p">);</span>
+					<span class="k">this</span><span class="p">.</span><span class="nx">querySelector</span><span class="p">(</span><span class="s1">'.content'</span><span class="p">).</span><span class="nx">appendChild</span><span class="p">(</span><span class="nx">element</span><span class="p">);</span>
+				<span class="p">}</span>
+			<span class="p">}</span>
+			<span class="nt">&lt;/script&gt;</span>
+		<span class="nt">&lt;/my-component&gt;</span>
+		</code></pre></figure>
+
+<ul>
+  <li>an extended VDOM now uses DOM diff to apply changes to the DOM more selectively, which drastically improves performance</li>
+  <li>you can now create components in pure JS:</li>
+</ul>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">	<span class="kd">function</span> <span class="nx">MyComponent</span><span class="p">(</span><span class="nx">Tag</span><span class="p">)</span> <span class="p">{</span>
+		<span class="k">return</span> <span class="p">{</span>
+			<span class="na">tagName</span><span class="p">:</span> <span class="s1">'my-component'</span><span class="p">,</span>
+			<span class="na">render</span><span class="p">:</span> <span class="kd">function</span><span class="p">(</span><span class="nx">data</span><span class="p">)</span> <span class="p">{</span>
+				<span class="k">return</span> <span class="k">new</span> <span class="nx">Tag</span><span class="p">(</span><span class="s1">'div'</span><span class="p">,</span> <span class="p">{</span><span class="na">id</span><span class="p">:</span> <span class="s1">'my-id'</span><span class="p">},</span> <span class="p">[</span>
+					<span class="s1">'Hello,'</span><span class="p">,</span> 
+					<span class="nx">data</span><span class="p">.</span><span class="nx">props</span><span class="p">.</span><span class="nx">name</span><span class="p">,</span> 
+					<span class="k">new</span> <span class="nx">Tag</span><span class="p">(</span><span class="s1">'p'</span><span class="p">,</span> <span class="p">{},</span> <span class="s1">'Paragraph'</span><span class="p">)</span>
+				<span class="p">]);</span>
+			<span class="p">},</span>
+			<span class="na">styles</span><span class="p">:</span> <span class="p">[</span><span class="s1">':host { color: red; }'</span><span class="p">,</span> <span class="s1">'#my-id { font-weight: bold; }'</span><span class="p">],</span>
+			<span class="na">functions</span><span class="p">:</span> <span class="p">{</span>
+				<span class="na">props</span><span class="p">:</span> <span class="p">{</span>
+					<span class="na">name</span><span class="p">:</span> <span class="s1">'World!'</span>
+				<span class="p">}</span>
+			<span class="p">}</span>
+		<span class="p">};</span>
+	<span class="p">}</span>
+
+	<span class="nx">Zino</span><span class="p">.</span><span class="kr">import</span><span class="p">(</span><span class="nx">MyComponent</span><span class="p">);</span>
+	</code></pre></figure>
+
+<ul>
+  <li>when using the regular HTML component definition, including sub components now supports self-closing tags</li>
+</ul>
+
+<figure class="highlight"><pre><code class="language-html" data-lang="html">	<span class="nt">&lt;my-component&gt;</span>
+		<span class="nt">&lt;div&gt;</span>
+			<span class="nt">&lt;my-sub-component</span> <span class="na">attribute=</span><span class="s">"value"</span><span class="nt">/&gt;</span>
+		<span class="nt">&lt;/div&gt;</span>
+	<span class="nt">&lt;/my-component&gt;</span>
+	</code></pre></figure>
+
 
   </div>
 

@@ -30,8 +30,11 @@ function propDetails(obj, attribute) {
 export function objectDiff(objA, objB) {
 	let result = {},
 		partialDiff;
+				
+	if (!objA) return objB || false;
+	if (!objB) return objA || false;
 	Object.keys(objA).forEach((key, index) => {
-		if (!isValue(objA, key)) return;
+		if (['__vdom', 'element', 'parentNode', 'innerHTML', 'outerHTML', 'className'].indexOf(key) >= 0 || isFn(objA[key])) return;
 		if (typeof objB[key] === 'undefined') {
 			result[key] = objA[key];
 		} else if (Object.keys(objB)[index] !== key) {
@@ -47,7 +50,7 @@ export function objectDiff(objA, objB) {
 		}
 	});
 	Object.keys(objB).forEach((key, index) => {
-		if (!isValue(objB, key)) return;
+		if (['__vdom', 'element', 'parentNode', 'innerHTML', 'outerHTML', 'className'].indexOf(key) >= 0 || isFn(objB[key])) return;
 		if (typeof objA[key] === 'undefined') {
 			result[key] = objB[key];
 		}
@@ -101,7 +104,7 @@ export var isFn = fn => typeof fn === 'function';
 export var emptyFunc = () => {};
 export var identity = a => a;
 
-function isValue(obj, key) {
+export function isValue(obj, key) {
 	let descriptor = Object.getOwnPropertyDescriptor(obj, key);
 	return typeof descriptor.value !== 'undefined' && !isFn(descriptor.value);
 }

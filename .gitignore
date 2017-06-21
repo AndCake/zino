@@ -3,6 +3,5 @@ index.js
 node_modules
 examples/dist
 .saucelabs.json
+yarn.lock
 .sass-cache
-
-yarn\.lock

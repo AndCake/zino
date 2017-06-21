@@ -1,6 +1,6 @@
 import {registerTag, render} from './core';
+import {parse} from './mustacheparser';
 import {emptyFunc, isObj} from './utils';
-import {find as $} from './htmlparser';
 import {on, one, off, trigger} from './events';
 
 let urlRegistry = window.zinoTagRegistry || {},
@@ -12,9 +12,7 @@ let urlRegistry = window.zinoTagRegistry || {},
 				removed = record.removedNodes;
 
 			if (added.length > 0) {
-				[].forEach.call(added, tag => {
-					(tag.children && $('*', tag) || []).concat(tag).forEach(subTag => trigger('--zino-mount-tag', subTag));
-				});
+				[].forEach.call(added, tag => trigger('--zino-mount-tag', tag));
 			} else if (removed.length > 0) {
 				[].forEach.call(removed, tag => {
 					(tag.children && $('[__ready]', tag) || []).concat(tag).forEach(subTag => trigger('--zino-unmount-tag', subTag));
@@ -22,6 +20,10 @@ let urlRegistry = window.zinoTagRegistry || {},
 			}
 		});
 	});
+
+function $(selector, context) {
+	return [].slice.call(context.querySelectorAll(selector));
+}
 
 export default Zino = {
 	on, one, off, trigger,
@@ -51,12 +53,30 @@ export default Zino = {
 		req.send();
 	},
 
-	import(path, callback = emptyFunc) {
+	import: function(path, callback = emptyFunc) {
+		const register = (code) => {
+			code && registerTag(code, document.body);
+			callback();
+		};
+
 		let url = (this.path || '') + path;
+		if (typeof path !== 'string') return register(path); 
 		Zino.fetch(url, (data, status) => {
+			let path = url.replace(/[^\/]+$/g, '');
 			if (status === 200) {
-				registerTag(data, url, document.body);
-				callback();
+				let code;
+				try {
+					// if we have HTML input
+					if (data.trim().indexOf('<') === 0) {
+						// convert it to JS
+						data = parse(data);
+					}
+					code = new Function('return ' + data.replace(/\bZino.import\s*\(/g, 'Zino.import.call({path: ' + JSON.stringify(path) + '}, ').trim().replace(/;$/, ''))();
+				} catch(e) {
+					e.message = 'Unable to import tag ' + url.replace(/.*\//g, '') + ': ' + e.message;
+					throw e;
+				}
+				register(code);
 			}
 		}, true);
 	}
@@ -70,8 +90,7 @@ on('publish-style', data => {
 	}
 	data && document.head.appendChild(data);
 });
-on('publish-script', document.head.appendChild);
-on('--zino-rerender-tag', tag => dirtyTags.push(tag));
+on('--zino-rerender-tag', tag => dirtyTags.indexOf(tag) < 0 && dirtyTags.push(tag));
 trigger('publish-style', '[__ready] { contain: content; }');
 $('[rel="zino-tag"]', document).forEach(tag => Zino.import(tag.href));
 tagObserver.observe(document.body, {
@@ -80,7 +99,8 @@ tagObserver.observe(document.body, {
 });
 
 requestAnimationFrame(function reRender() {
-	dirtyTags.forEach(render);
-	dirtyTags = [];
+	while (dirtyTags.length > 0) {
+		render(dirtyTags.shift());
+	}
 	requestAnimationFrame(reRender);
 });

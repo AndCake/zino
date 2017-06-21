@@ -1,5 +1,5 @@
 import * as zino from '../src/zino-tester';
-import * as html from '../src/htmlparser';
+import {JSDOM} from 'jsdom';
 import test from './test';
 
 test('Zino Snapshotting');
@@ -44,9 +44,9 @@ test('supports object notation for matchesSnapshot', t => {
 });
 
 test('allows for non-snapshot testing', t => {
-	let document = html.parse('<comment author="Bucks Bunny">I love carrots!</comment>');
+	let document = new JSDOM('<comment author="Bucks Bunny">I love carrots!</comment>').window.document;
 	zino.clearImports();
 	zino.importTag('test/components/comment.html', document);
-	let comment = document.children[0];
+	let comment = document.body.children[0];
 	t.is(comment.children[0].children[0].innerHTML, '"Bucks Bunny"', 'rendered the tag into the DOM');
 });

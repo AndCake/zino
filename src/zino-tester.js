@@ -1,10 +1,12 @@
 import * as core from './core';
+import * as vdom from './vdom';
 import {emptyFunc, merge, isObj} from './utils';
 import {on, off, one, trigger} from './events';
-import {parse} from './htmlparser';
+import {parse} from './mustacheparser';
 import fs from 'fs';
 import path from 'path';
 import colors from 'colors';
+import {JSDOM} from 'jsdom';
 import diff from 'fast-diff';
 import {createHash} from 'crypto';
 import readline from 'readline-sync';
@@ -22,8 +24,20 @@ merge(global, {
 });
 
 export function importTag(tagFile, document) {
-	let code = fs.readFileSync(tagFile, 'utf-8');
-	core.registerTag(code, tagFile, document);
+	let data = fs.readFileSync(tagFile, 'utf-8');
+	let code;
+	try {
+		// if we have HTML input
+		if (data.trim().indexOf('<') === 0) {
+			// convert it to JS
+			data = parse(data);
+		}
+		code = new Function('return ' + data.replace(/\bZino.import\s*\(/g, 'Zino.import.call({path: ' + JSON.stringify(path.basename(tagFile)) + '}, ').trim().replace(/;$/, ''))();
+	} catch(e) {
+		e.message = 'Unable to import tag ' + tagFile + ': ' + e.message;
+		throw e;
+	}
+	code && core.registerTag(code, document);
 }
 
 export function clearImports() {
@@ -36,10 +50,10 @@ export function matchesSnapshot(...args) {
 	} else {
 		var [html, props = {}, name = '', callback = () => {}] = args;
 	}
-	let code = parse(html);
+	let code = new JSDOM(html).window.document.body;
 
 	name = name.replace(/[^a-zA-Z0-9._-]/g, '-');
-	fileName = './test/snapshots/' + code.children[0].tagName + '-' + (name && name + '-' || '') + sha1(html + JSON.stringify(props) + callback.toString()).substr(0, 5);
+	fileName = './test/snapshots/' + code.children[0].tagName.toLowerCase() + '-' + (name && name + '-' || '') + sha1(html + JSON.stringify(props) + callback.toString()).substr(0, 5);
 	core.renderOptions.resolveData = (key, value) => sha1(key + '-' + JSON.stringify(value));
 	let {events, data} = core.mount(code.children[0], true);
 

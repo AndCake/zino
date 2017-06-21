@@ -7,18 +7,24 @@ module.exports = function(config) {
 			base: 'SauceLabs',
 			browserName: 'chrome',
 			platform: 'Windows 7',
-			version: '35'
+			version: 'latest'
 		},
 		sl_firefox: {
 			base: 'SauceLabs',
 			browserName: 'firefox',
-			version: '30'
+			version: 'latest'
 		},
 		sl_ie_11: {
 			base: 'SauceLabs',
 			browserName: 'internet explorer',
 			platform: 'Windows 8.1',
 			version: '11'
+		},
+		sl_edge: {
+			base: 'SauceLabs',
+			browserName: 'microsoftedge',
+			platform: 'Windows 10',
+			version: '14'
 		},
 		sl_ie_10: {
 			base: 'SauceLabs',
@@ -39,7 +45,7 @@ module.exports = function(config) {
 		username: sauce.user,
 		accessKey: sauce.key,
 		recordVideo: true,
-		build: require('./package.json').version + '-' + (+new Date)
+		build: require('./package.json').version + '-vdom-' + (+new Date)
 	},
 	customLaunchers: customLaunchers,
 
@@ -103,6 +109,6 @@ module.exports = function(config) {
 
 	// Concurrency level
 	// how many browser should be started simultaneous
-	concurrency: Infinity
+	concurrency: 4
 })
 }

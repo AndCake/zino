@@ -1,9 +1,4 @@
-<second-tag me="Welt!" __ready="true"><div class="-shadow-root"><div style="background-color:green;border:1px solid darkgreen;font-family:Arial;color:white;">Hallo, Welt!<a name="test"></a></div>
-
- <todo-list data-list="--f84a38d43d30ebec777412cfbe2c28bc3b36401f--"></todo-list>
-
-	
- <link rel="stylesheet" href="./second-tag.css"/></div></second-tag>
+<second-tag me="Welt!" __ready="true"><div class="-shadow-root"><div style="background-color:green;border:1px solid darkgreen;font-family:Arial;color:white;">Hallo,Welt!<a name="test"></a></div><todo-list data-list="--d1fae8d8122624bf8313b2e83660a66e3a6c80f6--"></todo-list><link rel="stylesheet" href="./second-tag.css"></div></second-tag>
 {
   "data": {
     "props": {
