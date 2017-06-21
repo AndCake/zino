@@ -847,7 +847,6 @@ function parse(data) {
 	}).trim();
 
 	if (!data.match(tagRegExp)) {
-		console.log(data);
 		throw new Error('No proper component provided');
 	}
 	resultObject.tagName = data.match(/^<([\w_-]+)>/)[1].toLowerCase();
@@ -969,7 +968,13 @@ var zino = Zino = {
 	import: function _import(path) {
 		var callback = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : emptyFunc;
 
+		var register = function register(code) {
+			code && registerTag(code, document.body);
+			callback();
+		};
+
 		var url = (this.path || '') + path;
+		if (typeof path !== 'string') return register(path);
 		Zino.fetch(url, function (data, status) {
 			var path = url.replace(/[^\/]+$/g, '');
 			if (status === 200) {
@@ -985,9 +990,8 @@ var zino = Zino = {
 					e.message = 'Unable to import tag ' + url.replace(/.*\//g, '') + ': ' + e.message;
 					throw e;
 				}
-				code && registerTag(code, document.body);
+				register(code);
 			}
-			callback();
 		}, true);
 	}
 };

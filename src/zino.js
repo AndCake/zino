@@ -54,7 +54,13 @@ export default Zino = {
 	},
 
 	import: function(path, callback = emptyFunc) {
+		const register = (code) => {
+			code && registerTag(code, document.body);
+			callback();
+		};
+
 		let url = (this.path || '') + path;
+		if (typeof path !== 'string') return register(path); 
 		Zino.fetch(url, (data, status) => {
 			let path = url.replace(/[^\/]+$/g, '');
 			if (status === 200) {
@@ -70,9 +76,8 @@ export default Zino = {
 					e.message = 'Unable to import tag ' + url.replace(/.*\//g, '') + ': ' + e.message;
 					throw e;
 				}
-				code && registerTag(code, document.body);
+				register(code);
 			}
-			callback();
 		}, true);
 	}
 };

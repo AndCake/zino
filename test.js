@@ -860,7 +860,6 @@ function parse(data) {
 	}).trim();
 
 	if (!data.match(tagRegExp)) {
-		console.log(data);
 		throw new Error('No proper component provided');
 	}
 	resultObject.tagName = data.match(/^<([\w_-]+)>/)[1].toLowerCase();

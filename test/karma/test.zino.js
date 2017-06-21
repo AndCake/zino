@@ -165,6 +165,33 @@ describe('zino', function () {
 				done();
 			}, 100);
 		});
+
+		var component = document.createElement('my-component');
+		document.body.appendChild(component);
+
+		function MyComponent(Tag) {
+			return {
+				tagName: 'my-component',
+				render: function(data) {
+					return new Tag('div', {id: 'my-id'}, ['Hello,', data.props.name, new Tag('p', {}, 'Paragraph')]);
+				},
+				styles: [':host { color: red; }', '#my-id { font-weight: bold; }'],
+				functions: {
+					props: {
+						name: 'World!'
+					}
+				}
+			};
+		}
+
+		it('can import JS', function(done) {
+			Zino.import(MyComponent);
+
+			setTimeout(function() {
+				assertElementHasContent('my-component .-shadow-root #my-id', 'Hello,World!<p>Paragraph</p>');
+				done();
+			}, 32)
+		});		
 	});
 
 	describe('re-renders tag dynamically', function() {

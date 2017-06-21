@@ -74,6 +74,8 @@ a {
   a:hover {
     color: #ddd;
     text-decoration: underline; }
+    .page-content a:hover {
+      color: #97c5ff; }
 
 /**
  * Blockquotes
