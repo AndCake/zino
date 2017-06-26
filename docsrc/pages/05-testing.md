@@ -57,6 +57,8 @@ Zino offers three methods to support your testing efforts:
  * `matchesSnapshot(<tagExample>, <data>)` - renders the tag as if it were used in a browser and checks if a previous snapshot of it has changed
  * `clearImports()` - removes all imported components from memory.
 
+If you have written your JS or CSS code in an external file and embedded it via `<script src="path/to/external-file.js"></script>` / `<link rel="stylesheet" href="path/to/file.css"/>`, you should always use the compilation result coming from [grunt-zino](https://npmjs.com/package/grunt-zino) for testing. Else the script functionality / styling won't be applied within your test.
+
 ### Testing with Snapshots
 
 Since events will usually trigger state changes, these events can be simulated by calling the `matchesSnapshot()` method with the data parameter, which allows you to overwrite props values. For our [todolist tag](https://github.com/AndCake/zino/blob/master/test/components/todolist.html) example, this could look like that:

@@ -245,6 +245,8 @@
   <li><code class="highlighter-rouge">clearImports()</code> - removes all imported components from memory.</li>
 </ul>
 
+<p>If you have written your JS or CSS code in an external file and embedded it via <code class="highlighter-rouge">&lt;script src="path/to/external-file.js"&gt;&lt;/script&gt;</code> / <code class="highlighter-rouge">&lt;link rel="stylesheet" href="path/to/file.css"/&gt;</code>, you should always use the compilation result coming from <a href="https://npmjs.com/package/grunt-zino">grunt-zino</a> for testing. Else the script functionality / styling won’t be applied within your test.</p>
+
 <h3 id="testing-with-snapshots">Testing with Snapshots</h3>
 
 <p>Since events will usually trigger state changes, these events can be simulated by calling the <code class="highlighter-rouge">matchesSnapshot()</code> method with the data parameter, which allows you to overwrite props values. For our <a href="https://github.com/AndCake/zino/blob/master/test/components/todolist.html">todolist tag</a> example, this could look like that:</p>
