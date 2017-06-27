@@ -6,7 +6,7 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <title>Release Notes</title>
+  <title>zino</title>
   <meta name="description" content="A micro component framework - easy to learn and powerful.
 ">
 
@@ -123,13 +123,6 @@
         
       
         
-        <li>
-            <a class="page-link" href="/zino/releases">Release Notes</a>
-            <ul>
-            
-            </ul>
-        </li>
-        
       
         
       
@@ -185,16 +178,41 @@
 
     <div class="page-content">
       <div class="wrapper">
-        <article class="post">
+        <h1 id="release-notes">Release Notes</h1>
 
-  <header class="post-header">
-    <h1 class="post-title">Release Notes</h1>
-  </header>
+<p>This page contains a summary of changes to the previous version</p>
 
-  <div class="post-content">
-    <p>This page contains a summary of changes to the previous version</p>
+<h2 id="version-310">Version 3.1.0</h2>
 
-<h1 id="version-300">Version 3.0.0</h1>
+<ul>
+  <li>zino test now supports “external” JS files in components without an additional compilation step via grunt-zino. So testing your components like that is now possible:</li>
+</ul>
+
+<figure class="highlight"><pre><code class="language-mustache" data-lang="mustache">	<span class="nt">&lt;my-component&gt;</span>
+		<span class="nt">&lt;div</span> <span class="na">class=</span><span class="s">"content"</span><span class="nt">&gt;</span>
+			
+		<span class="nt">&lt;/div&gt;</span>
+		<span class="nt">&lt;script </span><span class="na">src=</span><span class="s">"./my-component.js"</span><span class="nt">&gt;&lt;/script&gt;</span>
+	<span class="nt">&lt;/my-component&gt;</span>
+	</code></pre></figure>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js">	<span class="c1">// in ./my-component.js</span>
+	<span class="p">(</span><span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+		<span class="k">return</span> <span class="p">{</span>
+			<span class="na">props</span><span class="p">:</span> <span class="p">{</span>
+				<span class="na">text</span><span class="p">:</span> <span class="s1">'Lorem ipsum dolor sit amet'</span>
+			<span class="p">}</span>
+		<span class="p">};</span>
+	<span class="p">}())</span>
+	</code></pre></figure>
+
+<ul>
+  <li>JSDOM dependency for testing has been removed (a very slim DOM implementation replaced it)</li>
+  <li>fixed a bug where paths of sub components imported within other components were not resolved properly</li>
+  <li>the publish-script event is fired again for external scripts</li>
+</ul>
+
+<h2 id="version-300">Version 3.0.0</h2>
 
 <ul>
   <li>DOM-based mustache parser
@@ -270,10 +288,6 @@
 	<span class="nt">&lt;/my-component&gt;</span>
 	</code></pre></figure>
 
-
-  </div>
-
-</article>
 
       </div>
     </div>

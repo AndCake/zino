@@ -1,13 +1,42 @@
 ---
-layout: page
-title: Release Notes
+layout: default
 permalink: /releases
 ---
 
+# Release Notes
+
 This page contains a summary of changes to the previous version
 
+Version 3.1.0
+-------------
+
+- zino test now supports "external" JS files in components without an additional compilation step via grunt-zino. So testing your components like that is now possible:
+
+	{% highlight mustache %}
+	<my-component>
+		<div class="content">
+			{{props.text}}
+		</div>
+		<script src="./my-component.js"></script>
+	</my-component>
+	{% endhighlight %}
+	{% highlight js %}
+	// in ./my-component.js
+	(function() {
+		return {
+			props: {
+				text: 'Lorem ipsum dolor sit amet'
+			}
+		};
+	}())
+	{% endhighlight %}
+
+- JSDOM dependency for testing has been removed (a very slim DOM implementation replaced it)
+- fixed a bug where paths of sub components imported within other components were not resolved properly
+- the publish-script event is fired again for external scripts
+
 Version 3.0.0
-=============
+-------------
 
 - DOM-based mustache parser
 	- templates are no longer being parsed and evaluated during re-rendering but instead at component registration

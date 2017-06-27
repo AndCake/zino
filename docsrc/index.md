@@ -13,6 +13,8 @@ layout: default
 
 This is a microframework similar to ReactJS and Polymer but without all the bloating and additional dependencies.
 
+To learn about the latest changes to Zino, please take a look at the [Release Notes]({{site.baseurl}}/releases).
+
 
 ## Features
 
