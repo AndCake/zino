@@ -1,5 +1,5 @@
 import * as zino from '../src/zino-tester';
-import {JSDOM} from 'jsdom';
+import Document from '../src/dom';
 import test from './test';
 
 test('Zino Snapshotting');
@@ -44,9 +44,17 @@ test('supports object notation for matchesSnapshot', t => {
 });
 
 test('allows for non-snapshot testing', t => {
-	let document = new JSDOM('<comment author="Bucks Bunny">I love carrots!</comment>').window.document;
+	let document = new Document('<comment author="Bucks Bunny">I love carrots!</comment>');
 	zino.clearImports();
 	zino.importTag('test/components/comment.html', document);
 	let comment = document.body.children[0];
 	t.is(comment.children[0].children[0].innerHTML, '"Bucks Bunny"', 'rendered the tag into the DOM');
+});
+
+test('can deal with external scripts', t => {
+	let document = new Document('<external-js></external-js>');
+	zino.clearImports();
+	zino.importTag('test/components/external-js.html', document);
+	let ext = document.body.children[0];
+	t.is(ext.querySelectorAll('.test')[0].innerHTML, 'Hello, World!', 'is able to import external JS files');
 });

@@ -1,6 +1,6 @@
 import test from './test';
 import * as vdom from '../src/vdom';
-import {JSDOM} from 'jsdom';
+import Document from '../src/dom';
 
 test('vdom implementation');
 
@@ -35,7 +35,7 @@ test('getElementsByTagName', t => {
 });
 
 test('applyDOM', t => {
-	let jdom = new JSDOM('<!DOCTYPE html><html><head></head><body></body></html>');
-	vdom.applyDOM(jdom.window.document.querySelector('html'), dom, jdom.window.document);
-	t.is(jdom.window.document.firstElementChild.outerHTML, '<html><head><title>page title</title></head><body><h1 class="title">Headline</h1><p>Hello, World!</p><h1></h1></body></html>');
+	let jdom = new Document('<!DOCTYPE html><html><head></head><body></body></html>');
+	vdom.applyDOM(jdom.documentElement, dom, jdom);
+	t.is(jdom.documentElement.outerHTML, '<html><head><title>page title</title></head><body><h1 class="title">Headline</h1><p>Hello, World!</p><h1></h1></body></html>');
 });

@@ -111,8 +111,10 @@ function initializeTag(tag, registryEntry) {
 	if (!tag.attributes.__ready) {
 		if (isFn(tag.__s)) {
 			tag.__s('__ready', true);
+		} else if (isFn(tag.setAttribute)) {
+			tag.setAttribute('__ready', true);
 		} else {
-			tag.attributes['__ready'] = true;
+			tag.attributes.__ready = true;
 		}
 	}
 	if (!this || this.noEvents !== true) {

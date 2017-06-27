@@ -7,7 +7,6 @@ function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'defau
 var fs = _interopDefault(require('fs'));
 var path = _interopDefault(require('path'));
 var colors = _interopDefault(require('colors'));
-var jsdom = require('jsdom');
 var diff = _interopDefault(require('fast-diff'));
 var crypto = require('crypto');
 var readline = _interopDefault(require('readline-sync'));
@@ -494,8 +493,10 @@ function initializeTag(tag, registryEntry) {
 	if (!tag.attributes.__ready) {
 		if (isFn(tag.__s)) {
 			tag.__s('__ready', true);
+		} else if (isFn(tag.setAttribute)) {
+			tag.setAttribute('__ready', true);
 		} else {
-			tag.attributes['__ready'] = true;
+			tag.attributes.__ready = true;
 		}
 	}
 	if (!this || this.noEvents !== true) {
@@ -769,7 +770,7 @@ function parse(data) {
 		helperFunctions: [safeAccess$1],
 		tagName: '',
 		render: '',
-		functions: ''
+		functions: []
 	};
 	var usesMerge = false,
 	    usesRenderStyle = false,
@@ -850,14 +851,23 @@ function parse(data) {
 	}
 
 	// clean up code
-	data = data.replace(commentRegExp, '').replace(/<(script|style)[^>]*?>((?:.|\n)*?)<\/\1>/gi, function (g, x, m) {
+	on('--zino-addscript', function (content) {
+		resultObject.functions.push(content.trim().replace(/;$/, ''));
+		usesMerge = true;
+	});
+	data = data.replace(commentRegExp, '').replace(/<(script|style)([^>]*?)>((?:.|\n)*?)<\/\1>/gi, function (g, x, a, m) {
 		if (x === 'style') {
 			resultObject.styles.push(m);
 		} else {
-			resultObject.functions += m.trim().replace(/;$/, '');
+			if (a.match(/\s+src=(?:(?:'([^']+)')|(?:"([^"]+)"))/g)) {
+				trigger('publish-script', RegExp.$1 || RegExp.$2);
+			} else {
+				trigger('--zino-addscript', m);
+			}
 		}
 		return '';
 	}).trim();
+	off('--zino-addscript');
 
 	if (!data.match(tagRegExp)) {
 		throw new Error('No proper component provided');
@@ -913,7 +923,7 @@ function parse(data) {
 	if (usesRenderStyle) {
 		resultObject.helperFunctions.push(renderStyle);
 	}
-	resultObject.functions = resultObject.functions || '{}';
+	resultObject.functions = resultObject.functions.length > 0 ? 'merge({}, ' + (resultObject.functions.join(', ') || '{}') + ')' : '{}';
 	resultObject.styles = resultObject.styles.length > 0 ? 'styles: ' + JSON.stringify(resultObject.styles) + ',' : '';
 	resultObject.helperFunctions = resultObject.helperFunctions.join('\n');
 	return baseCode.replace(/\{\{([^\}]+)\}\}/g, function (g, m) {
@@ -921,10 +931,299 @@ function parse(data) {
 	});
 }
 
+var selfClosing = ['input', 'link', 'meta', 'hr', 'br', 'source', 'img'];
+
+function without(arr, element, attr) {
+	var idx = arr.indexOf(function (node) {
+		return attr ? node[attr] === element : node === element;
+	});
+	arr.splice(idx, 1);
+	return arr;
+}
+
+function parseAttributes(node, attributes) {
+	var attributeRegExp = /\s+([\w:_-]+)(?:\s*=\s*(?:'([^']+)'|"([^"]+)"))?/g;
+	var match = void 0;
+
+	while (match = attributeRegExp.exec(attributes)) {
+		node.setAttribute(match[1], match[2] || match[3]);
+		if (match[1] === 'class') {
+			node.classList.add(match[2] || match[3]);
+		} else if (match[1] === 'title' || match[1] === 'name' || match[1] === 'id') {
+			node[match[1]] = match[2] || match[3];
+		}
+	}
+}
+var position = -1;
+
+function parse$1(document, html, parentNode) {
+	var tagRegExp = /<(\/)?([\w:_-]+)(\s+[^>]+)?(\/)?>/g;
+	var match = void 0;
+
+	if (!html.match(tagRegExp)) {
+		parentNode.appendChild(document.createTextNode(html));
+	}
+	while (match = tagRegExp.exec(html)) {
+		if (position > match.index) continue;
+		if (match[1]) {
+			// closing tag
+			var content = html.substring(position, match.index);
+			if (content) {
+				parentNode.appendChild(document.createTextNode(content));
+			}
+			position = match.index + match[0].length;
+			return;
+		} else {
+			// opening tag
+			var _content = html.substring(position, match.index);
+			if (_content) {
+				parentNode.appendChild(document.createTextNode(_content));
+			}
+			var node = document.createElement(match[2]);
+			parseAttributes(node, match[3]);
+			if (!match[4]) {
+				position = match.index + match[0].length;
+				parse$1(document, html, node);
+			}
+			parentNode.appendChild(node);
+		}
+	}
+}
+
+// helpers
+var regExp = function regExp(name) {
+	return new RegExp('(^| )' + name + '( |$)');
+};
+var forEach = function forEach(list, fn, scope) {
+	for (var i = 0; i < list.length; i++) {
+		fn.call(scope, list[i]);
+	}
+};
+
+// class list object with basic methods
+function ClassList(element) {
+	this.element = element;
+}
+
+ClassList.prototype = {
+	add: function add() {
+		forEach(arguments, function (name) {
+			if (!this.contains(name)) {
+				this.element.className += this.element.className.length > 0 ? ' ' + name : name;
+			}
+		}, this);
+	},
+	remove: function remove() {
+		forEach(arguments, function (name) {
+			this.element.className = this.element.className.replace(regExp(name), '');
+		}, this);
+	},
+	toggle: function toggle(name) {
+		return this.contains(name) ? (this.remove(name), false) : (this.add(name), true);
+	},
+	contains: function contains(name) {
+		return regExp(name).test(this.element.className);
+	},
+	// bonus..
+	replace: function replace(oldName, newName) {
+		this.remove(oldName), this.add(newName);
+	}
+};
+
+function matchesSelector(tag, selector) {
+	var selectors = selector.split(/\s*,\s*/),
+	    match = void 0;
+	for (var all in selectors) {
+		if (match = selectors[all].match(/(?:([\w*:_-]+)?\[([\w:_-]+)(?:(\$|\^|\*)?=(?:(?:'([^']*)')|(?:"([^"]*)")))?\])|(?:\.([\w_-]+))|([\w*:_-]+)/g)) {
+			var value = RegExp.$4 || RegExp.$5;
+			if (RegExp.$7 === tag.tagName || RegExp.$7 === '*') return true;
+			if (RegExp.$6 && tag.classList.contains(RegExp.$6)) return true;
+			if (RegExp.$1 && tag.tagName !== RegExp.$1) continue;
+			var attribute = tag.getAttribute(RegExp.$2);
+			if (!RegExp.$3 && !value && typeof tag.attributes[RegExp.$2] !== 'undefined') return true;
+			if (!RegExp.$3 && value && attribute === value) return true;
+			if (RegExp.$3 && RegExp.$3 === '^' && attribute.indexOf(value) === 0) return true;
+			if (RegExp.$3 && RegExp.$3 === '$' && attribute.match(new RegExp(value + '$'))) return true;
+			if (RegExp.$3 && RegExp.$3 === '*' && attribute.indexOf(value) >= 0) return true;
+		}
+	}
+	return false;
+}
+
+function spread$1(arr) {
+	var result = [];
+	arr.forEach(function (entry) {
+		result = result.concat(entry);
+	});
+	return result;
+}
+
+function DOMElement(name, owner) {
+	var _this = this;
+
+	this.nodeType = 1;
+	this.nodeName = name;
+	this.tagName = name;
+	this.className = '';
+	this.childNodes = [];
+	this.style = {};
+	this.ownerDocument = owner;
+	this.parentNode = null;
+	this.attributes = [];
+	Object.defineProperty(this, 'children', {
+		get: function get() {
+			return _this.childNodes.filter(function (node) {
+				return node.nodeType === 1;
+			});
+		}
+	});
+	Object.defineProperty(this, 'classList', {
+		get: function get() {
+			return new ClassList(_this);
+		}
+	});
+	Object.defineProperty(this, 'innerHTML', {
+		get: function get() {
+			return _this.childNodes.map(function (tag) {
+				return tag.nodeType === 1 ? tag.outerHTML : tag.nodeValue;
+			}).join('');
+		},
+		set: function set(value) {
+			position = -1;
+			_this.childNodes = [];
+			parse$1(owner, value, _this);
+		}
+	});
+	Object.defineProperty(this, 'outerHTML', {
+		get: function get() {
+			if (Object.prototype.toString.call(_this.attributes) !== '[object Array]') {
+				_this.attributes = Object.keys(_this.attributes).map(function (entry) {
+					return { name: entry, value: _this.attributes[entry] };
+				});
+				_this.attributes.forEach(function (attr, idx, arr) {
+					_this.attributes[attr.name] = attr.value;
+				});
+			}
+			var attributes = _this.attributes.map(function (attr) {
+				return attr.name + '="' + (typeof attr.value === 'undefined' ? '' : attr.value) + '"';
+			}).join(' ');
+			if (selfClosing.indexOf(_this.tagName) >= 0) {
+				return '<' + _this.tagName + (attributes ? ' ' + attributes : '') + '/>';
+			} else {
+				return '<' + _this.tagName + (attributes ? ' ' + attributes : '') + '>' + _this.innerHTML + '</' + _this.tagName + '>';
+			}
+		}
+	});
+	this.appendChild = function (child) {
+		_this.childNodes.push(child);
+		child.parentNode = _this;
+	};
+	this.removeChild = function (child) {
+		without(_this.childNodes, child);
+	};
+	this.setAttribute = function (name, value) {
+		_this.attributes.push({ name: name, value: value });
+		_this.attributes[name] = value;
+	};
+	this.removeAttribute = function (name) {
+		without(_this.attributes, name, 'name');
+		delete _this.attributes[name];
+	};
+	this.getAttribute = function (name) {
+		return _this.attributes[name] || '';
+	};
+	this.replaceChild = function (newChild, toReplace) {
+		var idx = _this.childNodes.indexOf(toReplace);
+		_this.childNodes[idx] = newChild;
+		newChild.parentNode = _this;
+	};
+	this.addEventListener = function () {};
+	this.removeEventListener = function () {};
+	this.getElementsByTagName = function (tagName) {
+		return spread$1(_this.children.filter(function (tag) {
+			return tag.tagName === tagName;
+		}).concat(_this.children.map(function (tag) {
+			return tag.getElementsByTagName(tagName);
+		})));
+	};
+	this.getElementsByClassName = function (className) {
+		return spread$1(_this.children.filter(function (tag) {
+			return tag.classList.contains(className);
+		}).concat(_this.children.map(function (tag) {
+			return tag.getElementsByClassName(className);
+		})));
+	};
+	this.querySelectorAll = function (selector) {
+		return spread$1(_this.children.filter(function (tag) {
+			return matchesSelector(tag, selector);
+		}).concat(_this.children.map(function (tag) {
+			return tag.querySelectorAll(selector);
+		})));
+	};
+}
+
+function DOMText(content, owner) {
+	this.nodeValue = content;
+	this.nodeType = 3;
+	this.parentNode = null;
+	this.ownerDocument = owner;
+}
+
+function Document(html) {
+	var _this2 = this;
+
+	if (!this instanceof Document) {
+		return new Document(html);
+	}
+
+	this.createElement = function (name) {
+		return new DOMElement(name, _this2);
+	};
+	this.createTextNode = function (content) {
+		return new DOMText(content, _this2);
+	};
+	this.getElementsByTagName = function (name) {
+		return spread$1(_this2.children.filter(function (tag) {
+			return tag.tagName === name;
+		}).concat(_this2.children.map(function (tag) {
+			return tag.getElementsByTagName(name);
+		})));
+	};
+	this.getElementsByClassName = function (className) {
+		return spread$1(_this2.children.filter(function (tag) {
+			return tag.classList.contains(className);
+		}).concat(_this2.children.map(function (tag) {
+			return tag.getElementsByClassName(className);
+		})));
+	};
+	this.querySelectorAll = function (selector) {
+		return spread$1(_this2.children.filter(function (tag) {
+			return matchesSelector(tag, selector);
+		}).concat(_this2.children.map(function (tag) {
+			return tag.querySelectorAll(selector);
+		})));
+	};
+	this.addEventListener = function () {};
+	this.removeEventListener = function () {};
+
+	this.head = this.createElement('head');
+	this.body = this.createElement('body');
+	this.documentElement = this.createElement('html');
+	this.documentElement.appendChild(this.head);
+	this.documentElement.appendChild(this.body);
+	this.childNodes = [this.documentElement];
+	this.children = [this.documentElement];
+	this.nodeType = 9;
+
+	position = -1;
+	parse$1(this, html, this.body);
+}
+
 var sha1 = function sha1(data) {
 	return crypto.createHash('sha1').update(data).digest('hex');
 };
 var fileName = null;
+var tagPath = void 0;
 
 merge(global, {
 	Zino: {
@@ -937,16 +1236,22 @@ merge(global, {
 	}
 });
 
+on('publish-script', function (src) {
+	var data = fs.readFileSync(path.resolve(tagPath, src), 'utf-8');
+	trigger('--zino-addscript', data);
+});
+
 function importTag(tagFile, document) {
 	var data = fs.readFileSync(tagFile, 'utf-8');
 	var code = void 0;
+	tagPath = path.dirname(tagFile);
 	try {
 		// if we have HTML input
 		if (data.trim().indexOf('<') === 0) {
 			// convert it to JS
 			data = parse(data);
 		}
-		code = new Function('return ' + data.replace(/\bZino.import\s*\(/g, 'Zino.import.call({path: ' + JSON.stringify(path.basename(tagFile)) + '}, ').trim().replace(/;$/, ''))();
+		code = new Function('return ' + data.replace(/\bZino.import\s*\(/g, 'Zino.import.call({path: ' + JSON.stringify(path.dirname(tagFile)) + '}, ').trim().replace(/;$/, ''))();
 	} catch (e) {
 		e.message = 'Unable to import tag ' + tagFile + ': ' + e.message;
 		throw e;
@@ -981,7 +1286,7 @@ function matchesSnapshot() {
 		    _args$4 = args[3],
 		    callback = _args$4 === undefined ? function () {} : _args$4;
 	}
-	var code = new jsdom.JSDOM(html).window.document.body;
+	var code = new Document(html).body;
 
 	name = name.replace(/[^a-zA-Z0-9._-]/g, '-');
 	fileName = './test/snapshots/' + code.children[0].tagName.toLowerCase() + '-' + (name && name + '-' || '') + sha1(html + JSON.stringify(props) + callback.toString()).substr(0, 5);

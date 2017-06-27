@@ -1,11 +1,11 @@
 import * as core from '../src/core';
 import {on, off} from '../src/events';
-import {JSDOM} from 'jsdom';
+import Document from '../src/dom';
 import test from './test';
 
 test('Zino core functionality');
-let document = new JSDOM('X<myx-tag></myx-tag>Y<my-other-tag></my-other-tag>').window.document;
-let body = document.querySelector('body');
+let document = new Document('X<myx-tag></myx-tag>Y<my-other-tag></my-other-tag>');
+let body = document.body;
 
 test('render simple tag', t => {
 	core.registerTag(function(Tag) {

@@ -1,3 +1,5 @@
+import {trigger, on, off} from './events';
+
 const tagRegExp = /<(\/?)([\w-]+)([^>]*?)(\/?)>/g;
 const attrRegExp = /([\w_-]+)=(?:'([^']*?)'|"([^"]*?)")/g;
 const commentRegExp = /<!--(?:[^-]|-[^-])*-->/g;
@@ -82,7 +84,7 @@ export function parse(data) {
 		helperFunctions: [safeAccess],
 		tagName: '',
 		render: '',
-		functions: ''
+		functions: []
 	};
 	let usesMerge = false, usesRenderStyle = false, usesSpread = false;
 	let match, lastIndex = 0, level = 0, tagStack = [];
@@ -156,14 +158,23 @@ export function parse(data) {
 	}
 
  	// clean up code
-	data = data.replace(commentRegExp, '').replace(/<(script|style)[^>]*?>((?:.|\n)*?)<\/\1>/gi, (g, x, m) => {
+	on('--zino-addscript', content => {
+		resultObject.functions.push(content.trim().replace(/;$/, ''));
+		usesMerge = true;
+	});	 
+	data = data.replace(commentRegExp, '').replace(/<(script|style)([^>]*?)>((?:.|\n)*?)<\/\1>/gi, (g, x, a, m) => {
 		if (x === 'style') {
 			resultObject.styles.push(m);
 		} else {
-			resultObject.functions += m.trim().replace(/;$/, '');
+			if (a.match(/\s+src=(?:(?:'([^']+)')|(?:"([^"]+)"))/g)) {
+				trigger('publish-script', RegExp.$1 || RegExp.$2);
+			} else {
+				trigger('--zino-addscript', m);
+			}
 		}
 		return '';
 	}).trim();
+	off('--zino-addscript');
 
 	if (!data.match(tagRegExp)) {
 		throw new Error('No proper component provided');
@@ -219,7 +230,7 @@ export function parse(data) {
 	if (usesRenderStyle) {
 		resultObject.helperFunctions.push(renderStyle);
 	}
-	resultObject.functions = resultObject.functions || '{}';
+	resultObject.functions = resultObject.functions.length > 0 ? 'merge({}, ' + (resultObject.functions.join(', ') || '{}') + ')' : '{}';
 	resultObject.styles = resultObject.styles.length > 0 ? 'styles: ' + JSON.stringify(resultObject.styles) + ',' : '';
 	resultObject.helperFunctions = resultObject.helperFunctions.join('\n');
 	return baseCode.replace(/\{\{([^\}]+)\}\}/g, (g, m) => resultObject[m]);

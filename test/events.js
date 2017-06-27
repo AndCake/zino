@@ -7,11 +7,13 @@ test('can register for event', t => {
 	let called = false;
 	events.on('my-event', () => {called = true;});
 	events.trigger('my-event');
+	events.off('my-event');
 	t.true(called, 'custom event was called');
 
 	called = false;
 	events.on('other-event', data => {called = true; t.is(data, 'test', 'data correctly received')});
 	events.trigger('other-event', 'test');
+	events.off('other-event');
 	t.true(called, 'custom event was called with data');
 });
 
@@ -71,6 +73,9 @@ test('calls debugging events', t => {
 	})
 	events.one('one-time2', () => {});
 	events.trigger('one-time2', {x: 1});
+	events.off('--event-unregister');
+	events.off('--event-register');
+	events.off('--event-trigger');
 
 	t.is(triggered, true, 'trigger event has been triggered');
 	t.is(registered, true, 'trigger event has been triggered');

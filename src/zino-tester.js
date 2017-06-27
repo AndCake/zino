@@ -6,13 +6,14 @@ import {parse} from './mustacheparser';
 import fs from 'fs';
 import path from 'path';
 import colors from 'colors';
-import {JSDOM} from 'jsdom';
+import Document from './dom';
 import diff from 'fast-diff';
 import {createHash} from 'crypto';
 import readline from 'readline-sync';
 
 const sha1 = data => createHash('sha1').update(data).digest('hex');
-let fileName = null;
+let fileName = null,
+	tagPath;
 
 merge(global, {
 	Zino: {
@@ -23,16 +24,22 @@ merge(global, {
 	require: () => emptyFunc
 });
 
+on('publish-script', src => {
+	let data = fs.readFileSync(path.resolve(tagPath, src), 'utf-8');
+	trigger('--zino-addscript', data);
+});
+
 export function importTag(tagFile, document) {
 	let data = fs.readFileSync(tagFile, 'utf-8');
 	let code;
+	tagPath = path.dirname(tagFile);
 	try {
 		// if we have HTML input
 		if (data.trim().indexOf('<') === 0) {
 			// convert it to JS
 			data = parse(data);
 		}
-		code = new Function('return ' + data.replace(/\bZino.import\s*\(/g, 'Zino.import.call({path: ' + JSON.stringify(path.basename(tagFile)) + '}, ').trim().replace(/;$/, ''))();
+		code = new Function('return ' + data.replace(/\bZino.import\s*\(/g, 'Zino.import.call({path: ' + JSON.stringify(path.dirname(tagFile)) + '}, ').trim().replace(/;$/, ''))();
 	} catch(e) {
 		e.message = 'Unable to import tag ' + tagFile + ': ' + e.message;
 		throw e;
@@ -50,7 +57,7 @@ export function matchesSnapshot(...args) {
 	} else {
 		var [html, props = {}, name = '', callback = () => {}] = args;
 	}
-	let code = new JSDOM(html).window.document.body;
+	let code = new Document(html).body;
 
 	name = name.replace(/[^a-zA-Z0-9._-]/g, '-');
 	fileName = './test/snapshots/' + code.children[0].tagName.toLowerCase() + '-' + (name && name + '-' || '') + sha1(html + JSON.stringify(props) + callback.toString()).substr(0, 5);
