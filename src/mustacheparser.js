@@ -62,7 +62,7 @@ const renderStyle = 'function renderStyle(t,r){var e="";if(transform=function(t)
 
 	return style;
 }`*/;
-const baseCode = 'function (Tag){var __i;{{helperFunctions}};return{tagName:"{{tagName}}",{{styles}}render:function(data){return __i=this,[].concat({{render}})},functions:{{functions}}}}'/*`function(Tag) {
+const baseCode = 'function (Tag,Zino){var __i;{{helperFunctions}};return{tagName:"{{tagName}}",{{styles}}render:function(data){return __i=this,[].concat({{render}})},functions:{{functions}}}}'/*`function(Tag, Zino) {
 	var instance = null;
 	{{helperFunctions}}
 
@@ -101,7 +101,7 @@ export function parse(data) {
 		}
 		while (match = syntax.exec(text)) {
 			if (match.index < lastIndex) continue;
-			let frag = text.substring(lastIndex, match.index).trim()
+			let frag = text.substring(lastIndex, match.index).replace(/^\s+/g, '');
 			if (frag.length > 0) {
 				result += "'" + frag.replace(/\n/g, '').replace(/'/g, '\\\'') + "'" + cat;
 			}

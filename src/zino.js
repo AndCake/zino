@@ -55,7 +55,7 @@ export default Zino = {
 
 	import: function(path, callback = emptyFunc) {
 		const register = (code) => {
-			code && registerTag(code, document.body);
+			code && registerTag(code, document.body, Zino);
 			callback();
 		};
 

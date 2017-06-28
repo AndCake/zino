@@ -62,6 +62,7 @@ test('simple variables', t => {
 	t.is(render(`<a>x{{test}}y</a>`, {test: () => 1}), 'x1y', 'can evaluate function variable.');
 	t.is(render(`<a>x{{test}}y</a>`, {test: true}), 'xtruey', 'can render boolean value.');
 	t.is(render(`<a>x{{test}}y</a>`, {test: null}), 'xy', 'does not render null value.');
+	t.is(render('<a>x {{test}} y</a>', {test: 2}), 'x 2 y', 'keeps text whitespace');
 });
 
 test('parse blocks', t => {

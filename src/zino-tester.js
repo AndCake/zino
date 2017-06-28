@@ -44,7 +44,7 @@ export function importTag(tagFile, document) {
 		e.message = 'Unable to import tag ' + tagFile + ': ' + e.message;
 		throw e;
 	}
-	code && core.registerTag(code, document);
+	code && core.registerTag(code, document, Zino);
 }
 
 export function clearImports() {

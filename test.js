@@ -414,8 +414,8 @@ var renderOptions = {
 	}
 };
 
-function registerTag(fn, document) {
-	var firstElement = fn(Tag),
+function registerTag(fn, document, Zino) {
+	var firstElement = fn(Tag, Zino),
 	    tagName = firstElement.tagName;
 
 	if (tagRegistry[tagName]) {
@@ -519,7 +519,7 @@ function initializeNode(_ref) {
 			if (isFn(entry)) {
 				tag[all] = entry.bind(tag);
 			} else {
-				tag[all] = entry;
+				tag[all] = _typeof(tag[all]) === 'object' ? merge({}, entry, tag[all]) : entry;
 			}
 		}
 	}
@@ -527,12 +527,12 @@ function initializeNode(_ref) {
 	var desc = Object.getOwnPropertyDescriptor(tag, 'body');
 	if (!desc || typeof desc.get === 'undefined') {
 		Object.defineProperty(tag, 'body', {
-			set: function set(val) {
+			set: function set$$1(val) {
 				tag.__i = val;
 				setElementAttr(tag);
 				trigger('--zino-rerender-tag', tag.getHost());
 			},
-			get: function get() {
+			get: function get$$1() {
 				return tag.__i;
 			}
 		});
@@ -687,7 +687,7 @@ function unmountTag(tag) {
 
 function getAttributes(tag, propsOnly) {
 	var attrs = { props: tag.props, element: tag.element, styles: tag.styles, body: tag.__i },
-	    props = {};
+	    props = attrs.props;
 
 	[].forEach.call(tag.nodeType === 1 && tag.attributes || Object.keys(tag.attributes).map(function (attr) {
 		return { name: attr, value: tag.attributes[attr] };
@@ -762,7 +762,7 @@ var toArray$1 = 'function toArray(t,e){var r=safeAccess(t,e);return r?"[object A
 var spread = 'function spread(t){var e=[];return t.forEach(function(t){e=e.concat(t)}),e}';
 var merge$1 = 'function merge(t){return[].slice.call(arguments,1).forEach(function(e){for(var r in e)t[r]=e[r]}),t}';
 var renderStyle = 'function renderStyle(t,r){var e="";if(transform=function(t){return"function"==typeof t?transform(t.apply(r)):t+("number"==typeof t&&null!==t?r.styles&&r.styles.defaultUnit||"px":"")},"object"==typeof t)for(var n in t)e+=n.replace(/[A-Z]/g,function(t){return"-"+t.toLowerCase()})+":"+transform(t[n])+";";return e}';
-var baseCode = 'function (Tag){var __i;{{helperFunctions}};return{tagName:"{{tagName}}",{{styles}}render:function(data){return __i=this,[].concat({{render}})},functions:{{functions}}}}';
+var baseCode = 'function (Tag,Zino){var __i;{{helperFunctions}};return{tagName:"{{tagName}}",{{styles}}render:function(data){return __i=this,[].concat({{render}})},functions:{{functions}}}}';
 
 function parse(data) {
 	var resultObject = {
@@ -794,7 +794,7 @@ function parse(data) {
 		}
 		while (match = syntax.exec(text)) {
 			if (match.index < lastIndex) continue;
-			var frag = text.substring(lastIndex, match.index).trim();
+			var frag = text.substring(lastIndex, match.index).replace(/^\s+/g, '');
 			if (frag.length > 0) {
 				result += "'" + frag.replace(/\n/g, '').replace(/'/g, '\\\'') + "'" + cat;
 			}
@@ -957,7 +957,7 @@ function parseAttributes(node, attributes) {
 var position = -1;
 
 function parse$1(document, html, parentNode) {
-	var tagRegExp = /<(\/)?([\w:_-]+)(\s+[^>]+)?(\/)?>/g;
+	var tagRegExp = /<(\/)?([\w:_-]+)(\s+(?:[^\/>]|\/[^>])+)?(\/)?>/g;
 	var match = void 0;
 
 	if (!html.match(tagRegExp)) {
@@ -981,8 +981,8 @@ function parse$1(document, html, parentNode) {
 			}
 			var node = document.createElement(match[2]);
 			parseAttributes(node, match[3]);
+			position = match.index + match[0].length;
 			if (!match[4]) {
-				position = match.index + match[0].length;
 				parse$1(document, html, node);
 			}
 			parentNode.appendChild(node);
@@ -1206,17 +1206,27 @@ function Document(html) {
 	this.addEventListener = function () {};
 	this.removeEventListener = function () {};
 
-	this.head = this.createElement('head');
-	this.body = this.createElement('body');
 	this.documentElement = this.createElement('html');
-	this.documentElement.appendChild(this.head);
-	this.documentElement.appendChild(this.body);
 	this.childNodes = [this.documentElement];
 	this.children = [this.documentElement];
 	this.nodeType = 9;
-
 	position = -1;
-	parse$1(this, html, this.body);
+
+	if (html.trim().indexOf('<!DOCTYPE') < 0) {
+		this.head = this.createElement('head');
+		this.body = this.createElement('body');
+		this.documentElement.appendChild(this.head);
+		this.documentElement.appendChild(this.body);
+		parse$1(this, html, this.body);
+	} else {
+		html.match(/<html([^>]*)>/);
+		if (RegExp.$1) {
+			parseAttributes(this.documentElement, RegExp.$1);
+		}
+		html = html.replace(/<!DOCTYPE[^>]+>[\n\s]*<html([^>]*)>/g, '').replace(/<\/html>/g, '');
+
+		parse$1(this, html, this.documentElement);
+	}
 }
 
 var sha1 = function sha1(data) {
@@ -1256,7 +1266,7 @@ function importTag(tagFile, document) {
 		e.message = 'Unable to import tag ' + tagFile + ': ' + e.message;
 		throw e;
 	}
-	code && registerTag(code, document);
+	code && registerTag(code, document, Zino);
 }
 
 function clearImports() {

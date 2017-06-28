@@ -36,8 +36,8 @@ export let renderOptions = {
 	}
 };
 
-export function registerTag(fn, document) {
-	let firstElement = fn(vdom.Tag),
+export function registerTag(fn, document, Zino) {
+	let firstElement = fn(vdom.Tag, Zino),
 		tagName = firstElement.tagName;
 
 	if (tagRegistry[tagName]) {
@@ -133,7 +133,7 @@ function initializeNode({tag, node: functions = defaultFunctions}) {
 			if (isFn(entry)) {
 				tag[all] = entry.bind(tag);
 			} else {
-				tag[all] = entry;
+				tag[all] = typeof tag[all] === 'object' ? merge({}, entry, tag[all]) : entry;
 			}
 		}
 	}
@@ -293,7 +293,7 @@ function unmountTag(tag) {
 
 function getAttributes(tag, propsOnly) {
 	let attrs = {props: tag.props, element: tag.element, styles: tag.styles, body: tag.__i},
-		props = {};
+		props = attrs.props;
 
 	[].forEach.call(tag.nodeType === 1 && tag.attributes || Object.keys(tag.attributes).map(attr => ({name: attr, value: tag.attributes[attr]})), attribute => {
 		let isComplex = attribute.name.indexOf('data-') >= 0 && typeof attribute.value === 'string' && attribute.value.substr(0, 2) === '--';

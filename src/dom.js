@@ -22,7 +22,7 @@ function parseAttributes(node, attributes) {
 let position = -1;
 
 function parse(document, html, parentNode) {
-	let tagRegExp = /<(\/)?([\w:_-]+)(\s+[^>]+)?(\/)?>/g;
+	let tagRegExp = /<(\/)?([\w:_-]+)(\s+(?:[^\/>]|\/[^>])+)?(\/)?>/g;
 	let match;
 
 	if (!html.match(tagRegExp)) {
@@ -46,8 +46,8 @@ function parse(document, html, parentNode) {
 			}
 			let node = document.createElement(match[2]);
 			parseAttributes(node, match[3]);
+			position = match.index + match[0].length;
 			if (!match[4]) {
-				position = match.index + match[0].length;
 				parse(document, html, node);
 			}
 			parentNode.appendChild(node);
@@ -221,15 +221,25 @@ export default function Document(html) {
 	this.addEventListener = () => {};
 	this.removeEventListener = () => {};
 
-	this.head = this.createElement('head');
-	this.body = this.createElement('body');
 	this.documentElement = this.createElement('html');
-	this.documentElement.appendChild(this.head);
-	this.documentElement.appendChild(this.body);
 	this.childNodes = [this.documentElement];
 	this.children = [this.documentElement];
 	this.nodeType = 9;
-
 	position = -1;
-	parse(this, html, this.body);
+
+	if (html.trim().indexOf('<!DOCTYPE') < 0) {
+		this.head = this.createElement('head');
+		this.body = this.createElement('body');
+		this.documentElement.appendChild(this.head);
+		this.documentElement.appendChild(this.body);
+		parse(this, html, this.body);
+	} else {
+		html.match(/<html([^>]*)>/);
+		if (RegExp.$1) {
+			parseAttributes(this.documentElement, RegExp.$1);
+		}
+		html = html.replace(/<!DOCTYPE[^>]+>[\n\s]*<html([^>]*)>/g, '').replace(/<\/html>/g, '');
+
+		parse(this, html, this.documentElement);
+	}
 }
