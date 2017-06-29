@@ -6,7 +6,7 @@ import {parse} from './mustacheparser';
 import fs from 'fs';
 import path from 'path';
 import colors from 'colors';
-import Document from './dom';
+import Document from 'nano-dom';
 import diff from 'fast-diff';
 import {createHash} from 'crypto';
 import readline from 'readline-sync';

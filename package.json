@@ -46,6 +46,7 @@
     "dependencies": {
         "colors": "^1.1.2",
         "fast-diff": "^1.1.1",
+        "nano-dom": "^0.0.4",
         "readline-sync": "^1.4.7"
     },
     "optionalDependencies": {

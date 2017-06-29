@@ -1,6 +1,6 @@
 import * as core from '../src/core';
 import {on, off} from '../src/events';
-import Document from '../src/dom';
+import Document from 'nano-dom';
 import test from './test';
 
 test('Zino core functionality');
@@ -14,9 +14,9 @@ test('render simple tag', t => {
 			render: function(data) {
 				return [
 					new Tag('div', {class: 'abc'}, [].concat(
-						'A-', 
-						data.props && data.props.times ? (typeof data.props.times.map === 'function' ? data.props.times : [data.props.times]).map(e => 'B') : '', 
-						'-C', 
+						'A-',
+						data.props && data.props.times ? (typeof data.props.times.map === 'function' ? data.props.times : [data.props.times]).map(e => 'B') : '',
+						'-C',
 						'').concat(data.letter && [data.letter].map(e => '-' + e) || ''
 					))];
 			},
@@ -51,7 +51,7 @@ test('render tag with sub components', t => {
 			tagName: 'my-other-tag',
 			render: function() {
 				return [
-					Tag('title', {}, 'This is my title'), 
+					Tag('title', {}, 'This is my title'),
 					Tag('myx-tag', {'data-times': '1'})
 				];
 			},
@@ -119,7 +119,7 @@ test('re-renders tag dynamically', t => {
 
 	body.children[0].body = '34 56';
 	t.is(body.children[0].children[0].innerHTML, 'X34 56Y', 're-rendered after body change');
-	
+
 	body.children[0].setProps('x', 'Y');
 	t.is(body.children[0].children[0].innerHTML, 'Y34 56Y', 're-rendered after setProps');
 

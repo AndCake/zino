@@ -1,12 +1,12 @@
 import test from './test';
 import * as vdom from '../src/vdom';
-import Document from '../src/dom';
+import Document from 'nano-dom';
 
 test('vdom implementation');
 
 let dom = vdom.Tag('html', {}, [
 		vdom.Tag('body', {}, [
-			vdom.Tag('h1', {class: 'title'}, ['Headline']), 
+			vdom.Tag('h1', {class: 'title'}, ['Headline']),
 			vdom.Tag('p', {}, ['Hello, World!'])
 		])
 	]);

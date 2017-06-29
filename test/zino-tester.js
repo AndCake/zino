@@ -1,5 +1,5 @@
 import * as zino from '../src/zino-tester';
-import Document from '../src/dom';
+import Document from 'nano-dom';
 import test from './test';
 
 test('Zino Snapshotting');
