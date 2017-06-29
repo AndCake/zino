@@ -1,103 +1,129 @@
 import * as core from '../src/core';
 import {on, off} from '../src/events';
-import * as html from '../src/htmlparser';
+import Document from '../src/dom';
 import test from './test';
 
 test('Zino core functionality');
-let document = html.parse('X<myx-tag></myx-tag>Y<my-other-tag></my-other-tag>');
+let document = new Document('X<myx-tag></myx-tag>Y<my-other-tag></my-other-tag>');
+let body = document.body;
 
 test('render simple tag', t => {
-	core.registerTag(`
-<myx-tag>
-	<div class="abc">A-{{#props.times}}B{{/props.times}}-C{{#letter}}-{{.}}{{/letter}}</div><script>
-		({
-			props: {
-				times: [1, 2]
+	core.registerTag(function(Tag) {
+		return {
+			tagName: 'myx-tag',
+			render: function(data) {
+				return [
+					new Tag('div', {class: 'abc'}, [].concat(
+						'A-', 
+						data.props && data.props.times ? (typeof data.props.times.map === 'function' ? data.props.times : [data.props.times]).map(e => 'B') : '', 
+						'-C', 
+						'').concat(data.letter && [data.letter].map(e => '-' + e) || ''
+					))];
 			},
-			events: {
-				'.abc': {
-					click: function click(e) { console.log(e); }
+			styles: [],
+			functions: {
+				props: {times: [1, 2]},
+				events: {
+					'.abc': {
+						click: function click(e) { console.log(e); }
+					}
 				}
 			}
-		})
-	</script></myx-tag>`, './', document);
-	t.is(document.children[1].outerHTML, `<myx-tag __ready="true"><div class="-shadow-root"><div class="abc">A-BB-C</div></div></myx-tag>`, 'renders a tag');
+		};
+	}, document);
+	t.is(body.children[0].outerHTML, `<myx-tag __ready="true"><div class="-shadow-root"><div class="abc">A-BB-C</div></div></myx-tag>`, 'renders a tag');
 
 	let dirty = [];
 	on('--zino-rerender-tag', tag => dirty.push(tag));
-	document.children[1].setProps('times', [1, 2, 3]);
+	body.children[0].setProps('times', [1, 2, 3]);
 	t.is(dirty.length, 1, 'triggers re-render on tag after setProps');
 	off('--zino-rerender-tag');
 
 	on('--zino-rerender-tag', core.render);
-	document.children[1].setAttribute('letter', 'D');
-	t.is(document.children[1].outerHTML, `<myx-tag __ready="true" letter="D"><div class="-shadow-root"><div class="abc">A-BBB-C-D</div></div></myx-tag>`, 'renders a simple diff');
+	body.children[0].setAttribute('letter', 'D');
+	t.is(body.children[0].outerHTML, `<myx-tag __ready="true" letter="D"><div class="-shadow-root"><div class="abc">A-BBB-C-D</div></div></myx-tag>`, 'renders a simple diff');
 	off('--zino-rerender-tag');
 });
 
 test('render tag with sub components', t => {
-	core.registerTag(`
-<my-other-tag>
-	<title>This is my title</title>
-	<myx-tag data-times="1"></myx-tag>
-</my-other-tag>
-`, './x', document);
+	core.registerTag(function(Tag) {
+		return {
+			tagName: 'my-other-tag',
+			render: function() {
+				return [
+					Tag('title', {}, 'This is my title'), 
+					Tag('myx-tag', {'data-times': '1'})
+				];
+			},
+			styles: []
+		}
+	}, document);
 
-	t.is(document.children[3].outerHTML, `<my-other-tag __ready="true"><div class="-shadow-root"><title>This is my title</title>\n <myx-tag data-times="1" __ready="true"><div class="-shadow-root"><div class="abc">A-B-C</div></div></myx-tag></div></my-other-tag>`, 'renders a sub component');
+	t.is(body.childNodes[3].outerHTML, `<my-other-tag __ready="true"><div class="-shadow-root"><title>This is my title</title><myx-tag data-times="1" __ready="true"><div class="-shadow-root"><div class="abc">A-B-C</div></div></myx-tag></div></my-other-tag>`, 'renders a sub component');
 
-	document.children[3].setProps('test', 123);
+	body.childNodes[3].setProps('test', 123);
 });
 
 test('calls all callbacks', t => {
-	document.innerHTML = '<x></x>';
+	body.innerHTML = '<x></x>';
 	t.throws(() => {
-		core.registerTag(`<x><script>({mount:function(){throw 'mount called';}})</script></x>`, './x', document);
+		core.registerTag((Tag) => ({tagName: 'x', render:()=> {return []}, functions:{mount:function(){throw 'mount called';}}}), document);
 	}, 'mount called', 'calls the mount function');
 
-	 document.innerHTML = '<y></y>';
+	 body.innerHTML = '<y></y>';
 	 t.throws(() => {
- 		core.registerTag(`<y><script>({render:function(){throw 'render called';}})</script></y>`, './y', document);
+ 		core.registerTag((Tag) => ({tagName: 'y', render:()=> {return []}, functions:{render:function(){throw 'render called';}}}), document);
 	}, 'render called', 'calls the render function');
 	on('--zino-rerender-tag', core.render);
 	t.throws(() => {
-		document.children[0].setProps('test', 123);
+		body.children[0].setProps('test', 123);
 	}, 'render called', 'calls the render function on setProps');
 	off('--zino-rerender-tag');
 
-	document.innerHTML = '<z></z>';
-	core.registerTag(`<a><script>({mount:function(){throw 'a mount called';}})</script></a>`, './');
+	body.innerHTML = '<z></z>';
+	core.registerTag((Tag) => ({tagName: 'a', render:()=> {return []}, functions:{mount:function(){throw 'a mount called';}}}));
 	t.throws(() => {
-		core.registerTag(`<z>{{#props.times}}<a></a>{{/props.times}}<script>({props:{times:[1, 2]}})</z>`, './', document);
+		core.registerTag((Tag) => ({tagName: 'z', render:(data)=> {return data.props.times.map(e=>Tag('a'))}, functions:{props:{times: [1, 2]}}}), document);
 	}, 'a mount called', 'calls mount on a sub component');
 
-	document.innerHTML = '<q></q>';
-	core.registerTag(`<b><script>({render:function(){throw 'b render called';}})</script></b>`, './');
+	body.innerHTML = '<q></q>';
+	core.registerTag((Tag) => ({tagName: 'b', render:()=> {return []}, functions:{render:function(){throw 'b render called';}}}));
 	t.throws(() => {
-		core.registerTag(`<q><b></b></q>`, './', document);
+		core.registerTag((Tag) => ({tagName: 'q', render:(data)=> {return [Tag('b')]}, functions:{}}), document);
 	}, 'b render called', 'calls render on a sub component');
 
 	let called = false;
-	document.innerHTML = `<w></w>`;
-	document.children[0].onready = () => {
+	body.innerHTML = `<w></w>`;
+	body.children[0].onready = () => {
 		called = true;
 	};
-	core.registerTag(`<w>a</w>`, './', document);
+	core.registerTag((Tag) => ({tagName: 'w', render:()=> {return ['a']}, functions:{}}), document);
 	t.true(called, 'on ready was called');
 });
 
 test('re-renders tag dynamically', t => {
 	on('--zino-rerender-tag', core.render);
-	document.innerHTML = '<ab>12 34</ab>';
-	core.registerTag('<ab>{{props.x}}{{{body}}}{{^x}}Y{{/x}}{{#x}}{{.}}{{/x}}<script>{props:{x:"X"}}</script></ab>', './ab', document);
-	t.is(document.children[0].children[0].innerHTML, 'X12 34Y', 'renders the body correctly');
+	body.innerHTML = '<ab>12 34</ab>';
+	core.registerTag((Tag) => {
+		return {
+			tagName: 'ab',
+			render: function(data) {
+				return [data.props.x, data.body].concat(!data.x ? 'Y' : data.x);
+			},
+			functions: {
+				props: {x: 'X'}
+			}
+		}
+	}, document);
+	t.is(body.children[0].children[0].innerHTML, 'X12 34Y', 'renders the body correctly');
 
-	document.children[0].body = '34 56';
-	t.is(document.children[0].children[0].innerHTML, 'X34 56Y', 're-rendered after body change');
+	body.children[0].body = '34 56';
+	t.is(body.children[0].children[0].innerHTML, 'X34 56Y', 're-rendered after body change');
 	
-	document.children[0].setProps('x', 'Y');
-	t.is(document.children[0].children[0].innerHTML, 'Y34 56Y', 're-rendered after setProps');
+	body.children[0].setProps('x', 'Y');
+	t.is(body.children[0].children[0].innerHTML, 'Y34 56Y', 're-rendered after setProps');
 
-	document.children[0].setAttribute('x', 'Z');
-	t.is(document.children[0].children[0].innerHTML, 'Y34 56Z', 're-rendered after setAttribute');
+	body.children[0].setAttribute('x', 'Z');
+	t.is(body.children[0].children[0].innerHTML, 'Y34 56Z', 're-rendered after setAttribute');
 	off('--zino-rerender-tag');
 });

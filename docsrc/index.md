@@ -13,6 +13,8 @@ layout: default
 
 This is a microframework similar to ReactJS and Polymer but without all the bloating and additional dependencies.
 
+To learn about the latest changes to Zino, please take a look at the [Release Notes]({{site.baseurl}}/releases).
+
 
 ## Features
 
@@ -25,18 +27,21 @@ This is a microframework similar to ReactJS and Polymer but without all the bloa
 - uses virtual DOM to efficiently render with as few reflows / repaints as possible
 - dynamic on-demand loading of components
 - works with your coding style
-  - Write a component in one file or split it up into files by different technologies
+  - write a component in one file or split it up into files by different technologies
+  - write components directly in JS and bundle them with your favourite JS bundler
   - plays well together with jQuery and other UI frameworks
 - can be integrated to work with grunt
   - use SASS, LESS or Stylus for your component
   - write your JS in ES6, Typescript or CoffeeScript, and/or use Browserify
 - use CSS in JS the React way or define an automatically scoped fully-fledged stylesheet or mix both
+- no extra editor/editor plugins for specialized syntax highlighting necessary
 
 ## Comparison
 
-- Polymer: 66.3 KB minified & gzipped
-- ReactJS: 46.45 KB minified & gzipped
-- Zino: 5.0 KB minified & gzipped
+- AngularJS 4.1.3: 237.41 KB minified & gzipped
+- Polymer 1.8.0 + Web Components Polyfill Lite: 66.3 KB minified & gzipped
+- ReactJS (15.6.1 + Redux): 51.1KB minified & gzipped
+- Zino: 5.8 KB minified & gzipped
 
 Installation
 ------------

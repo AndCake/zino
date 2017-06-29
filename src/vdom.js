@@ -1,0 +1,218 @@
+import {uuid} from './utils';
+import {trigger} from './events';
+
+let tagFilter = [];
+let tagsCreated = [];
+let dataResolver = (attr, value) => {
+	return attr;
+};
+
+function isArray(obj) {
+	return Object.prototype.toString.call(obj) === '[object Array]';
+}
+
+export function setDataResolver(resolver) {
+	dataResolver = resolver;
+}
+
+export function Tag(tagName, attributes, children) {
+	tagName = tagName.toLowerCase();
+	children = children && (typeof children !== 'object' || children.tagName) ? [children] : children || [];
+	let tag = {
+		tagName,
+		attributes: attributes || {},
+		children: children,
+		__complexity: children.reduce(((a, b) => a + (b.__complexity || 1)), 0) + children.length
+	};
+	if (tagFilter.indexOf(tagName) >= 0) tagsCreated.push(tag);
+	return tag;
+}
+
+/**
+ * Returns all tags with a given tag name. If the provided context contains a getElementsByTagName() function,
+ * that will be used to retrieve the data, else a manual recursive lookup will be done
+ * 
+ * @param  {String} name - name of the tag to retrieve the elements  of
+ * @param  {Object} dom - either a VDOM node or a DOM node
+ * @return {Array} - list of elements that match the provided tag name
+ */
+export function getElementsByTagName(name, dom) {
+	let result = [];
+	name = (name || '').toLowerCase();
+	if (typeof dom.getElementsByTagName === 'function') return [].slice.call(dom.getElementsByTagName(name));
+
+	if (dom.children) {
+		result = result.concat(dom.children.filter(child => child.tagName && child.tagName.toLowerCase() === name));
+		dom.children.forEach(child => {
+			result = result.concat(getElementsByTagName(name, child));
+		});
+	}
+	return result;
+}
+
+/**
+ * defines which VDOM nodes should be captured for getTagsCreated()
+ * @param {Array} filter - an array of strings representing the tag names of the tags to be captured
+ */
+export function setFilter(filter) {
+	tagFilter = filter;
+}
+
+/**
+ * retrieves the list of tags that have been created since the last call of getTagsCreated()
+ * @return {Array} - an array of VDOM nodes that were created
+ */
+export function clearTagsCreated() {
+	tagsCreated = [];
+}
+
+/**
+ * retrieves the list of tags that have been created since the last call of getTagsCreated()
+ * @return {Array} - an array of VDOM nodes that were created
+ */
+export function getTagsCreated() {
+	let created = tagsCreated;
+	return created;
+}
+
+/**
+ * Calculates the HTML structure as a String represented by the VDOM
+ * 
+ * @param  {Object} node - the VDOM node whose inner HTML to generate
+ * @return {String} - the HTML structure representing the VDOM
+ */
+export function getInnerHTML(node) {
+	if (!node.children) return '';
+	if (!isArray(node.children)) node.children = [node.children];
+
+	return (isArray(node) && node || node.children).map(child => {
+		if (typeof child !== 'object') {
+			return '' + child;
+		} else if (isArray(child)) {
+			return getInnerHTML(child);
+		} else {
+			let attributes = [''].concat(Object.keys(child.attributes).map((attr) => {
+				if (typeof child.attributes[attr] === 'object') {
+					return attr + '="--' + dataResolver(attr, child.attributes[attr]) + '--"';
+				} else {
+					return attr+'="' + child.attributes[attr] + '"';
+				}
+			}));
+			return `<${child.tagName}${attributes.join(' ')}>${getInnerHTML(child)}</${child.tagName}>`;
+		}
+	}).join('');
+}
+
+/**
+ * Creates a new DOM node
+ * 
+ * @param  {Object|String} node - a VDOM node
+ * @param  {Document} document - the document in which to create the DOM node
+ * @return {Node} - the DOM node created (either a text element or an HTML element)
+ */
+function createElement(node, document) {
+	let tag;
+	if (typeof node !== 'object') {
+		// we have a text node, so create one
+		tag = document.createTextNode('' + node);
+	} else {
+		tag = document.createElement(node.tagName);
+		// add all required attributes
+		Object.keys(node.attributes).forEach((attr) => {
+			tag.setAttribute(attr, node.attributes[attr]);
+		});
+		if (node.__vdom) {
+			// it's a component, so don't forget to initialize this new instance
+			trigger('--zino-initialize-node', {tag, node: node.functions});
+		}
+		// define it's inner structure
+		tag.innerHTML = getInnerHTML(node);
+	}
+
+	return tag;
+}
+
+/**
+ * Applies a VDOM to an actual DOM, meaning that the state of the VDOM will be recreated on the DOM.
+ * The end result is, that the DOM structure is the same as the VDOM structure. Existing elements will
+ * be repurposed, new elements created where necessary.
+ * 
+ * @param  {DOM} dom - the DOM to which the VDOM should be applied
+ * @param  {Object} vdom - the VDOM to apply to the DOM
+ * @param  {Document} document - the document that the DOM is based on, used for createElement() and createTextNode() calls
+ */
+export function applyDOM(dom, vdom, document) {
+	if (!isArray(vdom)) {
+		// if we have a node
+		if (!isArray(vdom.children)) vdom.children = [vdom.children];
+		// if the tag name is not the same
+		if (vdom.tagName !== dom.tagName.toLowerCase()) {
+			// replace the node entirely
+			dom.parentNode.replaceChild(createElement(vdom, document), dom);
+		} else {
+			// check all vdom attributes
+			Object.keys(vdom.attributes).forEach(attr => {
+				// if the VDOM attribute is a non-object
+				if (typeof vdom.attributes[attr] !== 'object') {
+					// check if it differs
+					if (dom.getAttribute(attr) != vdom.attributes[attr]) {
+						// if so, apply it
+						dom.setAttribute(attr, vdom.attributes[attr]);
+					}
+				} else {
+					// the attribute is an object
+					if (dom.getAttribute(attr) && dom.getAttribute(attr).match(/^--|--$/g)) {
+						// if it has a complex value, use the data resolver to define it on the DOM
+						let id = dataResolver(attr, vdom.attributes[attr], dom.getAttribute(attr).replace(/^--|--$/g, ''));
+						// only set the ID with markers so that we know it is supposed to be a complex value
+						dom.setAttribute(attr, `--${id}--`);
+					}
+				}
+			});
+			// if we have too many attributes in our DOM
+			if (dom.attributes.length > Object.keys(vdom.attributes)) {
+				[].forEach.call(dom.attributes, attr => {
+					// if the respective attribute does not exist on the VDOM
+					if (typeof vdom.attributes[attr.name] === 'undefined') {
+						// remove it
+						dom.removeAttribute(attr.name);
+					}
+				})
+			}
+		}
+	}
+
+	// deal with the vdom's children
+	let children = (isArray(vdom) ? vdom : vdom.children);
+	children.forEach((node, index) => {
+		if (isArray(node)) return applyDOM(dom, node, document);
+		let domChild = dom.childNodes[index];
+		if (typeof domChild === 'undefined') {	
+			// does not exist, so it needs to be appended
+			dom.appendChild(createElement(node, document));
+		} else if (domChild.nodeType === 3) {	
+			// is a text node
+			// if the VDOM node is also a text node
+			if (typeof node === 'string' && domChild.nodeValue !== node) {
+				// simply apply the value
+				domChild.nodeValue = node;
+			} else if (typeof node !== 'string') {
+				// else replace with a new element
+				dom.replaceChild(createElement(node, document), domChild);
+			}
+		} else if (domChild.nodeType === 1) {	
+			// is a normal HTML tag
+			if (typeof node === 'object') {
+				// the VDOM is also a tag, apply it recursively
+				applyDOM(domChild, node, document);
+			} else {
+				// it's just a text node, so simply replace the element with the text node
+				dom.replaceChild(createElement(node, document), domChild);
+			}
+		}
+	});
+	if (dom.childNodes.length > children.length) {
+		// remove superfluous child nodes
+		[].slice.call(dom.childNodes, children.length).forEach(child => dom.removeChild(child));
+	}
+}

@@ -1,5 +1,4 @@
-<my-new-tag __ready="true"><div class="-shadow-root"><div>This is some content: </div>
- <p>Counting: 0</p></div></my-new-tag>
+<my-new-tag __ready="true"><div class="-shadow-root"><div>This is some content: </div><p>Counting: 0</p></div></my-new-tag>
 {
   "data": {
     "props": {

@@ -1,9 +1,13 @@
-<my-new-tag>
-	<div>This is some content: {{test}}</div>
-	<p>Counting: {{props.test}}</p>
+function(Tag) {
+	return {
+		tagName: 'my-new-tag',
+		styles: [':host {display: block; background:red;}'],
 
-	<script>
-		({
+		render: function(data) {
+			return [Tag('div', {}, 'This is some content ' + data.test), Tag('p', {}, 'Counting: ' + data.props.test)];
+		},
+
+		functions: {
 			props: {
 				test: 0,
 				tasks: []
@@ -17,19 +21,13 @@
 			},
 			mount: function() {
 				this.interval = setInterval(function() {
-					this.setState('test', this.props.test + 1);
+					this.setProps('test', this.props.test + 1);
 				}.bind(this), 1000);
 			},
 			unmount: function() {
 				clearInterval(this.interval);
 				alert('unmounting!');
 			}
-		})
-	</script>
-	<style>
-		:host {
-			display: block;
-			background: red;
 		}
-	</style>
-</my-new-tag>
+	};
+}

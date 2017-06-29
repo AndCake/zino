@@ -1,4 +1,3 @@
-import {find} from './htmlparser';
 import {isFn} from './utils';
 
 let eventQueue = {};
@@ -43,7 +42,7 @@ export function one(name, fn) {
 export function attachEvent (el, events, host) {
 	if (!isFn(el.addEventListener)) return;
 	let findEl = (selector, target) => {
-		let node = find(selector, el);
+		let node = [].slice.call(el.querySelectorAll(selector));
 		while (node.length > 0 && target !== host) {
 			if (node.indexOf(target) >= 0) return node[node.indexOf(target)];
 			target = target.parentNode;

@@ -128,11 +128,15 @@
       
         
       
+        
+      
   </ul>
 
   <hr>
 
   <ul class="trigger">
+    
+      
     
       
     
@@ -181,7 +185,7 @@
   </header>
 
   <div class="post-content">
-    <p>Zino offers snapshot testing for making sure that tests can be written very easily and tested equally quickly. Consider this simple <a href="https://bitbucket.org/rkunze/zinojs/src/master/examples/src/btn.html">button link example</a>:</p>
+    <p>Zino offers snapshot testing for making sure that tests can be written very easily and tested equally quickly. Consider this simple <a href="https://github.com/AndCake/zino/blob/master/test/components/btn.html">button link example</a>:</p>
 
 <figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">var</span> <span class="nx">z</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s1">'zino/test'</span><span class="p">);</span>
 
@@ -189,7 +193,7 @@
 	<span class="nx">z</span><span class="p">.</span><span class="nx">importTag</span><span class="p">(</span><span class="s1">'src/btn.html'</span><span class="p">);</span>
 
 	<span class="nx">it</span><span class="p">(</span><span class="s1">'receives the URL and renders the text properly'</span><span class="p">,</span> <span class="p">()</span> <span class="o">=&gt;</span> <span class="p">{</span>
-		<span class="nx">z</span><span class="p">.</span><span class="nx">matchesSnapshot</span><span class="p">(</span><span class="s1">'&lt;btn page="https://bitbucket.org/rkunze/zinojs"&gt;ZinoJS&lt;/btn&gt;'</span><span class="p">)</span>
+		<span class="nx">z</span><span class="p">.</span><span class="nx">matchesSnapshot</span><span class="p">(</span><span class="s1">'&lt;btn page="https://andcake.github.io/zino"&gt;ZinoJS&lt;/btn&gt;'</span><span class="p">)</span>
 	<span class="p">});</span>
 <span class="p">})</span></code></pre></figure>
 
@@ -202,7 +206,7 @@
   "data": {
     "props": {},
     "body": "ZinoJS",
-    "page": "https://bitbucket.org/rkunze/zinojs"
+    "page": "https://andcake.github.io/zino"
   },
   "events": [
     {
@@ -226,14 +230,19 @@
 
 <p>Once it is installed, in your project, create a <code class="highlighter-rouge">test/</code> directory. Place all your tests in that directory. It is recommended to use <a href="http://mochajs.org/">MochaJS</a> for your tests but any test framework will do.</p>
 
-<p>Zino offers two methods to support your testing efforts:</p>
+<p>Zino offers three methods to support your testing efforts:</p>
 
 <ul>
-  <li><code class="highlighter-rouge">importTag(&lt;pathToTag&gt;)</code> - imports a Zino component into the registry so that it can be used for testing</li>
+  <li><code class="highlighter-rouge">importTag(&lt;pathToTag&gt;[, &lt;document&gt;])</code> - imports a Zino component into the registry so that it can be used for testing. If the second parameter, which should be a virtual DOM implementation is provided, all instances of the imported component will be rendered in that document</li>
   <li><code class="highlighter-rouge">matchesSnapshot(&lt;tagExample&gt;, &lt;data&gt;)</code> - renders the tag as if it were used in a browser and checks if a previous snapshot of it has changed</li>
+  <li><code class="highlighter-rouge">clearImports()</code> - removes all imported components from memory.</li>
 </ul>
 
-<p>Since events will usually trigger state changes, these events can be simulated by calling the <code class="highlighter-rouge">matchesSnapshot()</code> method with the data parameter, which allows you to overwrite props values. For our <a href="https://bitbucket.org/rkunze/zinojs/src/master/examples/src/todolist.html">todolist tag</a> example, this could look like that:</p>
+<p>If you have written your JS or CSS code in an external file and embedded it via <code class="highlighter-rouge">&lt;script src="path/to/external-file.js"&gt;&lt;/script&gt;</code> / <code class="highlighter-rouge">&lt;link rel="stylesheet" href="path/to/file.css"/&gt;</code>, you should always use the compilation result coming from <a href="https://npmjs.com/package/grunt-zino">grunt-zino</a> for testing. Else the script functionality / styling won’t be applied within your test.</p>
+
+<h3 id="testing-with-snapshots">Testing with Snapshots</h3>
+
+<p>Since events will usually trigger state changes, these events can be simulated by calling the <code class="highlighter-rouge">matchesSnapshot()</code> method with the data parameter, which allows you to overwrite props values. For our <a href="https://github.com/AndCake/zino/blob/master/test/components/todolist.html">todolist tag</a> example, this could look like that:</p>
 
 <figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kr">const</span> <span class="nx">zino</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s1">'zino/test'</span><span class="p">);</span>
 
@@ -251,7 +260,29 @@
 	<span class="p">});</span>
 <span class="p">})</span></code></pre></figure>
 
-<p>Please refer to the <a href="https://bitbucket.org/rkunze/zinojs/src/master/test/zino-tester.js">test/zino-tester.js</a> for more examples of how snapshots can be used.</p>
+<h3 id="testing-with-jsdom-or-similar">Testing with jsDOM or similar</h3>
+
+<p>Sometimes you might want to have a little more context than a single component - e.g. to test the interactions between components. In order to do this, you can use libraries like jsDOM that simulate a DOM and have Zino render the components inside that DOM as it would on a normal page. Here is an example of how this looks like:</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kr">const</span> <span class="nx">zino</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s1">'zino/test'</span><span class="p">);</span>
+<span class="kr">const</span> <span class="nx">assert</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s1">'chai'</span><span class="p">).</span><span class="nx">assert</span><span class="p">;</span>
+<span class="kr">const</span> <span class="nx">JSDOM</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s1">'jsdom'</span><span class="p">).</span><span class="nx">jsdom</span><span class="p">;</span>
+
+<span class="nx">describe</span><span class="p">(</span><span class="s1">'comment-box'</span><span class="p">,</span> <span class="p">()</span> <span class="o">=&gt;</span> <span class="p">{</span>
+	<span class="c1">// prepare the JSDOM document containing the code</span>
+	<span class="kr">const</span> <span class="nx">html</span> <span class="o">=</span> <span class="s1">'&lt;comment author="Bucks Bunny"&gt;I love carrots!&lt;/comment&gt;'</span><span class="p">;</span>
+	<span class="kd">let</span> <span class="nb">document</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">JSDOM</span><span class="p">(</span><span class="nx">html</span><span class="p">).</span><span class="nb">window</span><span class="p">.</span><span class="nb">document</span><span class="p">;</span>
+
+	<span class="nx">it</span><span class="p">(</span><span class="s1">'renders the comment'</span><span class="p">,</span> <span class="p">()</span> <span class="p">{</span>
+		<span class="c1">// import the component used - please note the document is handed into importTag</span>
+		<span class="nx">zino</span><span class="p">.</span><span class="nx">importTag</span><span class="p">(</span><span class="s1">'test/components/comment.html'</span><span class="p">,</span> <span class="nb">document</span><span class="p">);</span>
+
+		<span class="kd">let</span> <span class="nx">comment</span> <span class="o">=</span> <span class="nb">document</span><span class="p">.</span><span class="nx">body</span><span class="p">.</span><span class="nx">querySelector</span><span class="p">(</span><span class="s1">'comment'</span><span class="p">);</span>
+		<span class="nx">assert</span><span class="p">.</span><span class="nx">equal</span><span class="p">(</span><span class="nx">comment</span><span class="p">.</span><span class="nx">children</span><span class="p">[</span><span class="mi">0</span><span class="p">].</span><span class="nx">children</span><span class="p">[</span><span class="mi">0</span><span class="p">].</span><span class="nx">innerHTML</span><span class="p">,</span> <span class="s1">'"Bucks Bunny"'</span><span class="p">,</span> <span class="s1">'rendered the component into the DOM'</span><span class="p">);</span>
+	<span class="p">});</span>
+<span class="p">});</span></code></pre></figure>
+
+<p>Please refer to the <a href="https://github.com/AndCake/zino/blob/master/test/zino-tester.js">test/zino-tester.js</a> for more examples of how Zino tests can be used.</p>
 
   </div>
 
