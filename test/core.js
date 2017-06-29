@@ -127,3 +127,20 @@ test('re-renders tag dynamically', t => {
 	t.is(body.children[0].children[0].innerHTML, 'Y34 56Z', 're-rendered after setAttribute');
 	off('--zino-rerender-tag');
 });
+
+test('pre-rendered tags', t => {
+	on('--zino-rerender-tag', core.render);
+	body.innerHTML = '<pre-rendered><div class="-shadow-root">Value: 2</div></pre-rendered>';
+	core.registerTag((Tag) => {
+		return {
+			tagName: 'pre-rendered',
+			render: function(data) {
+				return ['Value: ', data.props.value];
+			},
+			functions: {
+				props: {value: 'n/a'}
+			}
+		};
+	}, document);
+	t.is(body.getElementsByClassName('-shadow-root')[0].innerHTML, 'Value: 2', 'keeps pre-rendered text');
+});

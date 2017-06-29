@@ -77,7 +77,7 @@ function initializeTag(tag, registryEntry) {
 		isRendered;
 
 	// if it has been pre-rendered
-	if (tag.children.length > 0 && tag.children[0].attributes && tag.children[0].attributes['class'] === '-shadow-root') {
+	if (tag.children.length > 0 && tag.children[0].attributes && tag.children[0].attributes['class'] && tag.children[0].attributes['class'].value === '-shadow-root') {
 		let sibling = tag.children[1];
 		// remove original HTML content
 		if (sibling && sibling.className === '-original-root') {
@@ -298,7 +298,7 @@ function getAttributes(tag, propsOnly) {
 	[].forEach.call(tag.nodeType === 1 && tag.attributes || Object.keys(tag.attributes).map(attr => ({name: attr, value: tag.attributes[attr]})), attribute => {
 		let isComplex = attribute.name.indexOf('data-') >= 0 && typeof attribute.value === 'string' && attribute.value.substr(0, 2) === '--';
 		let value = tag.attributes[attribute.name];
-		if (value.toString() === '[object Attr]') {
+		if (value.toString() === '[object Attr]' || isObj(value) && typeof value.value !== 'undefined') {
 			value = value.value;
 		}
 		attrs[attribute.name] || (attrs[attribute.name] = isComplex && typeof value === 'string' && dataRegistry[value.replace(/^--|--$/g, '')] || value);
