@@ -83,12 +83,13 @@ export default Zino = {
 };
 window.Zino = Zino;
 on('publish-style', data => {
-	if (typeof data === 'string' && data.length > 0) {
+	if (typeof data.tagName === 'string' && data.styles.length > 0) {
+		if (document.getElementById('style:' + data.tagName)) return;
 		let style = document.createElement('style');
-		style.innerHTML = data;
-		data = style;
+		style.innerHTML = data.styles;
+		style.id = 'style:' + data.tagName;
+		document.head.appendChild(style);
 	}
-	data && document.head.appendChild(data);
 });
 on('--zino-rerender-tag', tag => dirtyTags.indexOf(tag) < 0 && dirtyTags.push(tag));
 trigger('publish-style', '[__ready] { contain: content; }');

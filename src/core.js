@@ -170,15 +170,14 @@ function initializeNode({tag, node: functions = defaultFunctions}) {
 
 	// call mount callback
 	tag.props = merge({}, functions.props, getAttributes(tag, true));
+	tag.attrs = getAttributes(tag);
 
-	if (tag.ownerDocument) {
-		try {
-			tag.mounting = true;
-			functions.mount.call(tag);
-			delete tag.mounting;
-		} catch (e) {
-			error('mount', tag.tagName, e);
-		}
+	try {
+		tag.mounting = true;
+		functions.mount.call(tag);
+		delete tag.mounting;
+	} catch (e) {
+		error('mount', tag.tagName, e);
 	}
 }
 
@@ -189,7 +188,6 @@ function renderTag(tag, registryEntry = tagRegistry[tag.tagName.toLowerCase()]) 
 		renderedDOM;
 
 	// do the actual rendering of the component
-	//let start = +new Date;
 	vdom.setDataResolver(renderOptions.resolveData);
 	let data = getAttributes(tag);
 	if (tag.ownerDocument || !tag.__vdom) {
@@ -216,17 +214,11 @@ function renderTag(tag, registryEntry = tagRegistry[tag.tagName.toLowerCase()]) 
 		}
 	});
 
-	//typeof console !== 'undefined' && console.debug('VDOM creation took ', (+new Date - start) + 'ms');
-	//typeof console !== 'undefined' && console.debug('Tag ' + tag.tagName + ' complexity (new, old, diff): ', renderedDOM.__complexity, tag.__complexity, (renderedDOM.__complexity - (tag.__complexity || 0)));
-
-	//start = +new Date;
 	if (tag.attributes.__ready && (Math.abs(renderedDOM.__complexity - (tag.__complexity || 0)) < 50) && tag.ownerDocument) {
 		// has been rendered before, so just apply diff
-		//typeof console !== 'undefined' && console.debug('VDOM dynamic');
 		vdom.applyDOM(tag.children[0], renderedDOM, tag.ownerDocument);
 	} else {
 		// simply render everything inside
-		//typeof console !== 'undefined' && console.debug('VDOM static');
 		if (tag.ownerDocument) {
 			tag.children[0].innerHTML = vdom.getInnerHTML(renderedDOM);
 		} else {
@@ -237,13 +229,8 @@ function renderTag(tag, registryEntry = tagRegistry[tag.tagName.toLowerCase()]) 
 	tag.__complexity = renderedDOM.__complexity;
 	tag.__subElements = renderedSubElements;
 
-	//typeof console !== 'undefined' && console.debug('Apply VDOM took ', (+new Date - start) + 'ms');
-
 	renderedSubElements.length > 0 && (tag.querySelectorAll && [].slice.call(tag.querySelectorAll('[__ready]')) || renderedSubElements).forEach((subEl, index) => {
 		merge(subEl, renderedSubElements[index]);
-		if (subEl.ownerDocument) {
-			initializeNode({tag: subEl, node: tagRegistry[subEl.tagName.toLowerCase()].functions});
-		}
 		renderedSubElements[index].getHost = defaultFunctions.getHost.bind(subEl);
 	});
 
@@ -331,8 +318,7 @@ function setElementAttr(source, target = source) {
 
 function handleStyles(element) {
 	let tagName = element.tagName;
-	trigger('publish-style',
-		(element.styles || []).map(style => {
+	let styles = (element.styles || []).map(style => {
 			let code = style;
 			return code.replace(/[\r\n]*([^%\{;\}]+?)\{/gm, (global, match) => {
 				if (match.trim().match(/^@/)) {
@@ -349,8 +335,8 @@ function handleStyles(element) {
 				});
 				return global.replace(match, selectors.join(','));
 			}).replace(/:host\b/gm, tagName) + '\n';
-		}).join('\n')
-	);
+		}).join('\n');
+	trigger('publish-style', {styles, tagName});
 }
 
 on('--zino-initialize-node', initializeNode);

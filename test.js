@@ -559,15 +559,14 @@ function initializeNode(_ref) {
 
 	// call mount callback
 	tag.props = merge({}, functions.props, getAttributes(tag, true));
+	tag.attrs = getAttributes(tag);
 
-	if (tag.ownerDocument) {
-		try {
-			tag.mounting = true;
-			functions.mount.call(tag);
-			delete tag.mounting;
-		} catch (e) {
-			error$1('mount', tag.tagName, e);
-		}
+	try {
+		tag.mounting = true;
+		functions.mount.call(tag);
+		delete tag.mounting;
+	} catch (e) {
+		error$1('mount', tag.tagName, e);
 	}
 }
 
@@ -580,7 +579,6 @@ function renderTag(tag) {
 	    renderedDOM = void 0;
 
 	// do the actual rendering of the component
-	//let start = +new Date;
 	setDataResolver(renderOptions.resolveData);
 	var data = getAttributes(tag);
 	if (tag.ownerDocument || !tag.__vdom) {
@@ -607,17 +605,11 @@ function renderTag(tag) {
 		}
 	});
 
-	//typeof console !== 'undefined' && console.debug('VDOM creation took ', (+new Date - start) + 'ms');
-	//typeof console !== 'undefined' && console.debug('Tag ' + tag.tagName + ' complexity (new, old, diff): ', renderedDOM.__complexity, tag.__complexity, (renderedDOM.__complexity - (tag.__complexity || 0)));
-
-	//start = +new Date;
 	if (tag.attributes.__ready && Math.abs(renderedDOM.__complexity - (tag.__complexity || 0)) < 50 && tag.ownerDocument) {
 		// has been rendered before, so just apply diff
-		//typeof console !== 'undefined' && console.debug('VDOM dynamic');
 		applyDOM(tag.children[0], renderedDOM, tag.ownerDocument);
 	} else {
 		// simply render everything inside
-		//typeof console !== 'undefined' && console.debug('VDOM static');
 		if (tag.ownerDocument) {
 			tag.children[0].innerHTML = getInnerHTML(renderedDOM);
 		} else {
@@ -628,13 +620,8 @@ function renderTag(tag) {
 	tag.__complexity = renderedDOM.__complexity;
 	tag.__subElements = renderedSubElements;
 
-	//typeof console !== 'undefined' && console.debug('Apply VDOM took ', (+new Date - start) + 'ms');
-
 	renderedSubElements.length > 0 && (tag.querySelectorAll && [].slice.call(tag.querySelectorAll('[__ready]')) || renderedSubElements).forEach(function (subEl, index) {
 		merge(subEl, renderedSubElements[index]);
-		if (subEl.ownerDocument) {
-			initializeNode({ tag: subEl, node: tagRegistry[subEl.tagName.toLowerCase()].functions });
-		}
 		renderedSubElements[index].getHost = defaultFunctions.getHost.bind(subEl);
 	});
 
@@ -732,7 +719,7 @@ function setElementAttr(source) {
 
 function handleStyles(element) {
 	var tagName = element.tagName;
-	trigger('publish-style', (element.styles || []).map(function (style) {
+	var styles = (element.styles || []).map(function (style) {
 		var code = style;
 		return code.replace(/[\r\n]*([^%\{;\}]+?)\{/gm, function (global, match) {
 			if (match.trim().match(/^@/)) {
@@ -747,7 +734,8 @@ function handleStyles(element) {
 			});
 			return global.replace(match, selectors.join(','));
 		}).replace(/:host\b/gm, tagName) + '\n';
-	}).join('\n'));
+	}).join('\n');
+	trigger('publish-style', { styles: styles, tagName: tagName });
 }
 
 on('--zino-initialize-node', initializeNode);
