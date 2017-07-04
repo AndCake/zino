@@ -43,6 +43,10 @@ test('script added', t => {
 	t.throws(function() {
 		result.functions.render();
 	}, 'render can run!');
+
+	result = run(parse('<btn><script>// thisis my test comment\n// another test</script><script>{props: {me: 2, // old value\ntest: "123"}}</script></btn>'));
+	t.is(result.functions.props.me, 2);
+	t.is(result.functions.props.test, '123');
 });
 
 test('styles generated', t => {

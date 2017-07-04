@@ -828,8 +828,11 @@ function parse(data) {
 
 	// clean up code
 	on('--zino-addscript', function (content) {
-		resultObject.functions.push(content.trim().replace(/;$/, ''));
-		usesMerge = true;
+		content = content.trim().replace(/;$/, '').replace(/\/\/.*$/gm, '');
+		if (content.trim()) {
+			resultObject.functions.push(content);
+			usesMerge = true;
+		}
 	});
 	data = data.replace(commentRegExp, '').replace(/<(script|style)([^>]*?)>((?:.|\n)*?)<\/\1>/gi, function (g, x, a, m) {
 		if (x === 'style') {

@@ -41,7 +41,7 @@ To learn about the latest changes to Zino, please take a look at the [Release No
 - AngularJS 4.1.3: 237.41 KB minified & gzipped
 - Polymer 1.8.0 + Web Components Polyfill Lite: 66.3 KB minified & gzipped
 - ReactJS (15.6.1 + Redux): 51.1KB minified & gzipped
-- Zino: 5.8 KB minified & gzipped
+- Zino: 6.0 KB minified & gzipped
 
 Installation
 ------------
