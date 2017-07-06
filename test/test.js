@@ -40,5 +40,6 @@ export default function(name, fn) {
 		console.log(`√ ${name} (${+new Date - runTime}ms)`.green);
 	} catch (e) {
 		console.error(`x ${name} (${+new Date - runTime}ms) failed: ${e.message}`.red);
+		if (e.message.indexOf('Assertion failed:') < 0) console.log(e);
 	}
 }

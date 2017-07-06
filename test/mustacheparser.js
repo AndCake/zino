@@ -57,6 +57,12 @@ test('styles generated', t => {
 	let dom = result.render(result.functions);
 	t.is(dom[0].attributes.style, 'border:1px solid red;');
 	t.is(getInnerHTML(Tag('div', {}, dom)), '<div style="border:1px solid red;">X</div>');
+
+	result = run(parse('<styleguide-color>Hello World!<style>my style</style></styleguide-color>'));
+	t.not(typeof result.styles, 'undefined');
+	t.is(result.styles[0], 'my style');
+	dom = result.render(result.functions);
+	t.is(dom[0], 'Hello World!');
 });
 
 test('simple variables', t => {

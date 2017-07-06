@@ -620,18 +620,18 @@ function renderTag(tag) {
 	tag.__complexity = renderedDOM.__complexity;
 	tag.__subElements = renderedSubElements;
 
-	renderedSubElements.length > 0 && (tag.querySelectorAll && [].slice.call(tag.querySelectorAll('[__ready]')) || renderedSubElements).forEach(function (subEl, index) {
+	renderedSubElements.length > 0 && (tag.querySelectorAll && [].slice.call(tag.querySelectorAll('[__ready]')) || []).forEach(function (subEl, index) {
 		merge(subEl, renderedSubElements[index]);
-		renderedSubElements[index].getHost = defaultFunctions.getHost.bind(subEl);
+		subEl.getHost = renderedSubElements[index].getHost = defaultFunctions.getHost.bind(subEl);
 	});
 
 	if (!this || !this.noRenderCall) {
 		renderCallbacks.forEach(function (callback) {
-			return callback();
+			return callback.fn.call(callback.tag.getHost());
 		});
 		registryEntry.functions.render.call(tag);
 	} else {
-		renderCallbacks.push(registryEntry.functions.render.bind(tag));
+		renderCallbacks.push({ fn: registryEntry.functions.render, tag: tag });
 	}
 	return { events: events, renderCallbacks: renderCallbacks, data: data };
 }
@@ -791,7 +791,7 @@ function parse(data) {
 			var key = match[1];
 			var value = key.substr(1);
 			if (key[0] === '#') {
-				result += 'spread(toArray(' + getData() + ', \'' + value + '\').map(function (e, i, a) {\n\t\t\t\t\t\tvar data$' + (level + 1) + ' = merge({}, data' + (0 <= level ? '' : '$' + level) + ', {\'.\': e, \'.index\': i, \'.length\': a.length}, e);\n\t\t\t\t\t\treturn [';
+				result += 'spread(toArray(' + getData() + ', \'' + value + '\').map(function (e, i, a) {\n\t\t\t\t\t\tvar data$' + (level + 1) + ' = merge({}, data' + (0 >= level ? '' : '$' + level) + ', {\'.\': e, \'.index\': i, \'.length\': a.length}, e);\n\t\t\t\t\t\treturn [';
 				level += 1;
 				usesMerge = true;
 				usesSpread = true;
@@ -841,14 +841,19 @@ function parse(data) {
 
 	// clean up code
 	on('--zino-addscript', function (content) {
-		resultObject.functions.push(content.trim().replace(/;$/, ''));
-		usesMerge = true;
+		content = content.trim().replace(/;$/, '').replace(/(['"`])([^\1\n]*)\1/gm, function (g, m, c) {
+			return g.replace(c, c.replace(/\/\//g, '\\/\\/'));
+		}).replace(/\/\/.*$/gm, '');
+		if (content.trim()) {
+			resultObject.functions.push(content);
+			usesMerge = true;
+		}
 	});
-	data = data.replace(commentRegExp, '').replace(/<(script|style)([^>]*?)>((?:.|\n)*?)<\/\1>/gi, function (g, x, a, m) {
+	data = data.replace(commentRegExp, '').replace(/<(script|style)(\s+[^>]*?)?>((?:.|\n)*?)<\/\1>/gi, function (g, x, a, m) {
 		if (x === 'style') {
 			resultObject.styles.push(m);
 		} else {
-			if (a.match(/\s+src=(?:(?:'([^']+)')|(?:"([^"]+)"))/g)) {
+			if (a && a.match(/\s+src=(?:(?:'([^']+)')|(?:"([^"]+)"))/g)) {
 				trigger('publish-script', RegExp.$1 || RegExp.$2);
 			} else {
 				trigger('--zino-addscript', m);

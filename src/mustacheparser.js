@@ -110,7 +110,7 @@ export function parse(data) {
 			let value = key.substr(1);
 			if (key[0] === '#') {
 				result += `spread(toArray(${getData()}, '${value}').map(function (e, i, a) {
-						var data$${level + 1} = merge({}, data${0 <= level ? '' : '$' + level}, {'.': e, '.index': i, '.length': a.length}, e);
+						var data$${level + 1} = merge({}, data${0 >= level ? '' : '$' + level}, {'.': e, '.index': i, '.length': a.length}, e);
 						return [`;
 				level += 1;
 				usesMerge = true;
@@ -159,17 +159,17 @@ export function parse(data) {
 
  	// clean up code
 	on('--zino-addscript', content => {
-		content = content.trim().replace(/;$/,'').replace(/\/\/.*$/gm, '');
+		content = content.trim().replace(/;$/,'').replace(/(['"`])([^\1\n]*)\1/gm, (g,m,c) => g.replace(c, c.replace(/\/\//g, '\\/\\/'))).replace(/\/\/.*$/gm, '');
 		if (content.trim()) {
 			resultObject.functions.push(content);
 			usesMerge = true;
 		}
 	});	 
-	data = data.replace(commentRegExp, '').replace(/<(script|style)([^>]*?)>((?:.|\n)*?)<\/\1>/gi, (g, x, a, m) => {
+	data = data.replace(commentRegExp, '').replace(/<(script|style)(\s+[^>]*?)?>((?:.|\n)*?)<\/\1>/gi, (g, x, a, m) => {
 		if (x === 'style') {
 			resultObject.styles.push(m);
 		} else {
-			if (a.match(/\s+src=(?:(?:'([^']+)')|(?:"([^"]+)"))/g)) {
+			if (a && a.match(/\s+src=(?:(?:'([^']+)')|(?:"([^"]+)"))/g)) {
 				trigger('publish-script', RegExp.$1 || RegExp.$2);
 			} else {
 				trigger('--zino-addscript', m);

@@ -229,16 +229,16 @@ function renderTag(tag, registryEntry = tagRegistry[tag.tagName.toLowerCase()]) 
 	tag.__complexity = renderedDOM.__complexity;
 	tag.__subElements = renderedSubElements;
 
-	renderedSubElements.length > 0 && (tag.querySelectorAll && [].slice.call(tag.querySelectorAll('[__ready]')) || renderedSubElements).forEach((subEl, index) => {
+	renderedSubElements.length > 0 && (tag.querySelectorAll && [].slice.call(tag.querySelectorAll('[__ready]')) || []).forEach((subEl, index) => {
 		merge(subEl, renderedSubElements[index]);
-		renderedSubElements[index].getHost = defaultFunctions.getHost.bind(subEl);
+		subEl.getHost = renderedSubElements[index].getHost = defaultFunctions.getHost.bind(subEl);
 	});
 
 	if (!this || !this.noRenderCall) {
-		renderCallbacks.forEach(callback => callback());
+		renderCallbacks.forEach(callback => callback.fn.call(callback.tag.getHost()));
 		registryEntry.functions.render.call(tag);
 	} else {
-		renderCallbacks.push(registryEntry.functions.render.bind(tag));
+		renderCallbacks.push({fn: registryEntry.functions.render, tag});
 	}
 	return {events, renderCallbacks, data};
 }
