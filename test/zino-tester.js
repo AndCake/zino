@@ -58,3 +58,13 @@ test('can deal with external scripts', t => {
 	let ext = document.body.children[0];
 	t.is(ext.querySelectorAll('.test')[0].innerHTML, 'Hello, World!', 'is able to import external JS files');
 });
+test('Can manage event handling', t => {
+	Zino.on('my-event', () => {throw 'event called'});
+	t.throws(() => {
+		Zino.trigger('my-event');
+	}, 'event called');
+	zino.clearEvents();
+	// should not throw anymore
+	Zino.trigger('my-event');
+
+});

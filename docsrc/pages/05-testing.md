@@ -56,6 +56,7 @@ Zino offers three methods to support your testing efforts:
  * `importTag(<pathToTag>[, <document>])` - imports a Zino component into the registry so that it can be used for testing. If the second parameter, which should be a virtual DOM implementation is provided, all instances of the imported component will be rendered in that document
  * `matchesSnapshot(<tagExample>, <data>)` - renders the tag as if it were used in a browser and checks if a previous snapshot of it has changed
  * `clearImports()` - removes all imported components from memory.
+ * `clearEvents()` - removes all custom event handlers that have been registered
 
 If you have written your JS or CSS code in an external file and embedded it via `<script src="path/to/external-file.js"></script>` / `<link rel="stylesheet" href="path/to/file.css"/>`, you should always use the compilation result coming from [grunt-zino](https://npmjs.com/package/grunt-zino) for testing. Else the script functionality / styling won't be applied within your test.
 

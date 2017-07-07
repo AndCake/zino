@@ -13,7 +13,8 @@ import readline from 'readline-sync';
 
 const sha1 = data => createHash('sha1').update(data).digest('hex');
 let fileName = null,
-	tagPath;
+	tagPath,
+	eventList = [];
 
 merge(global, {
 	Zino: {
@@ -49,6 +50,20 @@ export function importTag(tagFile, document) {
 
 export function clearImports() {
 	core.flushRegisteredTags();
+}
+
+export function clearEvents() {
+	console.log('called!');
+	eventList = eventList.filter(event => {
+		console.log('filtering ', event);
+		if (!event.name.match(/^--|^publish-(?:style|script)$/)) {
+			console.log('offing');
+
+			off(event.name);
+			return false;
+		}
+		return true;
+	});
 }
 
 export function matchesSnapshot(...args) {
@@ -109,6 +124,7 @@ export function matchesSnapshot(...args) {
 	}
 }
 on('--zino-rerender-tag', core.render);
+on('--event-register', obj => eventList.push(obj));
 
 function writeResult(result) {
 	fs.writeFileSync(fileName, result);

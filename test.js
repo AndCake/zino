@@ -930,6 +930,7 @@ var sha1 = function sha1(data) {
 };
 var fileName = null;
 var tagPath = void 0;
+var eventList = [];
 
 merge(global, {
 	Zino: {
@@ -967,6 +968,20 @@ function importTag(tagFile, document) {
 
 function clearImports() {
 	flushRegisteredTags();
+}
+
+function clearEvents() {
+	console.log('called!');
+	eventList = eventList.filter(function (event) {
+		console.log('filtering ', event);
+		if (!event.name.match(/^--|^publish-(?:style|script)$/)) {
+			console.log('offing');
+
+			off(event.name);
+			return false;
+		}
+		return true;
+	});
 }
 
 function matchesSnapshot() {
@@ -1051,6 +1066,9 @@ function matchesSnapshot() {
 	}
 }
 on('--zino-rerender-tag', render);
+on('--event-register', function (obj) {
+	return eventList.push(obj);
+});
 
 function writeResult(result) {
 	fs.writeFileSync(fileName, result);
@@ -1058,4 +1076,5 @@ function writeResult(result) {
 
 exports.importTag = importTag;
 exports.clearImports = clearImports;
+exports.clearEvents = clearEvents;
 exports.matchesSnapshot = matchesSnapshot;
