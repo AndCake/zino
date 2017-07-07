@@ -971,12 +971,8 @@ function clearImports() {
 }
 
 function clearEvents() {
-	console.log('called!');
 	eventList = eventList.filter(function (event) {
-		console.log('filtering ', event);
 		if (!event.name.match(/^--|^publish-(?:style|script)$/)) {
-			console.log('offing');
-
 			off(event.name);
 			return false;
 		}
