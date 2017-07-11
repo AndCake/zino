@@ -235,18 +235,28 @@ describe('zino', function () {
 	
 	describe('Escaping', function() {
 		var cb = document.createElement('cb');
+		cb.innerHTML = '<div class="me">123</div>'
 		document.body.appendChild(cb);
 		it('works for dynamic HTML content', function(done) {
 			Zino.import(function(Tag) {
 				return {
 					tagName: 'cb',
 					render: function(data) {
-						return new Tag('div', {}, ['<div class="test">ABC</div>']);
+						return new Tag('div', {'class': 'test'}, data.body);
 					}
 				}
 			});
 			setTimeout(function() {
-				assertElementHasContent('cb .-shadow-root .test', 'ABC', 'renders HTML values correctly');
+				assertElementHasContent('cb .-shadow-root .test .me', '123', 'renders HTML values correctly');
+				done();
+			}, 32);
+		});
+		it('updated the component correctly', function(done) {
+			cb.body = '<div class="me">test<span>huhu</span>123</div>';
+			setTimeout(function() {
+				if (document.querySelectorAll('cb .-shadow-root .test .me span').length <= 0) {
+					throw new Error('Assertion failed: dynamic HTML in a component correctly' + cb.outerHTML);
+				}
 				done();
 			}, 32);
 		});

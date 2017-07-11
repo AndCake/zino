@@ -2,10 +2,14 @@ import {isFn} from './utils';
 
 let eventQueue = {};
 
+function publishEvent(type, data) {
+	data.name.indexOf('--event-') && trigger('--event-' + type, data);
+}
+
 export function trigger(name, data) {
 	if (!eventQueue[name]) return;
 	for (let index in eventQueue[name]) {
-		name.indexOf('--event-') && trigger('--event-trigger', {name, fn: eventQueue[name][index], data});
+		publishEvent('trigger', {name, fn: eventQueue[name][index], data});
 		let result = eventQueue[name][index](data);
 		if (result === false) break;
 	}
@@ -16,18 +20,18 @@ export function on(name, fn) {
 		eventQueue[name] = [];
 	}
 	eventQueue[name].push(fn);
-	name.indexOf('--event-') && trigger('--event-register', {name, fn});
+	publishEvent('register', {name, fn});
 }
 
 export function off(name, fn) {
 	if (!isFn(fn)) {
 		delete eventQueue[name];
-		return name.indexOf('--event-') && trigger('--event-unregister', {name});
+		return publishEvent('unregister', {name});
 	}
 	for (let index in eventQueue[name]) {
 		if (eventQueue[name][index] === fn) {
 			delete eventQueue[name][index];
-			return name.indexOf('--event-') && trigger('--event-unregister', {name, fn});
+			return publishEvent('unregister', {name, fn});
 		}
 	}
 }

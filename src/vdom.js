@@ -132,6 +132,22 @@ function createElement(node, document) {
 	return tag;
 }
 
+function applyText(domChild, dom, node, document) {
+	// simply apply the value
+	if (node.match(/<[\w:_-]+[^>]*>/)) {
+		if (dom.childNodes.length === 1) {
+			dom.innerHTML = node;
+		} else {
+			let html = document.createElement('span');
+			html.innerHTML = node;
+			dom.replaceChild(html, domChild);
+		}
+	} else {
+		// it's just a text node, so simply replace the element with the text node
+		dom.replaceChild(createElement(node.replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&'), document), domChild);
+	}	
+}
+
 /**
  * Applies a VDOM to an actual DOM, meaning that the state of the VDOM will be recreated on the DOM.
  * The end result is, that the DOM structure is the same as the VDOM structure. Existing elements will
@@ -194,18 +210,7 @@ export function applyDOM(dom, vdom, document) {
 			// is a text node
 			// if the VDOM node is also a text node
 			if (typeof node === 'string' && domChild.nodeValue !== node) {
-				// simply apply the value
-				if (node.match(/<[\w:_-]+[^>]*>/)) {
-					if (domChild.children.length === 1) {
-						domChild.parentNode.innerHTML = node;
-					} else {
-						let html = document.createElement('span');
-						html.innerHTML = node;
-						domChild.parentNode.replaceChild(html, domChild);
-					}
-				} else {
-					domChild.nodeValue = node.replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
-				}
+				applyText(domChild, dom, node, document);
 			} else if (typeof node !== 'string') {
 				// else replace with a new element
 				dom.replaceChild(createElement(node, document), domChild);
@@ -216,8 +221,7 @@ export function applyDOM(dom, vdom, document) {
 				// the VDOM is also a tag, apply it recursively
 				applyDOM(domChild, node, document);
 			} else {
-				// it's just a text node, so simply replace the element with the text node
-				dom.replaceChild(createElement(node, document), domChild);
+				applyText(domChild, dom, node, document);
 			}
 		}
 	});

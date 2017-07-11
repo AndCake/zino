@@ -1,5 +1,5 @@
 import * as vdom from './vdom';
-import {emptyFunc, isFn, isObj, error, uuid, merge} from './utils';
+import {emptyFunc, isFn, isObj, uuid, merge} from './utils';
 import {trigger, on, attachEvent} from './events';
 
 let tagRegistry = {},
@@ -133,7 +133,7 @@ function initializeNode({tag, node: functions = defaultFunctions}) {
 			if (isFn(entry)) {
 				tag[all] = entry.bind(tag);
 			} else {
-				tag[all] = typeof tag[all] === 'object' ? merge({}, entry, tag[all]) : entry;
+				tag[all] = isObj(tag[all]) ? merge({}, entry, tag[all]) : entry;
 			}
 		}
 	}
@@ -177,7 +177,7 @@ function initializeNode({tag, node: functions = defaultFunctions}) {
 		functions.mount.call(tag);
 		delete tag.mounting;
 	} catch (e) {
-		error('mount', tag.tagName, e);
+		throw new Error('Unable to call mount function for ' + tag.tagName + ': ' + (e.message || e));
 	}
 }
 
@@ -227,7 +227,6 @@ function renderTag(tag, registryEntry = tagRegistry[tag.tagName.toLowerCase()]) 
 	}
 	tag.__vdom = renderedDOM;
 	tag.__complexity = renderedDOM.__complexity;
-	tag.__subElements = renderedSubElements;
 
 	renderedSubElements.length > 0 && (tag.querySelectorAll && [].slice.call(tag.querySelectorAll('[__ready]')) || []).forEach((subEl, index) => {
 		merge(subEl, renderedSubElements[index]);
@@ -273,7 +272,7 @@ function unmountTag(tag) {
 		try {
 			entry.functions.unmount.call(tag);
 		} catch (e) {
-			error('Unable to unmount tag ' + name, e);
+			throw new Error('Unable to unmount tag ' + name + ': ' + (e.message || e));
 		}
 	}
 }
