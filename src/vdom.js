@@ -195,7 +195,17 @@ export function applyDOM(dom, vdom, document) {
 			// if the VDOM node is also a text node
 			if (typeof node === 'string' && domChild.nodeValue !== node) {
 				// simply apply the value
-				domChild.nodeValue = node;
+				if (node.match(/<[\w:_-]+[^>]*>/)) {
+					if (domChild.children.length === 1) {
+						domChild.parentNode.innerHTML = node;
+					} else {
+						let html = document.createElement('span');
+						html.innerHTML = node;
+						domChild.parentNode.replaceChild(html, domChild);
+					}
+				} else {
+					domChild.nodeValue = node.replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+				}
 			} else if (typeof node !== 'string') {
 				// else replace with a new element
 				dom.replaceChild(createElement(node, document), domChild);

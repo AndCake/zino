@@ -232,4 +232,23 @@ describe('zino', function () {
 			}, 32);
 		});
 	});
+	
+	describe('Escaping', function() {
+		var cb = document.createElement('cb');
+		document.body.appendChild(cb);
+		it('works for dynamic HTML content', function(done) {
+			Zino.import(function(Tag) {
+				return {
+					tagName: 'cb',
+					render: function(data) {
+						return new Tag('div', {}, ['<div class="test">ABC</div>']);
+					}
+				}
+			});
+			setTimeout(function() {
+				assertElementHasContent('cb .-shadow-root .test', 'ABC', 'renders HTML values correctly');
+				done();
+			}, 32);
+		});
+	});
 });
