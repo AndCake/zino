@@ -12,7 +12,7 @@ let dom = vdom.Tag('html', {}, [
 	]);
 
 test('generates DOM structure', t => {
-	t.is(dom.children[0].children[0].attributes['class'], 'title', 'Correctly arranges attributes');
+	t.is(dom.children[0].children[0].attributes['class'].value, 'title', 'Correctly arranges attributes');
 	t.is(dom.children[0].children[1].children[0], 'Hello, World!', 'deals with text nodes');
 });
 

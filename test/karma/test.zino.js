@@ -4,13 +4,13 @@ var assert = function(value, message) {
 	}
 },
 assertEqual = function(a, b, message) {
-	assert(a === b, message || (JSON.stringify(a) + ' === ' + JSON.stringify(b)));
+	assert(a === b, (message || '') + '; ' + (JSON.stringify(a) + ' === ' + JSON.stringify(b)));
 },
 assertNotEmpty = function(el, message) {
-	assert(el.length > 0, message || (JSON.stringify(el) + ' is not empty'));
+	assert(el.length > 0, (message || '') + '; ' + (JSON.stringify(el) + ' is not empty'));
 },
 assertEmpty = function(el, message) {
-	assert(el.length <= 0, message || (JSON.stringify(el) + ' is empty'));
+	assert(el.length <= 0, (message || '') + '; ' + (JSON.stringify(el) + ' is empty'));
 },
 assertThrows = function(fn, message) {
 	var threw = false;
@@ -191,7 +191,7 @@ describe('zino', function () {
 				assertElementHasContent('my-component .-shadow-root #my-id', 'Hello,World!<p>Paragraph</p>');
 				done();
 			}, 32)
-		});		
+		});
 	});
 
 	describe('re-renders tag dynamically', function() {

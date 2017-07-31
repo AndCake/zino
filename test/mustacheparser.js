@@ -33,7 +33,7 @@ test('simple component', t => {
 
 	t.is(render(`<a><btn type="XX{{test}}YY">A</btn></a>`, {test: 2}), '<btn type="XX2YY">A</btn>', 'can have mixed variable and static content in attribute');
 	t.is(render(`<a><btn type="XX{{#test}}{{.}}{{/test}}YY">A</btn></a>`, {test: 2}), '<btn type="XX2YY">A</btn>', 'can have mixed variable and static content in attribute');
-	t.is(render(`<a><btn type="XX{{#test}}A{{.}}B{{/test}}YY">A</btn></a>`, {test: [1, 2]}), '<btn type="XXA1BA2BYY">A</btn>', 'can have mixed variable and static content in attribute');	
+	t.is(render(`<a><btn type="XX{{#test}}A{{.}}B{{/test}}YY">A</btn></a>`, {test: [1, 2]}), '<btn type="XXA1BA2BYY">A</btn>', 'can have mixed variable and static content in attribute');
 });
 
 test('script added', t => {
@@ -55,7 +55,7 @@ test('styles generated', t => {
 	t.not(typeof result.styles, 'undefined');
 	t.is(result.styles.length, 1);
 	let dom = result.render(result.functions);
-	t.is(dom[0].attributes.style, 'border:1px solid red;');
+	t.is(dom[0].attributes.style.value, 'border:1px solid red;');
 	t.is(getInnerHTML(Tag('div', {}, dom)), '<div style="border:1px solid red;">X</div>');
 
 	result = run(parse('<styleguide-color>Hello World!<style>my style</style></styleguide-color>'));
