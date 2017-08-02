@@ -17,10 +17,14 @@ export function setDataResolver(resolver) {
 
 export function Tag(tagName, attributes, children) {
 	tagName = tagName.toLowerCase();
+	attributes = attributes || {};
+	Object.keys(attributes).forEach(attr => {
+		attributes[attr] = {name: attr, value: attributes[attr]};
+	});
 	children = children && (typeof children !== 'object' || children.tagName) ? [children] : children || [];
 	let tag = {
 		tagName,
-		attributes: attributes || {},
+		attributes,
 		children: children,
 		__complexity: children.reduce(((a, b) => a + (b.__complexity || 1)), 0) + children.length
 	};
@@ -31,7 +35,7 @@ export function Tag(tagName, attributes, children) {
 /**
  * Returns all tags with a given tag name. If the provided context contains a getElementsByTagName() function,
  * that will be used to retrieve the data, else a manual recursive lookup will be done
- * 
+ *
  * @param  {String} name - name of the tag to retrieve the elements  of
  * @param  {Object} dom - either a VDOM node or a DOM node
  * @return {Array} - list of elements that match the provided tag name
@@ -77,7 +81,7 @@ export function getTagsCreated() {
 
 /**
  * Calculates the HTML structure as a String represented by the VDOM
- * 
+ *
  * @param  {Object} node - the VDOM node whose inner HTML to generate
  * @return {String} - the HTML structure representing the VDOM
  */
@@ -91,11 +95,11 @@ export function getInnerHTML(node) {
 		} else if (isArray(child)) {
 			return getInnerHTML(child);
 		} else {
-			let attributes = [''].concat(Object.keys(child.attributes).map((attr) => {
-				if (typeof child.attributes[attr] === 'object') {
-					return attr + '="--' + dataResolver(attr, child.attributes[attr]) + '--"';
+			let attributes = [''].concat(Object.keys(child.attributes).map(attr => {
+				if (typeof child.attributes[attr].value === 'object') {
+					return attr + '="--' + dataResolver(attr, child.attributes[attr].value) + '--"';
 				} else {
-					return attr+'="' + child.attributes[attr] + '"';
+					return attr+'="' + child.attributes[attr].value + '"';
 				}
 			}));
 			return `<${child.tagName}${attributes.join(' ')}>${getInnerHTML(child)}</${child.tagName}>`;
@@ -105,7 +109,7 @@ export function getInnerHTML(node) {
 
 /**
  * Creates a new DOM node
- * 
+ *
  * @param  {Object|String} node - a VDOM node
  * @param  {Document} document - the document in which to create the DOM node
  * @return {Node} - the DOM node created (either a text element or an HTML element)
@@ -119,7 +123,7 @@ function createElement(node, document) {
 		tag = document.createElement(node.tagName);
 		// add all required attributes
 		Object.keys(node.attributes).forEach((attr) => {
-			tag.setAttribute(attr, node.attributes[attr]);
+			tag.setAttribute(attr, node.attributes[attr].value);
 		});
 		if (node.__vdom) {
 			// it's a component, so don't forget to initialize this new instance
@@ -152,7 +156,7 @@ function applyText(domChild, dom, node, document) {
  * Applies a VDOM to an actual DOM, meaning that the state of the VDOM will be recreated on the DOM.
  * The end result is, that the DOM structure is the same as the VDOM structure. Existing elements will
  * be repurposed, new elements created where necessary.
- * 
+ *
  * @param  {DOM} dom - the DOM to which the VDOM should be applied
  * @param  {Object} vdom - the VDOM to apply to the DOM
  * @param  {Document} document - the document that the DOM is based on, used for createElement() and createTextNode() calls
@@ -169,17 +173,17 @@ export function applyDOM(dom, vdom, document) {
 			// check all vdom attributes
 			Object.keys(vdom.attributes).forEach(attr => {
 				// if the VDOM attribute is a non-object
-				if (typeof vdom.attributes[attr] !== 'object') {
+				if (typeof vdom.attributes[attr].value !== 'object') {
 					// check if it differs
-					if (dom.getAttribute(attr) != vdom.attributes[attr]) {
+					if (dom.getAttribute(attr) != vdom.attributes[attr].value) {
 						// if so, apply it
-						dom.setAttribute(attr, vdom.attributes[attr]);
+						dom.setAttribute(attr, vdom.attributes[attr].value);
 					}
 				} else {
 					// the attribute is an object
 					if (dom.getAttribute(attr) && dom.getAttribute(attr).match(/^--|--$/g)) {
 						// if it has a complex value, use the data resolver to define it on the DOM
-						let id = dataResolver(attr, vdom.attributes[attr], dom.getAttribute(attr).replace(/^--|--$/g, ''));
+						let id = dataResolver(attr, vdom.attributes[attr].value, dom.getAttribute(attr).replace(/^--|--$/g, ''));
 						// only set the ID with markers so that we know it is supposed to be a complex value
 						dom.setAttribute(attr, `--${id}--`);
 					}
@@ -203,10 +207,10 @@ export function applyDOM(dom, vdom, document) {
 	children.forEach((node, index) => {
 		if (isArray(node)) return applyDOM(dom, node, document);
 		let domChild = dom.childNodes[index];
-		if (typeof domChild === 'undefined') {	
+		if (typeof domChild === 'undefined') {
 			// does not exist, so it needs to be appended
 			dom.appendChild(createElement(node, document));
-		} else if (domChild.nodeType === 3) {	
+		} else if (domChild.nodeType === 3) {
 			// is a text node
 			// if the VDOM node is also a text node
 			if (typeof node === 'string' && domChild.nodeValue !== node) {
@@ -215,7 +219,7 @@ export function applyDOM(dom, vdom, document) {
 				// else replace with a new element
 				dom.replaceChild(createElement(node, document), domChild);
 			}
-		} else if (domChild.nodeType === 1) {	
+		} else if (domChild.nodeType === 1) {
 			// is a normal HTML tag
 			if (typeof node === 'object') {
 				// the VDOM is also a tag, apply it recursively

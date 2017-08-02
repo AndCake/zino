@@ -8,7 +8,7 @@ export function merge (target, ...args) {
 	args.forEach(arg => {
 		for (let all in arg) {
 			if ((typeof HTMLElement !== 'undefined' && arg instanceof HTMLElement) || typeof propDetails(arg, all).value !== 'undefined' && (!target[all] || propDetails(target, all).writable)) {
-				target[all] = arg[all];
+				if (all !== 'attributes') target[all] = arg[all];
 			}
 		}
 	});
@@ -30,7 +30,7 @@ function propDetails(obj, attribute) {
 export function objectDiff(objA, objB) {
 	let result = {},
 		partialDiff;
-				
+
 	if (!objA) return objB || false;
 	if (!objB) return objA || false;
 	Object.keys(objA).forEach((key, index) => {
@@ -60,12 +60,11 @@ export function objectDiff(objA, objB) {
 }
 
 export function error(method, tag, parentException) {
-	if (parentException) {
-		throw new Error('Error while calling ' + method + ' function of ' + tag + ': ' + (parentException.message || parentException), parentException.fileName, parentException.lineNumber);
-	} else {
+	if (!parentException) {
 		parentException = tag;
-		throw new Error(method + ': ' + (parentException.message || parentException), parentException.fileName, parentException.lineNumber);
 	}
+	parentException.message = 'Error while calling ' + method + (parentException !== tag ? ' function of ' + tag : '') + ': ' + (parentException.message || parentException);
+	throw parentException;
 }
 
 /**

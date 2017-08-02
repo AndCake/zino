@@ -32,7 +32,7 @@ function merge(target) {
 	args.forEach(function (arg) {
 		for (var all in arg) {
 			if (typeof HTMLElement !== 'undefined' && arg instanceof HTMLElement || typeof propDetails(arg, all).value !== 'undefined' && (!target[all] || propDetails(target, all).writable)) {
-				target[all] = arg[all];
+				if (all !== 'attributes') target[all] = arg[all];
 			}
 		}
 	});
@@ -54,12 +54,11 @@ function propDetails(obj, attribute) {
 
 
 function error$1(method, tag, parentException) {
-	if (parentException) {
-		throw new Error('Error while calling ' + method + ' function of ' + tag + ': ' + (parentException.message || parentException), parentException.fileName, parentException.lineNumber);
-	} else {
+	if (!parentException) {
 		parentException = tag;
-		throw new Error(method + ': ' + (parentException.message || parentException), parentException.fileName, parentException.lineNumber);
 	}
+	parentException.message = 'Error while calling ' + method + (parentException !== tag ? ' function of ' + tag : '') + ': ' + (parentException.message || parentException);
+	throw parentException;
 }
 
 /**
@@ -173,10 +172,14 @@ function setDataResolver(resolver) {
 
 function Tag(tagName, attributes, children) {
 	tagName = tagName.toLowerCase();
+	attributes = attributes || {};
+	Object.keys(attributes).forEach(function (attr) {
+		attributes[attr] = { name: attr, value: attributes[attr] };
+	});
 	children = children && ((typeof children === 'undefined' ? 'undefined' : _typeof(children)) !== 'object' || children.tagName) ? [children] : children || [];
 	var tag = {
 		tagName: tagName,
-		attributes: attributes || {},
+		attributes: attributes,
 		children: children,
 		__complexity: children.reduce(function (a, b) {
 			return a + (b.__complexity || 1);
@@ -189,7 +192,7 @@ function Tag(tagName, attributes, children) {
 /**
  * Returns all tags with a given tag name. If the provided context contains a getElementsByTagName() function,
  * that will be used to retrieve the data, else a manual recursive lookup will be done
- * 
+ *
  * @param  {String} name - name of the tag to retrieve the elements  of
  * @param  {Object} dom - either a VDOM node or a DOM node
  * @return {Array} - list of elements that match the provided tag name
@@ -237,7 +240,7 @@ function getTagsCreated() {
 
 /**
  * Calculates the HTML structure as a String represented by the VDOM
- * 
+ *
  * @param  {Object} node - the VDOM node whose inner HTML to generate
  * @return {String} - the HTML structure representing the VDOM
  */
@@ -252,10 +255,10 @@ function getInnerHTML(node) {
 			return getInnerHTML(child);
 		} else {
 			var attributes = [''].concat(Object.keys(child.attributes).map(function (attr) {
-				if (_typeof(child.attributes[attr]) === 'object') {
-					return attr + '="--' + dataResolver(attr, child.attributes[attr]) + '--"';
+				if (_typeof(child.attributes[attr].value) === 'object') {
+					return attr + '="--' + dataResolver(attr, child.attributes[attr].value) + '--"';
 				} else {
-					return attr + '="' + child.attributes[attr] + '"';
+					return attr + '="' + child.attributes[attr].value + '"';
 				}
 			}));
 			return '<' + child.tagName + attributes.join(' ') + '>' + getInnerHTML(child) + '</' + child.tagName + '>';
@@ -265,7 +268,7 @@ function getInnerHTML(node) {
 
 /**
  * Creates a new DOM node
- * 
+ *
  * @param  {Object|String} node - a VDOM node
  * @param  {Document} document - the document in which to create the DOM node
  * @return {Node} - the DOM node created (either a text element or an HTML element)
@@ -279,7 +282,7 @@ function createElement(node, document) {
 		tag = document.createElement(node.tagName);
 		// add all required attributes
 		Object.keys(node.attributes).forEach(function (attr) {
-			tag.setAttribute(attr, node.attributes[attr]);
+			tag.setAttribute(attr, node.attributes[attr].value);
 		});
 		if (node.__vdom) {
 			// it's a component, so don't forget to initialize this new instance
@@ -296,7 +299,7 @@ function createElement(node, document) {
  * Applies a VDOM to an actual DOM, meaning that the state of the VDOM will be recreated on the DOM.
  * The end result is, that the DOM structure is the same as the VDOM structure. Existing elements will
  * be repurposed, new elements created where necessary.
- * 
+ *
  * @param  {DOM} dom - the DOM to which the VDOM should be applied
  * @param  {Object} vdom - the VDOM to apply to the DOM
  * @param  {Document} document - the document that the DOM is based on, used for createElement() and createTextNode() calls
@@ -313,17 +316,17 @@ function applyDOM(dom, vdom, document) {
 			// check all vdom attributes
 			Object.keys(vdom.attributes).forEach(function (attr) {
 				// if the VDOM attribute is a non-object
-				if (_typeof(vdom.attributes[attr]) !== 'object') {
+				if (_typeof(vdom.attributes[attr].value) !== 'object') {
 					// check if it differs
-					if (dom.getAttribute(attr) != vdom.attributes[attr]) {
+					if (dom.getAttribute(attr) != vdom.attributes[attr].value) {
 						// if so, apply it
-						dom.setAttribute(attr, vdom.attributes[attr]);
+						dom.setAttribute(attr, vdom.attributes[attr].value);
 					}
 				} else {
 					// the attribute is an object
 					if (dom.getAttribute(attr) && dom.getAttribute(attr).match(/^--|--$/g)) {
 						// if it has a complex value, use the data resolver to define it on the DOM
-						var id = dataResolver(attr, vdom.attributes[attr], dom.getAttribute(attr).replace(/^--|--$/g, ''));
+						var id = dataResolver(attr, vdom.attributes[attr].value, dom.getAttribute(attr).replace(/^--|--$/g, ''));
 						// only set the ID with markers so that we know it is supposed to be a complex value
 						dom.setAttribute(attr, '--' + id + '--');
 					}
@@ -389,6 +392,18 @@ function applyDOM(dom, vdom, document) {
 	}
 }
 
+var renderOptions = {
+	resolveData: function resolveData(key, value, oldID) {
+		var id = uuid();
+		if (oldID) {
+			// unregister old entry
+			delete dataRegistry[oldID];
+		}
+		dataRegistry[id] = value;
+		return id;
+	}
+};
+
 var tagRegistry = {};
 var dataRegistry = {};
 var defaultFunctions = {
@@ -406,22 +421,14 @@ var defaultFunctions = {
 			merge(tag.props, name);
 		} else {
 			tag.props[name] = value;
+			var attrName = 'data-' + name.replace(/[A-Z]/g, function (g) {
+				return '-' + g.toLowerCase();
+			});
+			if (tag.attributes[attrName]) {
+				defineAttribute(tag, attrName, '--' + renderOptions.resolveData(name, value, tag.attributes[attrName].value) + '--');
+			}
 		}
-		if (!tag.mounting) {
-			trigger('--zino-rerender-tag', tag);
-		}
-	}
-};
-
-var renderOptions = {
-	resolveData: function resolveData(key, value, oldID) {
-		var id = uuid();
-		if (oldID) {
-			// unregister old entry
-			delete dataRegistry[oldID];
-		}
-		dataRegistry[id] = value;
-		return id;
+		!tag.mounting && trigger('--zino-rerender-tag', tag);
 	}
 };
 
@@ -502,19 +509,29 @@ function initializeTag(tag, registryEntry) {
 	subEvents.events = subEvents.events.concat({ childEvents: childEvents, hostEvents: hostEvents, tag: this && this.noEvents ? tag.tagName : tag });
 
 	if (!tag.attributes.__ready) {
-		if (isFn(tag.__s)) {
-			tag.__s('__ready', true);
-		} else if (isFn(tag.setAttribute)) {
-			tag.setAttribute('__ready', true);
-		} else {
-			tag.attributes.__ready = true;
-		}
+		defineAttribute(tag, '__ready', true);
 	}
 	if (!this || this.noEvents !== true) {
 		// attach sub events
 		attachSubEvents(subEvents, tag);
 	} else {
 		return subEvents;
+	}
+}
+
+function defineAttribute(tag, name, value) {
+	if (isFn(tag.__s)) {
+		if (tag.__s === tag.setAttribute) {
+			HTMLElement.prototype.setAttribute.call(tag, name, value);
+		} else {
+			tag.__s(name, value);
+		}
+	} else {
+		if (tag.ownerDocument) {
+			HTMLElement.prototype.setAttribute.call(tag, name, value);
+		} else {
+			tag.attributes[name] = { name: name, value: value };
+		}
 	}
 }
 
@@ -550,20 +567,7 @@ function initializeNode(_ref) {
 	}
 	tag.__s = tag.setAttribute;
 	tag.setAttribute = function (attr, val) {
-		if (isFn(tag.__s)) {
-			if (tag.__s === this.setAttribute) {
-				HTMLElement.prototype.setAttribute.call(this, attr, val);
-			} else {
-				tag.__s(attr, val);
-			}
-		} else {
-			var _desc = Object.getOwnPropertyDescriptor(this.attributes, attr);
-			if (_desc && !_desc.writable) {
-				HTMLElement.prototype.setAttribute.call(this, attr, val);
-			} else {
-				this.attributes[attr] = val;
-			}
-		}
+		defineAttribute(this, attr, val);
 		trigger('--zino-rerender-tag', this);
 	};
 
@@ -591,9 +595,9 @@ function renderTag(tag) {
 	// do the actual rendering of the component
 	setDataResolver(renderOptions.resolveData);
 	var data = getAttributes(tag);
-	if (tag.ownerDocument || !tag.__vdom) {
-		clearTagsCreated();
-	}
+	//if (tag.ownerDocument || !tag.__vdom) {
+	clearTagsCreated();
+	//}
 	if (isFn(registryEntry.render)) {
 		setFilter(Object.keys(tagRegistry));
 		renderedDOM = Tag('div', { 'class': '-shadow-root' }, registryEntry.render.call(tag, data));
@@ -602,7 +606,7 @@ function renderTag(tag) {
 	}
 
 	// render all contained sub components
-	renderedSubElements = renderedSubElements.concat(getTagsCreated());
+	renderedSubElements = getTagsCreated();
 	renderedSubElements.forEach(function (subEl) {
 		var subElEvents = initializeTag.call({
 			noRenderCallback: true,
@@ -668,7 +672,7 @@ function unmountTag(tag) {
 	    entry = tagRegistry[name];
 	if (entry) {
 		[].forEach.call(tag.nodeType === 1 && tag.attributes || Object.keys(tag.attributes).map(function (attr) {
-			return { name: attr, value: tag.attributes[attr] };
+			return tag.attributes[attr];
 		}), function (attr) {
 			// cleanup saved data
 			if (attr.name.indexOf('data-') >= 0) {
@@ -688,13 +692,10 @@ function getAttributes(tag, propsOnly) {
 	    props = attrs.props;
 
 	[].forEach.call(tag.nodeType === 1 && tag.attributes || Object.keys(tag.attributes).map(function (attr) {
-		return { name: attr, value: tag.attributes[attr] };
+		return tag.attributes[attr];
 	}), function (attribute) {
 		var isComplex = attribute.name.indexOf('data-') >= 0 && typeof attribute.value === 'string' && attribute.value.substr(0, 2) === '--';
-		var value = tag.attributes[attribute.name];
-		if (value.toString() === '[object Attr]' || isObj(value) && typeof value.value !== 'undefined') {
-			value = value.value;
-		}
+		var value = attribute.value;
 		attrs[attribute.name] || (attrs[attribute.name] = isComplex && typeof value === 'string' && dataRegistry[value.replace(/^--|--$/g, '')] || value);
 		if (attribute.name.indexOf('data-') === 0) {
 			props[attribute.name.replace(/^data-/g, '').replace(/(\w)-(\w)/g, function (g, m1, m2) {

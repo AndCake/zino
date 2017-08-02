@@ -2,6 +2,18 @@ import * as vdom from './vdom';
 import {emptyFunc, isFn, isObj, uuid, merge} from './utils';
 import {trigger, on, attachEvent} from './events';
 
+export let renderOptions = {
+	resolveData(key, value, oldID) {
+		let id = uuid();
+		if (oldID) {
+			// unregister old entry
+			delete dataRegistry[oldID];
+		}
+		dataRegistry[id] = value;
+		return id;
+	}
+};
+
 let tagRegistry = {},
 	dataRegistry = {},
 	defaultFunctions = {
@@ -17,24 +29,14 @@ let tagRegistry = {},
 				merge(tag.props, name);
 			} else {
 				tag.props[name] = value;
+				let attrName = 'data-' + name.replace(/[A-Z]/g, g => `-${g.toLowerCase()}`);
+				if (tag.attributes[attrName]) {
+					defineAttribute(tag, attrName, `--${renderOptions.resolveData(name, value, tag.attributes[attrName].value)}--`);
+				}
 			}
-			if (!tag.mounting) {
-				trigger('--zino-rerender-tag', tag);
-			}
+			!tag.mounting && trigger('--zino-rerender-tag', tag);
 		}
 	};
-
-export let renderOptions = {
-	resolveData(key, value, oldID) {
-		let id = uuid();
-		if (oldID) {
-			// unregister old entry
-			delete dataRegistry[oldID];
-		}
-		dataRegistry[id] = value;
-		return id;
-	}
-};
 
 export function registerTag(fn, document, Zino) {
 	let firstElement = fn(vdom.Tag, Zino),
@@ -109,19 +111,29 @@ function initializeTag(tag, registryEntry) {
 	subEvents.events = subEvents.events.concat({childEvents, hostEvents, tag: this && this.noEvents ? tag.tagName : tag})
 
 	if (!tag.attributes.__ready) {
-		if (isFn(tag.__s)) {
-			tag.__s('__ready', true);
-		} else if (isFn(tag.setAttribute)) {
-			tag.setAttribute('__ready', true);
-		} else {
-			tag.attributes.__ready = true;
-		}
+		defineAttribute(tag, '__ready', true);
 	}
 	if (!this || this.noEvents !== true) {
 		// attach sub events
 		attachSubEvents(subEvents, tag);
 	} else {
 		return subEvents;
+	}
+}
+
+function defineAttribute(tag, name, value) {
+	if (isFn(tag.__s)) {
+		if (tag.__s === tag.setAttribute) {
+			HTMLElement.prototype.setAttribute.call(tag, name, value);
+		} else {
+			tag.__s(name, value);
+		}
+	} else {
+		if (tag.ownerDocument) {
+			HTMLElement.prototype.setAttribute.call(tag, name, value);
+		} else {
+			tag.attributes[name] = {name, value};
+		}
 	}
 }
 
@@ -151,20 +163,7 @@ function initializeNode({tag, node: functions = defaultFunctions}) {
 	}
 	tag.__s = tag.setAttribute;
 	tag.setAttribute = function(attr, val) {
-		if (isFn(tag.__s)) {
-			if (tag.__s === this.setAttribute) {
-				HTMLElement.prototype.setAttribute.call(this, attr, val);
-			} else {
-				tag.__s(attr, val);
-			}
-		} else {
-			let desc = Object.getOwnPropertyDescriptor(this.attributes, attr);
-			if (desc && !desc.writable) {
-				HTMLElement.prototype.setAttribute.call(this, attr, val);
-			} else {
-				this.attributes[attr] = val;
-			}
-		}
+		defineAttribute(this, attr, val);
 		trigger('--zino-rerender-tag', this);
 	};
 
@@ -190,9 +189,9 @@ function renderTag(tag, registryEntry = tagRegistry[tag.tagName.toLowerCase()]) 
 	// do the actual rendering of the component
 	vdom.setDataResolver(renderOptions.resolveData);
 	let data = getAttributes(tag);
-	if (tag.ownerDocument || !tag.__vdom) {
-		vdom.clearTagsCreated();
-	}
+	//if (tag.ownerDocument || !tag.__vdom) {
+	vdom.clearTagsCreated();
+	//}
 	if (isFn(registryEntry.render)) {
 		vdom.setFilter(Object.keys(tagRegistry));
 		renderedDOM = vdom.Tag('div', {'class': '-shadow-root'}, registryEntry.render.call(tag, data));
@@ -201,7 +200,7 @@ function renderTag(tag, registryEntry = tagRegistry[tag.tagName.toLowerCase()]) 
 	}
 
 	// render all contained sub components
-	renderedSubElements = renderedSubElements.concat(vdom.getTagsCreated());
+	renderedSubElements = vdom.getTagsCreated();
 	renderedSubElements.forEach(subEl => {
 		let subElEvents = initializeTag.call({
 			noRenderCallback: true,
@@ -263,7 +262,7 @@ function unmountTag(tag) {
 	let name = (tag.tagName || '').toLowerCase(),
 		entry = tagRegistry[name];
 	if (entry) {
-		[].forEach.call(tag.nodeType === 1 && tag.attributes || Object.keys(tag.attributes).map(attr => ({name: attr, value: tag.attributes[attr]})), attr => {
+		[].forEach.call(tag.nodeType === 1 && tag.attributes || Object.keys(tag.attributes).map(attr => tag.attributes[attr]), attr => {
 			// cleanup saved data
 			if (attr.name.indexOf('data-') >= 0) {
 				delete dataRegistry[attr.value];
@@ -281,12 +280,9 @@ function getAttributes(tag, propsOnly) {
 	let attrs = {props: tag.props, element: tag.element, styles: tag.styles, body: tag.__i},
 		props = attrs.props;
 
-	[].forEach.call(tag.nodeType === 1 && tag.attributes || Object.keys(tag.attributes).map(attr => ({name: attr, value: tag.attributes[attr]})), attribute => {
+	[].forEach.call(tag.nodeType === 1 && tag.attributes || Object.keys(tag.attributes).map(attr => tag.attributes[attr]), attribute => {
 		let isComplex = attribute.name.indexOf('data-') >= 0 && typeof attribute.value === 'string' && attribute.value.substr(0, 2) === '--';
-		let value = tag.attributes[attribute.name];
-		if (value.toString() === '[object Attr]' || isObj(value) && typeof value.value !== 'undefined') {
-			value = value.value;
-		}
+		let value = attribute.value;
 		attrs[attribute.name] || (attrs[attribute.name] = isComplex && typeof value === 'string' && dataRegistry[value.replace(/^--|--$/g, '')] || value);
 		if (attribute.name.indexOf('data-') === 0) {
 			props[attribute.name.replace(/^data-/g, '').replace(/(\w)-(\w)/g, (g, m1, m2) => m1 + m2.toUpperCase())] = attrs[attribute.name];
