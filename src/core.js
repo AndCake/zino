@@ -121,21 +121,29 @@ function initializeTag(tag, registryEntry) {
 	}
 }
 
-function defineAttribute(tag, name, value) {
-	if (isFn(tag.__s)) {
-		if (tag.__s === tag.setAttribute) {
-			HTMLElement.prototype.setAttribute.call(tag, name, value);
-		} else {
-			tag.__s(name, value);
-		}
-	} else {
-		if (tag.ownerDocument) {
-			HTMLElement.prototype.setAttribute.call(tag, name, value);
-		} else {
-			tag.attributes[name] = {name, value};
-		}
-	}
-}
+function defineAttribute(tag, name, value) { 
+	// if __s is already defined (which means the component has been mounted already) 
+	if (isFn(tag.__s)) { 
+		// if it's the same as setAttribute 
+		if (tag.__s === tag.setAttribute) { 
+			// we might have a double override => use the original HTMLElement's setAttribute instead to avoid endless recursion 
+			HTMLElement.prototype.setAttribute.call(tag, name, value); 
+		} else { 
+			// we now know it's the original setAttribute (also works for vdom nodes) 
+			tag.__s(name, value); 
+		} 
+	} else { 
+		// if the element is not a mounted component 
+		// but it is a regular HTML element 
+		if (tag.ownerDocument) { 
+			// use the HTMLElement's setAttribute to define the attribute 
+			HTMLElement.prototype.setAttribute.call(tag, name, value); 
+		} else { 
+			// we now know it can only be a vdom node, so set attribute vdom-style 
+			tag.attributes[name] = {name, value}; 
+		} 
+	} 
+} 
 
 function initializeNode({tag, node: functions = defaultFunctions}) {
 	// copy all defined functions/attributes
@@ -189,9 +197,7 @@ function renderTag(tag, registryEntry = tagRegistry[tag.tagName.toLowerCase()]) 
 	// do the actual rendering of the component
 	vdom.setDataResolver(renderOptions.resolveData);
 	let data = getAttributes(tag);
-	//if (tag.ownerDocument || !tag.__vdom) {
 	vdom.clearTagsCreated();
-	//}
 	if (isFn(registryEntry.render)) {
 		vdom.setFilter(Object.keys(tagRegistry));
 		renderedDOM = vdom.Tag('div', {'class': '-shadow-root'}, registryEntry.render.call(tag, data));

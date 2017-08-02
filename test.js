@@ -53,13 +53,7 @@ function propDetails(obj, attribute) {
  */
 
 
-function error$1(method, tag, parentException) {
-	if (!parentException) {
-		parentException = tag;
-	}
-	parentException.message = 'Error while calling ' + method + (parentException !== tag ? ' function of ' + tag : '') + ': ' + (parentException.message || parentException);
-	throw parentException;
-}
+
 
 /**
  * Checks if the given arguments are the provided types, if they do no match, an exception is thrown.
@@ -94,10 +88,14 @@ var emptyFunc = function emptyFunc() {};
 
 var eventQueue = {};
 
+function publishEvent(type, data) {
+	data.name.indexOf('--event-') && trigger('--event-' + type, data);
+}
+
 function trigger(name, data) {
 	if (!eventQueue[name]) return;
 	for (var index in eventQueue[name]) {
-		name.indexOf('--event-') && trigger('--event-trigger', { name: name, fn: eventQueue[name][index], data: data });
+		publishEvent('trigger', { name: name, fn: eventQueue[name][index], data: data });
 		var result = eventQueue[name][index](data);
 		if (result === false) break;
 	}
@@ -108,18 +106,18 @@ function on(name, fn) {
 		eventQueue[name] = [];
 	}
 	eventQueue[name].push(fn);
-	name.indexOf('--event-') && trigger('--event-register', { name: name, fn: fn });
+	publishEvent('register', { name: name, fn: fn });
 }
 
 function off(name, fn) {
 	if (!isFn(fn)) {
 		delete eventQueue[name];
-		return name.indexOf('--event-') && trigger('--event-unregister', { name: name });
+		return publishEvent('unregister', { name: name });
 	}
 	for (var index in eventQueue[name]) {
 		if (eventQueue[name][index] === fn) {
 			delete eventQueue[name][index];
-			return name.indexOf('--event-') && trigger('--event-unregister', { name: name, fn: fn });
+			return publishEvent('unregister', { name: name, fn: fn });
 		}
 	}
 }
@@ -295,6 +293,22 @@ function createElement(node, document) {
 	return tag;
 }
 
+function applyText(domChild, dom, node, document) {
+	// simply apply the value
+	if (node.match(/<[\w:_-]+[^>]*>/)) {
+		if (dom.childNodes.length === 1) {
+			dom.innerHTML = node;
+		} else {
+			var html = document.createElement('span');
+			html.innerHTML = node;
+			dom.replaceChild(html, domChild);
+		}
+	} else {
+		// it's just a text node, so simply replace the element with the text node
+		dom.replaceChild(createElement(node.replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&'), document), domChild);
+	}
+}
+
 /**
  * Applies a VDOM to an actual DOM, meaning that the state of the VDOM will be recreated on the DOM.
  * The end result is, that the DOM structure is the same as the VDOM structure. Existing elements will
@@ -357,18 +371,7 @@ function applyDOM(dom, vdom, document) {
 			// is a text node
 			// if the VDOM node is also a text node
 			if (typeof node === 'string' && domChild.nodeValue !== node) {
-				// simply apply the value
-				if (node.match(/<[\w:_-]+[^>]*>/)) {
-					if (domChild.children.length === 1) {
-						domChild.parentNode.innerHTML = node;
-					} else {
-						var html = document.createElement('span');
-						html.innerHTML = node;
-						domChild.parentNode.replaceChild(html, domChild);
-					}
-				} else {
-					domChild.nodeValue = node.replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
-				}
+				applyText(domChild, dom, node, document);
 			} else if (typeof node !== 'string') {
 				// else replace with a new element
 				dom.replaceChild(createElement(node, document), domChild);
@@ -379,8 +382,7 @@ function applyDOM(dom, vdom, document) {
 				// the VDOM is also a tag, apply it recursively
 				applyDOM(domChild, node, document);
 			} else {
-				// it's just a text node, so simply replace the element with the text node
-				dom.replaceChild(createElement(node, document), domChild);
+				applyText(domChild, dom, node, document);
 			}
 		}
 	});
@@ -520,16 +522,24 @@ function initializeTag(tag, registryEntry) {
 }
 
 function defineAttribute(tag, name, value) {
+	// if __s is already defined (which means the component has been mounted already) 
 	if (isFn(tag.__s)) {
+		// if it's the same as setAttribute 
 		if (tag.__s === tag.setAttribute) {
+			// we might have a double override => use the original HTMLElement's setAttribute instead to avoid endless recursion 
 			HTMLElement.prototype.setAttribute.call(tag, name, value);
 		} else {
+			// we now know it's the original setAttribute (also works for vdom nodes) 
 			tag.__s(name, value);
 		}
 	} else {
+		// if the element is not a mounted component 
+		// but it is a regular HTML element 
 		if (tag.ownerDocument) {
+			// use the HTMLElement's setAttribute to define the attribute 
 			HTMLElement.prototype.setAttribute.call(tag, name, value);
 		} else {
+			// we now know it can only be a vdom node, so set attribute vdom-style 
 			tag.attributes[name] = { name: name, value: value };
 		}
 	}
@@ -547,7 +557,7 @@ function initializeNode(_ref) {
 			if (isFn(entry)) {
 				tag[all] = entry.bind(tag);
 			} else {
-				tag[all] = _typeof(tag[all]) === 'object' ? merge({}, entry, tag[all]) : entry;
+				tag[all] = isObj(tag[all]) ? merge({}, entry, tag[all]) : entry;
 			}
 		}
 	}
@@ -555,12 +565,12 @@ function initializeNode(_ref) {
 	var desc = Object.getOwnPropertyDescriptor(tag, 'body');
 	if (!desc || typeof desc.get === 'undefined') {
 		Object.defineProperty(tag, 'body', {
-			set: function set$$1(val) {
+			set: function set(val) {
 				tag.__i = val;
 				setElementAttr(tag);
 				trigger('--zino-rerender-tag', tag.getHost());
 			},
-			get: function get$$1() {
+			get: function get() {
 				return tag.__i;
 			}
 		});
@@ -580,7 +590,7 @@ function initializeNode(_ref) {
 		functions.mount.call(tag);
 		delete tag.mounting;
 	} catch (e) {
-		error$1('mount', tag.tagName, e);
+		throw new Error('Unable to call mount function for ' + tag.tagName + ': ' + (e.message || e));
 	}
 }
 
@@ -595,9 +605,7 @@ function renderTag(tag) {
 	// do the actual rendering of the component
 	setDataResolver(renderOptions.resolveData);
 	var data = getAttributes(tag);
-	//if (tag.ownerDocument || !tag.__vdom) {
 	clearTagsCreated();
-	//}
 	if (isFn(registryEntry.render)) {
 		setFilter(Object.keys(tagRegistry));
 		renderedDOM = Tag('div', { 'class': '-shadow-root' }, registryEntry.render.call(tag, data));
@@ -632,7 +640,6 @@ function renderTag(tag) {
 	}
 	tag.__vdom = renderedDOM;
 	tag.__complexity = renderedDOM.__complexity;
-	tag.__subElements = renderedSubElements;
 
 	renderedSubElements.length > 0 && (tag.querySelectorAll && [].slice.call(tag.querySelectorAll('[__ready]')) || []).forEach(function (subEl, index) {
 		merge(subEl, renderedSubElements[index]);
@@ -682,7 +689,7 @@ function unmountTag(tag) {
 		try {
 			entry.functions.unmount.call(tag);
 		} catch (e) {
-			error$1('Unable to unmount tag ' + name, e);
+			throw new Error('Unable to unmount tag ' + name + ': ' + (e.message || e));
 		}
 	}
 }
