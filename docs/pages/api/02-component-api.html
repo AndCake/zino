@@ -82,8 +82,6 @@
         
       
         
-      
-        
         <li>
             <a class="page-link" href="/zino/templates">Templating</a>
             <ul>
@@ -135,8 +133,6 @@
   <hr>
 
   <ul class="trigger">
-    
-      
     
       
     
@@ -257,6 +253,26 @@ The <code class="highlighter-rouge">this.getHost()</code> function can be used t
 <figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="c1">// somewhere on the page</span>
 <span class="nb">document</span><span class="p">.</span><span class="nx">querySelector</span><span class="p">(</span><span class="s1">'my-custom-tag'</span><span class="p">).</span><span class="nx">body</span> <span class="o">=</span> <span class="s1">'this is my new content'</span><span class="p">;</span></code></pre></figure>
 
+<h4 id="isrendered">isRendered</h4>
+
+<p>An attribute defining whether or not this element has been rendered already. Usually, during mount time, this value is <code class="highlighter-rouge">false</code>. When the <code class="highlighter-rouge">render()</code> function is called, this value is <code class="highlighter-rouge">true</code>. However, if a component is pre-rendered before mounting (e.g. server-side rendering), the attribute <code class="highlighter-rouge">isRendered</code> will be <code class="highlighter-rouge">true</code> even in the mount function.</p>
+
+<p><em>Example:</em></p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="c1">// somewhere is your component</span>
+<span class="nl">mount</span><span class="p">:</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+	<span class="c1">// whenever something in the store changes</span>
+	<span class="nx">Zino</span><span class="p">.</span><span class="nx">on</span><span class="p">(</span><span class="s1">'update-from-store'</span><span class="p">,</span> <span class="kd">function</span><span class="p">(</span><span class="nx">data</span><span class="p">)</span> <span class="p">{</span>
+		<span class="c1">// re-render</span>
+		<span class="k">this</span><span class="p">.</span><span class="nx">getHost</span><span class="p">().</span><span class="nx">setProps</span><span class="p">(</span><span class="nx">data</span><span class="p">);</span>
+	<span class="p">}.</span><span class="nx">bind</span><span class="p">(</span><span class="k">this</span><span class="p">));</span>
+
+	<span class="c1">// only ask the store for data if we haven't been rendered already</span>
+	<span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="k">this</span><span class="p">.</span><span class="nx">isRendered</span><span class="p">)</span> <span class="p">{</span>
+		<span class="nx">Zino</span><span class="p">.</span><span class="nx">trigger</span><span class="p">(</span><span class="s1">'ask-my-store'</span><span class="p">);</span>
+	<span class="p">}</span>
+<span class="p">}</span></code></pre></figure>
+
 <h4 id="props">props</h4>
 
 <p>An object used to define the initial internal state of the component. You can read the state by using <code class="highlighter-rouge">this.props.&lt;prop-name&gt;</code>, however, never write a value to the state using this syntax. Instead use <code class="highlighter-rouge">this.setProps('&lt;prop-name&gt;', &lt;prop-value&gt;);</code>, else there will be no automatic re-rendering of the component upon state-change.</p>
@@ -270,7 +286,7 @@ The <code class="highlighter-rouge">this.getHost()</code> function can be used t
 
 <h4 id="render">render</h4>
 
-<p>A function that called whenever the component has been re-rendered. The render function is usually a good place to mount all used sub-components of the current component.</p>
+<p>A function that called whenever the component has been re-rendered. This is usually a good place to call initialization functions for libraries that require the finished DOM part.</p>
 
 <h4 id="mount">mount</h4>
 

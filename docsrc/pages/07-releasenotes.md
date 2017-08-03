@@ -7,6 +7,19 @@ permalink: /releases
 
 This page contains a summary of changes to the previous version
 
+Version 3.2.0
+-------------
+
+- replaced light DOM implementation with [nano-dom](https://www.npmjs.com/package/nano-dom) as an alternative to JSDOM for testing zino components (or pre-rendering) in a non-browser context
+- added possibility to clear all custom events during testing by providing the `clearEvents()` function (see [Testing](/testing)).
+- added possibility to react to pre-rendered tags in the `mount` function by using this.isRendered (see [Component API](/pages/api/02-component-api.html))
+- fixed issues with pre-render detection
+- fixed a bug where comments in script nodes could lead to syntax errors
+- fixed a bug with dynamic HTML injection
+- fixed an issue where attributes could not be consistently accessed between sub components and components
+- fixed an issue where when an error was thrown, sometimes the causing exception's stack trace was lost
+
+
 Version 3.1.0
 -------------
 

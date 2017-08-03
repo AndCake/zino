@@ -84,6 +84,28 @@ An attribute of the custom element allowing read/write access to it's content. W
 document.querySelector('my-custom-tag').body = 'this is my new content';
 {% endhighlight %}
 
+#### isRendered
+
+An attribute defining whether or not this element has been rendered already. Usually, during mount time, this value is `false`. When the `render()` function is called, this value is `true`. However, if a component is pre-rendered before mounting (e.g. server-side rendering), the attribute `isRendered` will be `true` even in the mount function.
+
+*Example:*
+
+{% highlight javascript %}
+// somewhere is your component
+mount: function() {
+	// whenever something in the store changes
+	Zino.on('update-from-store', function(data) {
+		// re-render
+		this.getHost().setProps(data);
+	}.bind(this));
+
+	// only ask the store for data if we haven't been rendered already
+	if (!this.isRendered) {
+		Zino.trigger('ask-my-store');
+	}
+}
+{% endhighlight %}
+
 #### props
 
 An object used to define the initial internal state of the component. You can read the state by using `this.props.<prop-name>`, however, never write a value to the state using this syntax. Instead use `this.setProps('<prop-name>', <prop-value>);`, else there will be no automatic re-rendering of the component upon state-change.
@@ -99,7 +121,7 @@ props: {
 
 #### render
 
-A function that called whenever the component has been re-rendered. The render function is usually a good place to mount all used sub-components of the current component.
+A function that called whenever the component has been re-rendered. This is usually a good place to call initialization functions for libraries that require the finished DOM part.
 
 #### mount
 

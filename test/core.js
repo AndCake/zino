@@ -130,7 +130,8 @@ test('re-renders tag dynamically', t => {
 
 test('pre-rendered tags', t => {
 	on('--zino-rerender-tag', core.render);
-	body.innerHTML = '<pre-rendered><div class="-shadow-root">Value: 2</div></pre-rendered>';
+	body.innerHTML = '<pre-rendered><div class="-shadow-root">Value: 2</div></pre-rendered><not-prerendered></not-prerendered>';
+	var isRenderedValue;
 	core.registerTag((Tag) => {
 		return {
 			tagName: 'pre-rendered',
@@ -138,9 +139,32 @@ test('pre-rendered tags', t => {
 				return ['Value: ', data.props.value];
 			},
 			functions: {
-				props: {value: 'n/a'}
+				props: {value: 'n/a'},
+				mount: function() {
+					isRenderedValue = this.isRendered;
+				}
 			}
 		};
 	}, document);
 	t.is(body.getElementsByClassName('-shadow-root')[0].innerHTML, 'Value: 2', 'keeps pre-rendered text');
+	t.is(isRenderedValue, true, 'provides isRendered attribute');
+
+	isRenderedValue = null;
+	var isRenderedAfterRendered = null;
+	core.registerTag((Tag) => {
+		return {
+			tagName: 'not-prerendered',
+			render: function(data){ return ['test']; },
+			functions: {
+				render: function() {
+					isRenderedAfterRendered = this.isRendered;
+				},
+				mount: function() {
+					isRenderedValue = this.isRendered;
+				}
+			}
+		}
+	}, document);
+	t.is(isRenderedValue, false, 'isRendered is false if it has not been rendered yet');
+	t.is(isRenderedAfterRendered, true, 'isRendered is true once it has been rendered');
 });

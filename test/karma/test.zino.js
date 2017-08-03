@@ -29,6 +29,9 @@ assertElementIsEmpty = function(el, message) {
 	var content = document.querySelector(el).innerHTML.trim();
 	assertEmpty(content, message || ('Element ' + el + ' is empty'));
 };
+assertElementExists = function(el, message) {
+	assert(document.querySelector(el), message || 'Element ' + el + ' does not exist.');
+}
 
 function mouseEvent(type, sx, sy, cx, cy) {
 	var evt;

@@ -82,8 +82,6 @@
         
       
         
-      
-        
         <li>
             <a class="page-link" href="/zino/templates">Templating</a>
             <ul>
@@ -166,8 +164,6 @@
     
       
     
-      
-    
   </ul>
 
   <a href="https://github.com/AndCake/zino">View the Project on GitHub</a>
@@ -181,6 +177,19 @@
         <h1 id="release-notes">Release Notes</h1>
 
 <p>This page contains a summary of changes to the previous version</p>
+
+<h2 id="version-320">Version 3.2.0</h2>
+
+<ul>
+  <li>replaced light DOM implementation with <a href="https://www.npmjs.com/package/nano-dom">nano-dom</a> as an alternative to JSDOM for testing zino components (or pre-rendering) in a non-browser context</li>
+  <li>added possibility to clear all custom events during testing by providing the <code class="highlighter-rouge">clearEvents()</code> function (see <a href="/testing">Testing</a>).</li>
+  <li>added possibility to react to pre-rendered tags in the <code class="highlighter-rouge">mount</code> function by using this.isRendered (see <a href="/pages/api/02-component-api.html">Component API</a>)</li>
+  <li>fixed issues with pre-render detection</li>
+  <li>fixed a bug where comments in script nodes could lead to syntax errors</li>
+  <li>fixed a bug with dynamic HTML injection</li>
+  <li>fixed an issue where attributes could not be consistently accessed between sub components and components</li>
+  <li>fixed an issue where when an error was thrown, sometimes the causing exception’s stack trace was lost</li>
+</ul>
 
 <h2 id="version-310">Version 3.1.0</h2>
 

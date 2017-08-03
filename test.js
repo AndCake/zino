@@ -473,8 +473,7 @@ function flushRegisteredTags() {
 function initializeTag(tag, registryEntry) {
 	// check if the tag has been initialized already
 	if (tag.__vdom || !registryEntry) return;
-	var functions = registryEntry.functions,
-	    isRendered = void 0;
+	var functions = registryEntry.functions;
 
 	// if it has been pre-rendered
 	if (tag.children.length > 0 && tag.children[0].attributes && tag.children[0].attributes['class'] && tag.children[0].attributes['class'].value === '-shadow-root') {
@@ -485,17 +484,18 @@ function initializeTag(tag, registryEntry) {
 			setElementAttr(sibling, tag);
 			sibling.parentNode.removeChild(sibling);
 		}
-		isRendered = true;
+		tag.isRendered = true;
 	} else {
 		tag.__i = tag.ownerDocument ? tag.innerHTML : getInnerHTML(tag);
 		setElementAttr(tag);
 		tag.innerHTML = '<div class="-shadow-root"></div>';
+		tag.isRendered = false;
 	}
 	trigger('--zino-initialize-node', { tag: tag, node: functions });
 	tag.__vdom = {};
 
 	// render the tag's content
-	var subEvents = !isRendered && renderTag.call(this, tag) || { events: [] };
+	var subEvents = !tag.isRendered && renderTag.call(this, tag) || { events: [] };
 
 	// attach events
 	var hostEvents = [],
@@ -613,6 +613,9 @@ function renderTag(tag) {
 		throw new Error('No render function provided in component ' + tag.tagName);
 	}
 
+	// unmount previously rendered sub components
+	tag.__subs && tag.__subs.forEach(unmountTag);
+
 	// render all contained sub components
 	renderedSubElements = getTagsCreated();
 	renderedSubElements.forEach(function (subEl) {
@@ -638,6 +641,7 @@ function renderTag(tag) {
 			tag.children[0] = renderedDOM;
 		}
 	}
+	tag.__subs = renderedSubElements;
 	tag.__vdom = renderedDOM;
 	tag.__complexity = renderedDOM.__complexity;
 
@@ -645,6 +649,7 @@ function renderTag(tag) {
 		merge(subEl, renderedSubElements[index]);
 		subEl.getHost = renderedSubElements[index].getHost = defaultFunctions.getHost.bind(subEl);
 	});
+	tag.isRendered = true;
 
 	if (!this || !this.noRenderCall) {
 		renderCallbacks.forEach(function (callback) {
