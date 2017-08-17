@@ -632,9 +632,8 @@ function renderTag(tag) {
 	tag.__vdom = renderedDOM;
 	tag.__complexity = renderedDOM.__complexity;
 
-	renderedSubElements.length > 0 && (tag.querySelectorAll && [].slice.call(tag.querySelectorAll('[__ready]')) || []).forEach(function (subEl, index) {
-		merge(subEl, renderedSubElements[index]);
-		subEl.getHost = renderedSubElements[index].getHost = defaultFunctions.getHost.bind(subEl);
+	renderedSubElements.forEach(function (subEl, index) {
+		subEl.getHost = defaultFunctions.getHost.bind(subEl);
 	});
 	tag.isRendered = true;
 

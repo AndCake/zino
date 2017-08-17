@@ -237,9 +237,8 @@ function renderTag(tag, registryEntry = tagRegistry[tag.tagName.toLowerCase()]) 
 	tag.__vdom = renderedDOM;
 	tag.__complexity = renderedDOM.__complexity;
 
-	renderedSubElements.length > 0 && (tag.querySelectorAll && [].slice.call(tag.querySelectorAll('[__ready]')) || []).forEach((subEl, index) => {
-		merge(subEl, renderedSubElements[index]);
-		subEl.getHost = renderedSubElements[index].getHost = defaultFunctions.getHost.bind(subEl);
+	renderedSubElements.forEach((subEl, index) => {
+		subEl.getHost = defaultFunctions.getHost.bind(subEl);
 	});
 	tag.isRendered = true;
 
