@@ -237,9 +237,19 @@ function renderTag(tag, registryEntry = tagRegistry[tag.tagName.toLowerCase()]) 
 	tag.__vdom = renderedDOM;
 	tag.__complexity = renderedDOM.__complexity;
 
-	renderedSubElements.forEach((subEl, index) => {
-		subEl.getHost = defaultFunctions.getHost.bind(subEl);
-	});
+	if(renderedSubElements.length > 0 && tag.querySelectorAll) {
+		var directlyRenderedSubElementNodes = ([].slice.call(tag.querySelectorAll('[__ready]')) || []).filter(subElement => {
+			while(!subElement.classList.contains("-shadow-root")) {
+				subElement = subElement.parentNode;
+			}
+			return subElement.parentNode === tag;
+		});
+
+		directlyRenderedSubElementNodes.forEach((subEl, index) => {
+			merge(subEl, renderedSubElements[index]);
+			subEl.getHost = renderedSubElements[index].getHost = defaultFunctions.getHost.bind(subEl);
+		});
+	}
 	tag.isRendered = true;
 
 	if (!this || !this.noRenderCall) {

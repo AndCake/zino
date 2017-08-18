@@ -632,9 +632,19 @@ function renderTag(tag) {
 	tag.__vdom = renderedDOM;
 	tag.__complexity = renderedDOM.__complexity;
 
-	renderedSubElements.forEach(function (subEl, index) {
-		subEl.getHost = defaultFunctions.getHost.bind(subEl);
-	});
+	if (renderedSubElements.length > 0 && tag.querySelectorAll) {
+		var directlyRenderedSubElementNodes = ([].slice.call(tag.querySelectorAll('[__ready]')) || []).filter(function (subElement) {
+			while (!subElement.classList.contains("-shadow-root")) {
+				subElement = subElement.parentNode;
+			}
+			return subElement.parentNode === tag;
+		});
+
+		directlyRenderedSubElementNodes.forEach(function (subEl, index) {
+			merge(subEl, renderedSubElements[index]);
+			subEl.getHost = renderedSubElements[index].getHost = defaultFunctions.getHost.bind(subEl);
+		});
+	}
 	tag.isRendered = true;
 
 	if (!this || !this.noRenderCall) {
