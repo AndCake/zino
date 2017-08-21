@@ -237,9 +237,9 @@ function renderTag(tag, registryEntry = tagRegistry[tag.tagName.toLowerCase()]) 
 	tag.__vdom = renderedDOM;
 	tag.__complexity = renderedDOM.__complexity;
 
-	if(renderedSubElements.length > 0 && tag.querySelectorAll) {
+	if (renderedSubElements.length > 0 && tag.querySelectorAll) {
 		var directlyRenderedSubElementNodes = ([].slice.call(tag.querySelectorAll('[__ready]')) || []).filter(subElement => {
-			while(!subElement.classList.contains("-shadow-root")) {
+			while (!subElement.classList.contains("-shadow-root")) {
 				subElement = subElement.parentNode;
 			}
 			return subElement.parentNode === tag;
