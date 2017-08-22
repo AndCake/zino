@@ -635,18 +635,25 @@ function renderTag(tag) {
 	tag.__vdom = renderedDOM;
 	tag.__complexity = renderedDOM.__complexity;
 
+	// if we have rendered any sub components, retrieve their actual DOM node
 	renderedSubElements.length > 0 && (tag.querySelectorAll && [].slice.call(tag.querySelectorAll('[__ready]')) || []).forEach(function (subEl, index) {
+		// apply all additional functionality to them (custom functions, attributes, etc...)
 		merge(subEl, renderedSubElements[index]);
+		// update getHost to return the DOM node instead of the vdom node
 		subEl.getHost = renderedSubElements[index].getHost = defaultFunctions.getHost.bind(subEl);
 	});
 	tag.isRendered = true;
 
-	if (!this || !this.noRenderCall) {
+	// if this is not a sub component's rendering run
+	if (!this || !this.noRenderCallback) {
+		// call all of our sub component's render functions
 		renderCallbacks.forEach(function (callback) {
 			return callback.fn.call(callback.tag.getHost());
 		});
+		// call our own rendering function
 		registryEntry.functions.render.call(tag);
 	} else {
+		// just add this sub component's rendering function to the list
 		renderCallbacks.push({ fn: registryEntry.functions.render, tag: tag });
 	}
 	return { events: events, renderCallbacks: renderCallbacks, data: data };

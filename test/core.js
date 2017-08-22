@@ -27,6 +27,9 @@ test('render simple tag', t => {
 					'.abc': {
 						click: function click(e) { console.log(e); }
 					}
+				},
+				render: function() {
+					t.is(this.getElementsByClassName('abc').length, 1, 'can access rendered elements');
 				}
 			}
 		};
