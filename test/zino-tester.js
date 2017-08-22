@@ -34,6 +34,7 @@ test('calls the callback function', t => {
 	let called = false;
 	zino.matchesSnapshot('<second-tag me="Welt!"></second-tag>', {}, '', tag => {
 		called = true;
+		t.is(tag.attributes.me.value, 'Welt!', 'Attribute correctly applied');
 		tag.children[0].innerHTML = 'content removed in callback!';
 	});
 	t.true(called, 'Callback function was called');

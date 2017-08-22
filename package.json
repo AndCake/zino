@@ -16,11 +16,11 @@
     "homepage": "https://andcake.github.io/zino/",
     "scripts": {
         "start": "rollup -c &&  uglifyjs -m -c --screw-ie8 --in-source-map zino.js.map --source-map zino.min.js.map -o zino.min.js zino.js && gzip -c9 zino.min.js > zino.min.js.gz",
-        "test": "(rollup -c rollup.config.test.js | node) && karma start",
+        "test": "(rollup -c rollup.config.test.js | node)",
         "watch": "while inotifywait -qq -r -e close_write ./src ./test; do npm test; done",
         "debug": "rollup -c rollup.config.test.js -o index.js && node-debug index.js",
         "clean": "rm zino*.js* index.js",
-        "prepublish": "rollup -c rollup.config.snapshots.js && npm start"
+        "prepublish": "rollup -c rollup.config.snapshots.js && npm start && npm test && karma start"
     },
     "repository": {
         "type": "git",

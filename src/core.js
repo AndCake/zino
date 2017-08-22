@@ -199,6 +199,7 @@ function renderTag(tag, registryEntry = tagRegistry[tag.tagName.toLowerCase()]) 
 	let data = getAttributes(tag);
 	vdom.clearTagsCreated();
 	if (isFn(registryEntry.render)) {
+		// tell the vdom which tags to remember to look for
 		vdom.setFilter(Object.keys(tagRegistry));
 		renderedDOM = vdom.Tag('div', {'class': '-shadow-root'}, registryEntry.render.call(tag, data));
 	} else {
@@ -209,8 +210,10 @@ function renderTag(tag, registryEntry = tagRegistry[tag.tagName.toLowerCase()]) 
 	tag.__subs && tag.__subs.forEach(unmountTag);
 
 	// render all contained sub components
+	// retrieve the tags that the vdom was made aware of (all our registered components)
 	renderedSubElements = vdom.getTagsCreated();
 	renderedSubElements.forEach(subEl => {
+		// initialize them all
 		let subElEvents = initializeTag.call({
 			noRenderCallback: true,
 			noEvents: true
