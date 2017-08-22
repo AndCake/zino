@@ -594,6 +594,7 @@ function renderTag(tag) {
 	var data = getAttributes(tag);
 	clearTagsCreated();
 	if (isFn(registryEntry.render)) {
+		// tell the vdom which tags to remember to look for
 		setFilter(Object.keys(tagRegistry));
 		renderedDOM = Tag('div', { 'class': '-shadow-root' }, registryEntry.render.call(tag, data));
 	} else {
@@ -604,8 +605,10 @@ function renderTag(tag) {
 	tag.__subs && tag.__subs.forEach(unmountTag);
 
 	// render all contained sub components
+	// retrieve the tags that the vdom was made aware of (all our registered components)
 	renderedSubElements = getTagsCreated();
 	renderedSubElements.forEach(function (subEl) {
+		// initialize them all
 		var subElEvents = initializeTag.call({
 			noRenderCallback: true,
 			noEvents: true
@@ -756,13 +759,58 @@ var tagRegExp = /<(\/?)([\w-]+)([^>]*?)(\/?)>/g;
 var attrRegExp = /([\w_-]+)=(?:'([^']*?)'|"([^"]*?)")/g;
 var commentRegExp = /<!--(?:[^-]|-[^-])*-->/g;
 var syntax = /\{\{\s*([^\}]+)\s*\}\}\}?/g;
+
+/* helper functions to be used inside the generated code */
+
+/** @function safeAccess
+ * safely access the given property in the object obj.
+ * 
+ * @param obj (Object) - the object to read the property from
+ * @param attrs (String) - the name of the property to access (allows for object paths via ., e.g. "myprop.firstValue")
+ * @param escape (Boolean) - if the value should be HTML escaped to prevent XSS attacks and such
+ * @return any
+ */
 var safeAccess$1 = 'function safeAccess(t,e,r){if(!e)return t;if("."===e[0])return t[e];for(e=e.split(".");e.length>0&&void 0!==(t=t[e.shift()]););return"string"==typeof t&&r===!0?t.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;").replace(/>/g,"&gt;"):"function"==typeof t?t.call(__i):"number"==typeof t?t:t||""}';
+
+/** @function toArray
+ * turn property value of an object into an array
+ * 
+ * @param data (Object) - the object to read the property value from
+ * @param value (String) - the property whose value should be read from the object
+ * @return Array
+ */
 var toArray$1 = 'function toArray(t,e){var r=safeAccess(t,e);return r?"[object Array]"===Object.prototype.toString.call(r)?r:"function"==typeof r?r():[r]:[]}';
+
+/** @function spread
+ * turns an array of arrays into an array of all containing elements (reduces the array depth by 1)
+ * 
+ * @param array (Array) - the array to spread the values along
+ * @return Array - a new array containing all the values of the sub elements
+ */
 var spread = 'function spread(t){var e=[];return t.forEach(function(t){e=e.concat(t)}),e}';
+
+/** @function merge
+ * merges any number of objects into the target object
+ * @param target (Object) - the object the other object should be merged into
+ * @param obj1 (Object) - the first object to be merged into the target object
+ * @param objn (Object) - all nth object to be merged into the target object
+ * @return Object - the target object
+ */
 var merge$1 = 'function merge(t){return[].slice.call(arguments,1).forEach(function(e){for(var r in e)t[r]=e[r]}),t}';
+
+/** @function renderStyle
+ * transforms an object into CSS properties
+ * 
+ * @param value (Object) - the object to be transformed
+ * @param context (Object) - for any functions defined in the object, context will be provided within as `this`
+ * @return String - the CSS property list separated by semicolon
+ */
 var renderStyle = 'function renderStyle(t,r){var e="";if(transform=function(t){return"function"==typeof t?transform(t.apply(r)):t+("number"==typeof t&&null!==t?r.styles&&r.styles.defaultUnit||"px":"")},"object"==typeof t)for(var n in t)e+=n.replace(/[A-Z]/g,function(t){return"-"+t.toLowerCase()})+":"+transform(t[n])+";";return e}';
+
+/* this is the base structure of a Zino tag */
 var baseCode = 'function (Tag,Zino){var __i;{{helperFunctions}};return{tagName:"{{tagName}}",{{styles}}render:function(data){return __i=this,[].concat({{render}})},functions:{{functions}}}}';
 
+/** takes an HTML string containing mustache code and turns it into executable JS code that generates a vdom */
 function parse(data) {
 	var resultObject = {
 		styles: [],
@@ -779,10 +827,12 @@ function parse(data) {
 	    level = 0,
 	    tagStack = [];
 
+	// return the correct data level for multi-level mustache blocks
 	function getData() {
 		return 'data' + (level === 0 ? '' : '$' + level);
 	}
 
+	// text is the only place where mustache code can be found
 	function handleText(text, isAttr) {
 		var match = void 0,
 		    result = '',
@@ -791,6 +841,7 @@ function parse(data) {
 		if (!text.match(syntax)) {
 			return result += "'" + text.substr(lastIndex).replace(/\n/g, '').replace(/'/g, '\\\'') + "'" + cat;
 		}
+		// locate mustache syntax within the text
 		while (match = syntax.exec(text)) {
 			if (match.index < lastIndex) continue;
 			var frag = text.substring(lastIndex, match.index).replace(/^\s+/g, '');
@@ -799,14 +850,17 @@ function parse(data) {
 			}
 			lastIndex = match.index + match[0].length;
 			var key = match[1];
+			// of "{{#test}}" value will be "test"
 			var value = key.substr(1);
 			if (key[0] === '#') {
-				result += 'spread(toArray(' + getData() + ', \'' + value + '\').map(function (e, i, a) {\n\t\t\t\t\t\tvar data$' + (level + 1) + ' = merge({}, data' + (0 >= level ? '' : '$' + level) + ', {\'.\': e, \'.index\': i, \'.length\': a.length}, e);\n\t\t\t\t\t\treturn [';
+				// handle block start
+				result += 'spread(toArray(' + getData() + ', \'' + value + '\').map(function (e, i, a) {\n\t\t\t\t\t\tvar data$' + (level + 1) + ' = merge({}, data' + (0 >= level ? '' : '$' + level) + ', {\'.\': e, \'.index\': i, \'.length\': a.length}, e);\n\t\t\t\t\t\treturn [].concat(';
 				level += 1;
 				usesMerge = true;
 				usesSpread = true;
 			} else if (key[0] === '/') {
-				result += '\'\']; }))' + (isAttr ? '.join("")' : '') + cat;
+				// handle block end
+				result += '\'\'); }))' + (isAttr ? '.join("")' : '') + cat;
 				level -= 1;
 				if (level < 0) {
 					throw new Error('Unexpected end of block: ' + key.substr(1));
@@ -815,20 +869,25 @@ function parse(data) {
 				// ignore comments
 				result += '';
 			} else if (key[0] === '^') {
-				result += '(safeAccess(' + getData() + ', \'' + value + '\') && (typeof safeAccess(' + getData() + ', \'' + value + '\') === \'boolean\' || safeAccess(' + getData() + ', \'' + value + '\').length > 0)) ? \'\' : spread([1].map(function() { var data$' + (level + 1) + ' = merge({}, data' + (0 <= level ? '' : '$' + level) + '); return [';
+				// handle inverted block start
+				result += '(safeAccess(' + getData() + ', \'' + value + '\') && (typeof safeAccess(' + getData() + ', \'' + value + '\') === \'boolean\' || safeAccess(' + getData() + ', \'' + value + '\').length > 0)) ? \'\' : spread([1].map(function() { var data$' + (level + 1) + ' = merge({}, data' + (0 <= level ? '' : '$' + level) + '); return [].concat(';
 				usesSpread = true;
 				level += 1;
 			} else if (key[0] === '%') {
+				// handle style rendering "{{%myvar}}" - only to be used for attribute values!
 				result += key.substr(1).split(/\s*,\s*/).map(function (value) {
 					return 'renderStyle(safeAccess(' + getData() + ', \'' + value + '\'), ' + getData() + ')';
 				}).join(' + ');
 				usesRenderStyle = true;
 			} else if (key[0] === '+') {
+				// handle deep data transfer "{{+myvar}}"
 				result += 'safeAccess(' + getData() + ', \'' + value + '\')' + cat;
 			} else if (key[0] !== '{') {
+				// handle non-escaping prints "{{{myvar}}}"
 				value = key;
 				result += '\'\'+safeAccess(' + getData() + ', \'' + value + '\', true)' + cat;
 			} else {
+				// regular prints "{{myvar}}"
 				result += '\'\'+safeAccess(' + getData() + ', \'' + value + '\')' + cat;
 			}
 		}
@@ -838,6 +897,7 @@ function parse(data) {
 		return result;
 	}
 
+	// generate attribute objects for vdom creation
 	function makeAttributes(attrs) {
 		var attributes = '{';
 		var attr = void 0;
@@ -859,6 +919,7 @@ function parse(data) {
 			usesMerge = true;
 		}
 	});
+	// handle all scripts and styles
 	data = data.replace(commentRegExp, '').replace(/<(script|style)(\s+[^>]*?)?>((?:.|\n)*?)<\/\1>/gi, function (g, x, a, m) {
 		if (x === 'style') {
 			resultObject.styles.push(m);
@@ -873,18 +934,25 @@ function parse(data) {
 	}).trim();
 	off('--zino-addscript');
 
+	// check if we have an actual HTML component code (looking for the starting tag)
 	if (!data.match(tagRegExp)) {
 		throw new Error('No proper component provided');
 	}
+	// find out how the component is called
 	resultObject.tagName = data.match(/^<([\w_-]+)>/)[1].toLowerCase();
 
+	// loop through all HTML tags in code
 	while (match = tagRegExp.exec(data)) {
+		// skip the ones we already processed
 		if (match.index < lastIndex) continue;
 		var text = data.substring(lastIndex, match.index).replace(/^[ \t]+|[ \t]$/g, ' ').trim();
 		lastIndex = match.index + match[0].length;
+		// if we have some leading text (before the first tag)
 		if (text.length > 0) {
+			// it must be a text node
 			resultObject.render += handleText(text);
 		}
+		// if we found the tag's definition, skip it
 		if (match[2] === resultObject.tagName) continue;
 		if (match[1]) {
 			// closing tag
@@ -899,8 +967,10 @@ function parse(data) {
 			var attributes = makeAttributes(match[3]);
 			resultObject.render += 'new Tag(\'' + match[2] + '\', ' + attributes;
 			if (!match[4]) {
+				// not a self-closing tag, so prepare for it's content
 				resultObject.render += ', [].concat(';
 			} else {
+				// self-closing tag, close it immediately
 				resultObject.render += '), ';
 				tagStack.pop();
 			}
@@ -912,11 +982,14 @@ function parse(data) {
 	if (level > 0) {
 		throw new Error('Unexpected end of block');
 	}
+	// if we have content after the last found tag node
 	if (data.substr(lastIndex).trim().length > 0) {
+		// it must be a text node
 		resultObject.render += handleText(data.substr(lastIndex).replace(/^[ \t]+|[ \t]$/g, ' ').trim());
 	}
 	resultObject.render = resultObject.render.replace(/,\s*$/g, '');
 
+	// add helper functions that were used by the code
 	if (usesMerge) {
 		resultObject.helperFunctions.push(merge$1);
 		resultObject.helperFunctions.push(toArray$1);
@@ -930,6 +1003,8 @@ function parse(data) {
 	resultObject.functions = resultObject.functions.length > 0 ? 'merge({}, ' + (resultObject.functions.join(', ') || '{}') + ')' : '{}';
 	resultObject.styles = resultObject.styles.length > 0 ? 'styles: ' + JSON.stringify(resultObject.styles) + ',' : '';
 	resultObject.helperFunctions = resultObject.helperFunctions.join('\n');
+
+	// fill in place-holders in base code and return the result
 	return baseCode.replace(/\{\{([^\}]+)\}\}/g, function (g, m) {
 		return resultObject[m];
 	});
