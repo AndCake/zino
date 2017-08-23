@@ -3,8 +3,8 @@
  * grunt
  *
  *
- * Copyright (c) 2016 Robert Kunze
- * Licensed under the UNLICENSED license.
+ * Copyright (c) 2017 Robert Kunze
+ * Licensed under the MIT license.
  */
 
 'use strict';

@@ -78,8 +78,10 @@ test('simple variables', t => {
 test('parse blocks', t => {
 	t.is(render(`<a>x{{#test}}y{{/test}}z</a>`, {test: true}), 'xyz', 'evaluates truish values');
 	t.is(render(`<a>x{{#test}}y{{/test}}z</a>`, {test: false}), 'xz', 'evaluates false values');
-	t.is(render(`<a>x{{#test}}y{{#x}}z{{/x}}a{{/test}}b</a>`, {test: [{x: false}]}), 'xyab', 'evaluates false values for sub objects');
-	t.is(render(`<a>x{{#test}}y{{#x}}z{{/x}}a{{/test}}b</a>`, {test: [{x: true}]}), 'xyzab', 'evaluates true values for sub objects');
+	t.is(render(`<a>x{{#test}}y{{#x}}{{z}}{{/x}}a{{/test}}b</a>`, {test: [{x: false, z: '123'}]}), 'xyab', 'evaluates false values for sub objects');
+	t.is(render(`<a>x{{#test}}y{{#x}}{{z}}{{/x}}a{{/test}}b</a>`, {test: [{x: true, z: '123'}]}), 'xy123ab', 'evaluates true values for sub objects');
+	t.is(render(`<a>x{{#test}}y{{^x}}{{z}}{{/x}}a{{/test}}b</a>`, {test: [{x: true, z: '123'}]}), 'xyab', 'evaluates inverted true values for sub objects');
+	t.is(render(`<a>x{{#test}}y{{^x}}{{z}}{{/x}}a{{/test}}b</a>`, {test: [{x: false, z: '123'}]}), 'xy123ab', 'evaluates inverted false values for sub objects');
 	t.is(render(`<a>x{{#test}}y{{/test}}z</a>`, {test: [1, 2, 3]}), 'xyyyz', 'evaluates array values');
 	t.is(render(`<a>x{{^test}}y{{/test}}z</a>`, {test: true}), 'xz', 'evaluates inverted truish values');
 	t.is(render(`<a>x{{^test}}y{{/test}}z</a>`, {test: false}), 'xyz', 'evaluates inverted false values');

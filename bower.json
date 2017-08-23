@@ -6,7 +6,7 @@
   "authors": [
     "Robert Kunze <quixotic.worx@protonmail.com>"
   ],
-  "license": "LGPL-3.0",
+  "license": "MIT",
   "keywords": [
     "components",
     "react",

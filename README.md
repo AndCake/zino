@@ -32,4 +32,4 @@ For information on how to get started and how to use Zino, please see the [Zino 
 
 ## License
 
-[LGPLv3](https://opensource.org/licenses/LGPL-3.0)
+[MIT](https://opensource.org/licenses/MIT)
