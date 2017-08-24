@@ -65,6 +65,46 @@ test('render tag with sub components', t => {
 	t.is(body.childNodes[3].outerHTML, `<my-other-tag __ready="true"><div class="-shadow-root"><title>This is my title</title><myx-tag data-times="1" __ready="true"><div class="-shadow-root"><div class="abc">A-B-C</div></div></myx-tag></div></my-other-tag>`, 'renders a sub component');
 
 	body.childNodes[3].setProps('test', 123);
+
+	var subLevel = document.createElement('sub-level1');
+	body.appendChild(subLevel);
+	core.registerTag(function(Tag) {
+		return {
+			tagName: 'sub-level4',
+			render: function() {
+				return [
+					'test'
+				];
+			}
+		}
+	});
+	core.registerTag(function(Tag) {
+		return {
+			tagName: 'sub-level3',
+			render: function() {
+				return [Tag('sub-level4')];
+			}
+		}
+	});
+	core.registerTag(function(Tag) {
+		return {
+			tagName: 'sub-level2',
+			render: function() {
+				return [Tag('sub-level3'), Tag('sub-level3')];
+			},
+			styles: []
+		}
+	});
+	core.registerTag(function(Tag) {
+		return {
+			tagName: 'sub-level1',
+			render: function() {
+				return [Tag('sub-level2')];
+			},
+			styles: []
+		}
+	}, document);
+	t.is(subLevel.innerHTML, '<div class="-shadow-root"><sub-level2 __ready="true"><div class="-shadow-root"><sub-level3 __ready="true"><div class="-shadow-root"><sub-level4 __ready="true"><div class="-shadow-root">test</div></sub-level4></div></sub-level3><sub-level3 __ready="true"><div class="-shadow-root"><sub-level4 __ready="true"><div class="-shadow-root">test</div></sub-level4></div></sub-level3></div></sub-level2></div>')
 });
 
 test('calls all callbacks', t => {

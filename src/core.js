@@ -196,8 +196,8 @@ function renderTag(tag, registryEntry = tagRegistry[tag.tagName.toLowerCase()]) 
 
 	// do the actual rendering of the component
 	vdom.setDataResolver(renderOptions.resolveData);
-	let data = getAttributes(tag);
 	vdom.clearTagsCreated();
+	let data = getAttributes(tag);
 	if (isFn(registryEntry.render)) {
 		// tell the vdom which tags to remember to look for
 		vdom.setFilter(Object.keys(tagRegistry));
@@ -219,7 +219,7 @@ function renderTag(tag, registryEntry = tagRegistry[tag.tagName.toLowerCase()]) 
 			noEvents: true
 		}, subEl, tagRegistry[subEl.tagName]);
 		if (subElEvents) {
-			renderedSubElements = renderedSubElements.concat(vdom.getTagsCreated());
+			renderedSubElements = renderedSubElements.concat(subElEvents.subElements);
 			events = events.concat(subElEvents.events);
 			renderCallbacks = renderCallbacks.concat(subElEvents.renderCallbacks);
 		}
@@ -259,7 +259,7 @@ function renderTag(tag, registryEntry = tagRegistry[tag.tagName.toLowerCase()]) 
 		// just add this sub component's rendering function to the list
 		renderCallbacks.push({fn: registryEntry.functions.render, tag});
 	}
-	return {events, renderCallbacks, data};
+	return {events, renderCallbacks, data, subElements: renderedSubElements};
 }
 
 function attachSubEvents(subEvents, tag) {
