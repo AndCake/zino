@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Component Best-practices</title>
+  <meta name="description" content="A micro component framework - easy to learn and powerful.
+">
+
+  <link rel="stylesheet" href="/zino/css/main.css">
+  <link rel="canonical" href="https://andcake.github.io/zino/pages/tutorial/04-best-practices.html">
+  <link rel="alternate" type="application/rss+xml" title="zino" href="https://andcake.github.io/zino/feed.xml">
+</head>
+
+
+  <body>
+
+    <a href="https://github.com/AndCake/zino"><img style="position: absolute; top: 0; right: 0; border: 0;" src="https://camo.githubusercontent.com/365986a132ccd6a44c23a9169022c0b5c890c387/68747470733a2f2f73332e616d617a6f6e6177732e636f6d2f6769746875622f726962626f6e732f666f726b6d655f72696768745f7265645f6161303030302e706e67" alt="Fork me on GitHub" data-canonical-src="https://s3.amazonaws.com/github/ribbons/forkme_right_red_aa0000.png"></a>
+
+<header class="site-header">
+<nav class="site-nav">
+    <a class="site-title" href="/zino/">zino</a>
+
+  <a href="#" class="menu-icon">
+    <svg viewBox="0 0 18 15">
+      <path fill="#424242" d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.031C17.335,0,18,0.665,18,1.484L18,1.484z"/>
+      <path fill="#424242" d="M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0c0-0.82,0.665-1.484,1.484-1.484 h15.031C17.335,6.031,18,6.696,18,7.516L18,7.516z"/>
+      <path fill="#424242" d="M18,13.516C18,14.335,17.335,15,16.516,15H1.484C0.665,15,0,14.335,0,13.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.031C17.335,12.031,18,12.696,18,13.516L18,13.516z"/>
+    </svg>
+  </a>
+
+  <ul class="trigger">
+      
+        
+      
+        
+        <li>
+            <a class="page-link" href="/zino/getting-started">Getting Started</a>
+            <ul>
+            
+            </ul>
+        </li>
+        
+      
+        
+      
+        
+      
+        
+      
+        
+        <li>
+            <a class="page-link" href="/zino/tutorial">Tutorial</a>
+            <ul>
+            
+                <li><a class="page-link" href="/zino/pages/tutorial/01-first-component.html">Your First Component</a></li>
+            
+                <li><a class="page-link" href="/zino/pages/tutorial/02-backend-communication.html">Backend Communication</a></li>
+            
+                <li><a class="page-link" href="/zino/pages/tutorial/03-styling-components.html">Styling Components</a></li>
+            
+                <li><a class="page-link" href="/zino/pages/tutorial/04-best-practices.html">Component Best-practices</a></li>
+            
+            </ul>
+        </li>
+        
+      
+        
+        <li>
+            <a class="page-link" href="/zino/api">API</a>
+            <ul>
+            
+                <li><a class="page-link" href="/zino/pages/api/01-zino-api.html">Zino API</a></li>
+            
+                <li><a class="page-link" href="/zino/pages/api/02-component-api.html">Component API</a></li>
+            
+            </ul>
+        </li>
+        
+      
+        
+      
+        
+      
+        
+        <li>
+            <a class="page-link" href="/zino/templates">Templating</a>
+            <ul>
+            
+                <li><a class="page-link" href="/zino/templates#variables">Variables</a></li>
+            
+                <li><a class="page-link" href="/zino/templates#sections--conditions--iterations">Conditions/Iterations</a></li>
+            
+                <li><a class="page-link" href="/zino/templates#inverted-sections">Inverted Sections</a></li>
+            
+                <li><a class="page-link" href="/zino/templates#section-keys">Section Keys</a></li>
+            
+                <li><a class="page-link" href="/zino/templates#style-tag">Style Tag</a></li>
+            
+                <li><a class="page-link" href="/zino/templates#transfer-tag">Transfer Tag</a></li>
+            
+            </ul>
+        </li>
+        
+      
+        
+        <li>
+            <a class="page-link" href="/zino/testing">Testing</a>
+            <ul>
+            
+            </ul>
+        </li>
+        
+      
+        
+        <li>
+            <a class="page-link" href="/zino/events">Events</a>
+            <ul>
+            
+            </ul>
+        </li>
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+  </ul>
+
+  <hr>
+
+  <ul class="trigger">
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </ul>
+
+  <a href="https://github.com/AndCake/zino">View the Project on GitHub</a>
+
+</nav>
+</header>
+
+
+    <div class="page-content">
+      <div class="wrapper">
+        <article class="post">
+
+  <header class="post-header">
+    <h1 class="post-title">Component Best-practices</h1>
+  </header>
+
+  <div class="post-content">
+    <p>Zino is all about components, which have two primary methods for receiving, handling, and displaying data: attributes
+and props. Understanding the difference between these two is critical to effectively use Zino for development.</p>
+
+<h2 id="attributes">Attributes</h2>
+
+<p>Attributes are values that are passed into a component from the outside, for example via setAttribute() or other means.
+In the following example, the attributes <code class="highlighter-rouge">name</code> and <code class="highlighter-rouge">price</code> are handed in:</p>
+
+<figure class="highlight"><pre><code class="language-html" data-lang="html">	<span class="nt">&lt;product</span> <span class="na">name=</span><span class="s">"Handbag"</span> <span class="na">price=</span><span class="s">"12.99"</span><span class="nt">/&gt;</span>
+	</code></pre></figure>
+
+<p>Attributes are simple in nature. They cannot contain complex data like arrays, objects or functions instead they are
+used to hold direct values.</p>
+
+<h2 id="props">Props</h2>
+
+<p>In order to represent the internal state of a component, the props are used. Props often change during a component’s
+lifetime. The are usually updated by using the component’s <code class="highlighter-rouge">setProps</code> method. Props can be complex objects that also
+include functions, objects and arrays. Please note: whenever you call <code class="highlighter-rouge">setProps</code>, the component will re-render itself.
+If the change is just a minor one, then only the resulting diff DOM will be applied to the browser’s DOM.</p>
+
+<p>Although props are used to represent the internal state of a component, you can define their initial value from
+the outside by transferring complex objects from your parent component like this:</p>
+
+<figure class="highlight"><pre><code class="language-mustache" data-lang="mustache">	<span class="nt">&lt;product</span> <span class="na">data-details=</span><span class="s">"</span><span class="k">{{</span><span class="err">+</span><span class="nv">props</span><span class="p">.</span><span class="nv">currentProduct</span><span class="k">}}</span><span class="s">"</span><span class="nt">/&gt;</span>
+	</code></pre></figure>
+
+<p>Please note, that in order to pass props as initial state to a sub component, you need to define a data attribute, whose
+name will be used for the props’ name. In the above example, <code class="highlighter-rouge">currentProduct</code> is read from the parent component’s state
+and passed into the sub component ‘product’ as a prop called ‘details’.</p>
+
+<h2 id="when-to-use-attributes-vs-props">When to use attributes vs. props</h2>
+
+<p>Attributes should be used to transfer simple information to a component (not necessarily to a sub component!). It should
+also be used for simple information that can change in the parent component.</p>
+
+<p>Props should be used only for the internal state of a component and to define this internal state initially, when
+rendering it into a parent component. When you use a store to load information from the server, you should use the props
+in order to store (and maybe transform) the data for display.</p>
+
+<h2 id="dumb-components">Dumb Components</h2>
+
+<p>Dumb components are the most reusable components available, because they have a know-nothing approach to the application
+in which they are used. Think of simple HTML DOM elements: an anchor tag knows nothing about the app using it and relies
+on the app passing attributes like <code class="highlighter-rouge">href</code>, <code class="highlighter-rouge">title</code>, and <code class="highlighter-rouge">target</code>. This is an example of a dumb component.</p>
+
+<p>Dumb components are incredibly reusable because they are not specific to any one use case or application.</p>
+
+<h3 id="example">Example</h3>
+
+<p>An example of a dumb component would be the Avatar component shown below:</p>
+
+<figure class="highlight"><pre><code class="language-mustache" data-lang="mustache">	<span class="nt">&lt;avatar&gt;</span>
+		<span class="nt">&lt;img</span> <span class="na">src=</span><span class="s">"</span><span class="k">{{</span><span class="nv">src</span><span class="k">}}</span><span class="s">"</span> <span class="na">class=</span><span class="s">"</span><span class="k">{{</span><span class="nv">props</span><span class="p">.</span><span class="nv">circle</span><span class="k">}}</span><span class="s"> </span><span class="k">{{</span><span class="nv">props</span><span class="p">.</span><span class="nv">rounded</span><span class="k">}}</span><span class="s">"</span> <span class="na">title=</span><span class="s">"</span><span class="k">{{</span><span class="nv">title</span><span class="k">}}</span><span class="s">"</span> <span class="na">alt=</span><span class="s">"</span><span class="k">{{</span><span class="nv">title</span><span class="k">}}</span><span class="s">"</span><span class="nt">/&gt;</span>
+
+		<span class="nt">&lt;script&gt;</span>
+		<span class="p">{</span>
+			<span class="nl">props</span><span class="p">:</span> <span class="p">{</span>
+				<span class="nl">circle</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
+				<span class="nx">rounded</span><span class="err">:</span> <span class="kc">false</span>
+			<span class="p">},</span>
+
+			<span class="nx">mount</span><span class="err">:</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+				<span class="c1">// using setProps not required here, since the component will render after mount anyway!</span>
+				<span class="k">this</span><span class="p">.</span><span class="nx">props</span><span class="p">.</span><span class="nx">circle</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">props</span><span class="p">.</span><span class="nx">circle</span> <span class="p">?</span> <span class="s1">'circle'</span> <span class="p">:</span> <span class="s1">''</span><span class="p">;</span>
+				<span class="k">this</span><span class="p">.</span><span class="nx">props</span><span class="p">.</span><span class="nx">rounded</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">props</span><span class="p">.</span><span class="nx">rounded</span> <span class="p">?</span> <span class="s1">'rounded'</span> <span class="p">:</span> <span class="s1">''</span><span class="p">;</span>
+			<span class="p">}</span>
+		<span class="p">}</span>
+		<span class="nt">&lt;/script&gt;</span>
+		<span class="nt">&lt;link</span> <span class="na">rel=</span><span class="s">"stylesheet"</span> <span class="na">href=</span><span class="s">"./style.css"</span><span class="nt">/&gt;</span>
+	<span class="nt">&lt;/avatar&gt;</span>
+	</code></pre></figure>
+
+<p>The avatar has no awareness of the state of the external application and does not connect to any stores to retrieve data
+to / from. It is passed the exact data it needs in order to render.</p>
+
+<p>Whenever possible, try to use dumb components in order to reduce the complexity of your components, which makes them
+easier to understand, maintain and allows for better reusability. If your component doesn’t know anything about the
+application, fewer parts of your code are adversely affected if you break app-level code.</p>
+
+<h2 id="smart-components">Smart components</h2>
+
+<p>The distinction key deciding factor between <strong>smart</strong> and <strong>dumb</strong> components is whether they need to access <em>external</em> state.</p>
+
+<p>Smart components are less reusable outside a single application or set of applications because they are aware of
+application-level state.</p>
+
+<p>For instance, Smart components may listen for store actions in order to directly integrate with business logic and
+react to data or state changes. Whenever possible, you should favor creating dumb components and reduce the surface
+area of components which bind to application logic.</p>
+
+<h3 id="rule-of-thumb-use-sparingly">Rule of thumb: use sparingly</h3>
+
+<p>If you notice that you are creating many smart components, think carefully why the state of the component should not be
+managed at a higher level. Often things that feel like they should bind to application state are better expressed as dumb
+components included in a higher-level smart component.</p>
+
+<h3 id="example-1">Example</h3>
+
+<p>As an example, you may have a page (/cart) to allow a user to purchase the contents of their shopping cart. On that page,
+you will likely have some components to display the items in the cart, calculate sales tax and shipping, and show
+“other people also bought” recommendations.</p>
+
+<p>Initially, it may seem like the shopping cart component should connect to a shopping-cart-store to retrieve the list of
+items and render them each and include a button on each row to call shopping-cart:changeQuantity or shopping-cart:removeFromCart.</p>
+
+<p>If you took this approach, you’d have business logic in your shopping-cart component, and you’d insert it into the
+Cart page like this:</p>
+
+<figure class="highlight"><pre><code class="language-html" data-lang="html">	<span class="nt">&lt;cart&gt;</span>
+		<span class="c">&lt;!-- ... snip ... --&gt;</span>
+		<span class="nt">&lt;div&gt;</span>
+			<span class="nt">&lt;h1&gt;</span>Your cart<span class="nt">&lt;/h1&gt;</span>
+			<span class="nt">&lt;shopping-cart/&gt;</span>
+			<span class="nt">&lt;shipping-info/&gt;</span>
+			<span class="nt">&lt;checkout-button/&gt;</span>
+		<span class="nt">&lt;/div&gt;</span>
+		<span class="c">&lt;!-- ... snip ... --&gt;</span>
+	<span class="nt">&lt;/cart&gt;</span>
+	</code></pre></figure>
+
+<p>This may feel very clean at the top, but pushes too much duplicate logic down into the child components. In this case,
+all three of the Smart components shown will need to be aware of application state and all will update application state
+directly via store actions.</p>
+
+<p>Instead, in Zino, you should instead create the shopping-cart component as a dumb component, and pass the cart as props.
+You should also pass down a callback for the actions you want to take, so that you can mutate application state centrally
+on the cart page component.</p>
+
+<p>Consider instead the following approach:</p>
+
+<figure class="highlight"><pre><code class="language-mustache" data-lang="mustache">	<span class="nt">&lt;cart&gt;</span>
+		<span class="c">&lt;!-- ... snip ... --&gt;</span>
+		<span class="nt">&lt;div&gt;</span>
+			<span class="nt">&lt;h1&gt;</span>Your cart<span class="nt">&lt;/h1&gt;</span>
+			<span class="nt">&lt;shopping-cart</span> <span class="na">data-cart=</span><span class="s">"</span><span class="k">{{</span><span class="err">+</span><span class="nv">props</span><span class="p">.</span><span class="nv">cart</span><span class="k">}}</span><span class="s">"</span> <span class="na">data-on-remove=</span><span class="s">"</span><span class="k">{{</span><span class="err">+</span><span class="nv">props</span><span class="p">.</span><span class="nv">removeCartItem</span><span class="k">}}</span><span class="s">"</span> <span class="na">data-on-change=</span><span class="s">"</span><span class="k">{{</span><span class="err">+</span><span class="nv">props</span><span class="p">.</span><span class="nv">changeCartItemQuantity</span><span class="k">}}</span><span class="s">"</span> <span class="nt">/&gt;</span>
+			<span class="nt">&lt;shipping-info</span> <span class="na">data-cart=</span><span class="s">"</span><span class="k">{{</span><span class="err">+</span><span class="nv">props</span><span class="p">.</span><span class="nv">cart</span><span class="k">}}</span><span class="s">"</span> <span class="na">data-address=</span><span class="s">"</span><span class="k">{{</span><span class="err">+</span><span class="nv">props</span><span class="p">.</span><span class="nv">userShippingAddress</span><span class="k">}}</span><span class="s">"</span><span class="nt">/&gt;</span>
+			<span class="nt">&lt;checkout-button</span> <span class="na">data-on-buy=</span><span class="s">"</span><span class="k">{{</span><span class="err">+</span><span class="nv">props</span><span class="p">.</span><span class="nv">cartPurchase</span><span class="k">}}</span><span class="s">"</span><span class="nt">/&gt;</span>
+		<span class="nt">&lt;/div&gt;</span>
+		<span class="c">&lt;!-- ... snip ... --&gt;</span>
+	<span class="nt">&lt;/cart&gt;</span>
+	</code></pre></figure>
+
+<p>If you find yourself referencing components without any attributes or props like in the wrong example above, this should
+be considered a code smell and you should make extra sure that using smart components in that case is the right approach.</p>
+
+<h2 id="pages">Pages</h2>
+
+<p>While pages are technically Smart Components themselves, we make a distinction between the two concepts in the context
+of a Zino app to ensure simple structure and organization.</p>
+
+<p>Pages are generally addressable via a URL and may read one or more parameters from the url or the query string. Pages
+are roughly similar to actions in a MVC controller application and you may have pages like account-show or account-overview
+in an application.</p>
+
+<p>It is the responsibility of the page to bind to changes in the stores which are relevant to the page or its children.
+Pages will also be generally responsible for calling store actions to make changes to data when children components
+request it.</p>
+
+<h3 id="parent-child-relationships">Parent-child relationships</h3>
+
+<p>A common pattern is to pass a function on the Page into a component as a prop to enable the child component to make the
+callback when an action is taken in the interface. For clean separability, it is important that parent components (or
+pages, in this case) are unaware of the DOM structure generated by any children. Likewise, children components should
+not have knowledge of where their data comes from or how to persist it to a server, etc.</p>
+
+<h3 id="changing-between-pages">Changing between pages</h3>
+
+<p>When you want to have multiple pages that a user can navigate to and from, it can help to have a router store that can
+modify the browser’s history via the History API and load the requested page components, transferring any required
+state to those components, if necessary.</p>
+
+<h2 id="dumb-vs-smart-vs-pages">Dumb vs. Smart vs. Pages</h2>
+
+<h3 id="dumb-components-1">Dumb Components</h3>
+
+<ul>
+  <li>DO bind to DOM events</li>
+  <li>CAN fetch data from the DOM and pass it up to parent callbacks.</li>
+  <li>DO NOT use state for data (UI behaviours only)</li>
+  <li>DO NOT know about stores</li>
+  <li>DO NOT know about url routes or what page they are on</li>
+</ul>
+
+<h3 id="smart-components-1">Smart Components</h3>
+
+<ul>
+  <li>DO have data in state</li>
+  <li>DO bind to changes in stores</li>
+  <li>DO call store actions to make changes to data</li>
+  <li>DO pass data to children components as props or attributes</li>
+</ul>
+
+<h3 id="pages-1">Pages</h3>
+
+<p>Same as Smart Components rules, plus:</p>
+
+<ul>
+  <li>DO know about url routes</li>
+  <li>DO NOT know about the generated DOM in child components</li>
+</ul>
+
+<p>Facebook has <a href="https://facebook.github.io/react/docs/thinking-in-react.html#step-4-identify-where-your-state-should-live">some good tipps</a> on how to identify where the state of a component should live.</p>
+
+  </div>
+
+</article>
+
+      </div>
+    </div>
+
+    <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">zino</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-2">
+        <ul class="social-media-list">
+          
+          <li>
+            <a href="https://github.com/AndCake"><span class="icon icon--github"><svg viewBox="0 0 16 16"><path fill="#828282" d="M7.999,0.431c-4.285,0-7.76,3.474-7.76,7.761 c0,3.428,2.223,6.337,5.307,7.363c0.388,0.071,0.53-0.168,0.53-0.374c0-0.184-0.007-0.672-0.01-1.32 c-2.159,0.469-2.614-1.04-2.614-1.04c-0.353-0.896-0.862-1.135-0.862-1.135c-0.705-0.481,0.053-0.472,0.053-0.472 c0.779,0.055,1.189,0.8,1.189,0.8c0.692,1.186,1.816,0.843,2.258,0.645c0.071-0.502,0.271-0.843,0.493-1.037 C4.86,11.425,3.049,10.76,3.049,7.786c0-0.847,0.302-1.54,0.799-2.082C3.768,5.507,3.501,4.718,3.924,3.65 c0,0,0.652-0.209,2.134,0.796C6.677,4.273,7.34,4.187,8,4.184c0.659,0.003,1.323,0.089,1.943,0.261 c1.482-1.004,2.132-0.796,2.132-0.796c0.423,1.068,0.157,1.857,0.077,2.054c0.497,0.542,0.798,1.235,0.798,2.082 c0,2.981-1.814,3.637-3.543,3.829c0.279,0.24,0.527,0.713,0.527,1.437c0,1.037-0.01,1.874-0.01,2.129 c0,0.208,0.14,0.449,0.534,0.373c3.081-1.028,5.302-3.935,5.302-7.362C15.76,3.906,12.285,0.431,7.999,0.431z"/></svg>
+</span><span class="username">AndCake</span></a>
+
+          </li>
+          
+
+          
+        </ul>
+      </div>
+
+      <div class="footer-col footer-col-3">
+        <p>A micro component framework - easy to learn and powerful.
+</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+
+<script>
+    [].slice.call(document.querySelectorAll('.site-nav li')).forEach(function(li) {
+        if (li.querySelector('a[href]').href === location.href) {
+            li.classList.add('active');
+            if (li.parentNode.parentNode.tagName === 'LI') {
+                li.parentNode.parentNode.classList.add('active');
+            }
+        }
+    });
+</script>
+
+
+  </body>
+
+</html>

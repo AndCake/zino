@@ -12,6 +12,9 @@ subpages:
   - 03:
     url: /pages/tutorial/03-styling-components.html
     name: Styling Components
+  - 04:
+    url: /pages/tutorial/04-best-practices.html
+    name: Component Best-practices
 ---
 
 For this tutorial you will need a running server to serve your static files. You can use the Gruntfile from this repository and adapt it to your needs. Don't forget to take over

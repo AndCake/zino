@@ -53,13 +53,14 @@ Version 3.0.0
 
 - DOM-based mustache parser
 	- templates are no longer being parsed and evaluated during re-rendering but instead at component registration
-	- impact on syntax: it is no longer possible to have dynamic tag names as in the following example:
-		
+	- impact on syntax: it is no longer possible to have dynamic tag names or tag attributes as in the following example:
+
 		{% highlight mustache %}
 		<!-- DON'T DO THIS -->
 		<my-component>
 			<div class='content'>
 				<{{'{{'}}props.tag}}></{{'{{'}}props.tag}}>
+				<a {{#url}}href="{{.}}"{{/url}}>Test</a>
 			</div>
 			<script>
 			{
@@ -71,6 +72,12 @@ Version 3.0.0
 		<!-- instead do this: -->
 		<my-component>
 			<div class='content'></div>
+			{{#url}}
+				<a href="{{.}}">Test</a>
+			{{/url}}
+			{{^url}}
+				<a>Test</a>
+			{{/url}}
 			<script>
 			{
 				props: {tag: 'some-random-component'},
@@ -92,8 +99,8 @@ Version 3.0.0
 			tagName: 'my-component',
 			render: function(data) {
 				return new Tag('div', {id: 'my-id'}, [
-					'Hello,', 
-					data.props.name, 
+					'Hello,',
+					data.props.name,
 					new Tag('p', {}, 'Paragraph')
 				]);
 			},
