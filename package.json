@@ -1,6 +1,6 @@
 {
     "name": "zino",
-    "version": "3.2.3",
+    "version": "3.2.4",
     "description": "Micro component framework",
     "main": "zino.js",
     "directories": {

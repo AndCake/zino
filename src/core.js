@@ -275,7 +275,7 @@ function attachSubEvents(subEvents, tag) {
 			attachEvent(el, event.hostEvents, el);
 			el.children[0].__eventsAttached = true;
 		}
-		isFn(el.onready) && el.onready();
+		isFn(el.onready) && el.onready.call(el);
 	});
 }
 

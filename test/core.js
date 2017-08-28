@@ -99,12 +99,12 @@ test('render tag with sub components', t => {
 		return {
 			tagName: 'sub-level1',
 			render: function() {
-				return [Tag('sub-level2')];
+				return [Tag('sub-level4'), Tag('sub-level2')];
 			},
 			styles: []
 		}
 	}, document);
-	t.is(subLevel.innerHTML, '<div class="-shadow-root"><sub-level2 __ready="true"><div class="-shadow-root"><sub-level3 __ready="true"><div class="-shadow-root"><sub-level4 __ready="true"><div class="-shadow-root">test</div></sub-level4></div></sub-level3><sub-level3 __ready="true"><div class="-shadow-root"><sub-level4 __ready="true"><div class="-shadow-root">test</div></sub-level4></div></sub-level3></div></sub-level2></div>')
+	t.is(subLevel.innerHTML, '<div class="-shadow-root"><sub-level4 __ready="true"><div class="-shadow-root">test</div></sub-level4><sub-level2 __ready="true"><div class="-shadow-root"><sub-level3 __ready="true"><div class="-shadow-root"><sub-level4 __ready="true"><div class="-shadow-root">test</div></sub-level4></div></sub-level3><sub-level3 __ready="true"><div class="-shadow-root"><sub-level4 __ready="true"><div class="-shadow-root">test</div></sub-level4></div></sub-level3></div></sub-level2></div>')
 });
 
 test('calls all callbacks', t => {

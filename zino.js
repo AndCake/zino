@@ -672,7 +672,7 @@ function attachSubEvents(subEvents, tag) {
 			attachEvent(el, event.hostEvents, el);
 			el.children[0].__eventsAttached = true;
 		}
-		isFn(el.onready) && el.onready();
+		isFn(el.onready) && el.onready.call(el);
 	});
 }
 
@@ -872,9 +872,6 @@ function parse(data) {
 				if (level < 0) {
 					throw new Error('Unexpected end of block: ' + key.substr(1));
 				}
-			} else if (key[0] === '!') {
-				// ignore comments
-				result += '';
 			} else if (key[0] === '^') {
 				// handle inverted block start
 				result += '(safeAccess(' + getData() + ', \'' + value + '\') && (typeof safeAccess(' + getData() + ', \'' + value + '\') === \'boolean\' || safeAccess(' + getData() + ', \'' + value + '\').length > 0)) ? \'\' : spread([1].map(function() { var data$' + (level + 1) + ' = merge({}, data' + (0 >= level ? '' : '$' + level) + '); return [].concat(';
@@ -893,10 +890,10 @@ function parse(data) {
 				// handle non-escaping prints "{{{myvar}}}"
 				value = key;
 				result += '\'\'+safeAccess(' + getData() + ', \'' + value + '\', true)' + cat;
-			} else {
+			} else if (key[0] !== '!') {
 				// regular prints "{{myvar}}"
 				result += '\'\'+safeAccess(' + getData() + ', \'' + value + '\')' + cat;
-			}
+			} // ignore comments
 		}
 		if (text.substr(lastIndex).length > 0) {
 			result += "'" + text.substr(lastIndex).replace(/\n/g, '').replace(/'/g, '\\\'') + "'" + cat;
@@ -1094,7 +1091,10 @@ var zino = Zino = {
 						// convert it to JS
 						data = parse(data);
 					}
-					code = new Function('return ' + data.replace(/\bZino.import\s*\(/g, 'Zino.import.call({path: ' + JSON.stringify(path) + '}, ').trim().replace(/;$/, ''))();
+					code = new Function('return ' + data.replace(/url\((['"]?)(.*?)\1\)/g, function (g, quote, url) {
+						if (url.indexOf('data:') === 0 || url.indexOf('http') === 0 || url.indexOf('//') === 0 || url.indexOf('/') === 0) return g;
+						return g.replace(url, path + url);
+					}).replace(/\bZino.import\s*\(/g, 'Zino.import.call({path: ' + JSON.stringify(path) + '}, ').trim().replace(/;$/, ''))();
 				} catch (e) {
 					e.message = 'Unable to import tag ' + url.replace(/.*\//g, '') + ': ' + e.message;
 					throw e;

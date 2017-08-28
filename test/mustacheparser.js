@@ -11,9 +11,13 @@ function run(code) {
 	}
 }
 
-function render (code, data) {
+function render (code, data, debug) {
 	let parsed = parse(code);
 	let dom = run(parsed);
+	if (debug) {
+		console.log(parsed, dom, data);
+		debugger;
+	}
 	let result = dom.render(data);
 	result = Tag('div', {class: '-shadow-root'}, result);
 	return getInnerHTML(result);
