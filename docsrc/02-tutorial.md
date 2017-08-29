@@ -13,7 +13,10 @@ subpages:
     url: /pages/tutorial/03-styling-components.html
     name: Styling Components
   - 04:
-    url: /pages/tutorial/04-best-practices.html
+    url: /pages/tutorial/04-component-lifecycle.html
+    name: Component Lifecycle
+  - 05:
+    url: /pages/tutorial/05-best-practices.html
     name: Component Best-practices
 ---
 

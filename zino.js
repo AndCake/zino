@@ -1091,9 +1091,9 @@ var zino = Zino = {
 						// convert it to JS
 						data = parse(data);
 					}
-					code = new Function('return ' + data.replace(/url\((['"]?)(.*?)\1\)/g, function (g, quote, url) {
+					code = new Function('return ' + data.replace(/url\((\\*['"])?(.*?)\1\)/g, function (g, quote, url) {
 						if (url.indexOf('data:') === 0 || url.indexOf('http') === 0 || url.indexOf('//') === 0 || url.indexOf('/') === 0) return g;
-						return g.replace(url, path + url);
+						return 'url(' + path + url + ')';
 					}).replace(/\bZino.import\s*\(/g, 'Zino.import.call({path: ' + JSON.stringify(path) + '}, ').trim().replace(/;$/, ''))();
 				} catch (e) {
 					e.message = 'Unable to import tag ' + url.replace(/.*\//g, '') + ': ' + e.message;
