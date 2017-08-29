@@ -763,7 +763,7 @@ on('--zino-unmount-tag', unmountTag);
 on('--zino-mount-tag', mount);
 
 var tagRegExp = /<(\/?)([\w-]+)([^>]*?)(\/?)>/g;
-var attrRegExp = /([\w_-]+)=(?:'([^']*?)'|"([^"]*?)")/g;
+var attrRegExp = /([\w_-]+)(?:=(?:'([^']*?)'|"([^"]*?)"))?/g;
 var commentRegExp = /<!--(?:[^-]|-[^-])*-->/g;
 var syntax = /\{\{\s*([^\}]+)\s*\}\}\}?/g;
 
@@ -908,7 +908,7 @@ function parse(data) {
 
 		while (attr = attrRegExp.exec(attrs)) {
 			if (attributes !== '{') attributes += ', ';
-			attributes += '"' + attr[1].toLowerCase() + '": ' + handleText(attr[2] || attr[3], true).replace(/\s*[,+]\s*$/g, '');
+			attributes += '"' + attr[1].toLowerCase() + '": ' + handleText(attr[2] || attr[3] || '', true).replace(/\s*[,+]\s*$/g, '');
 		}
 		return attributes + '}';
 	}

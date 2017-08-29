@@ -1,7 +1,7 @@
 import {trigger, on, off} from './events';
 
 const tagRegExp = /<(\/?)([\w-]+)([^>]*?)(\/?)>/g;
-const attrRegExp = /([\w_-]+)=(?:'([^']*?)'|"([^"]*?)")/g;
+const attrRegExp = /([\w_-]+)(?:=(?:'([^']*?)'|"([^"]*?)"))?/g;
 const commentRegExp = /<!--(?:[^-]|-[^-])*-->/g;
 const syntax = /\{\{\s*([^\}]+)\s*\}\}\}?/g;
 
@@ -206,7 +206,7 @@ export function parse(data) {
 
 		while ((attr = attrRegExp.exec(attrs))) {
 			if (attributes !== '{') attributes += ', ';
-			attributes += '"' + attr[1].toLowerCase() + '": ' + handleText(attr[2] || attr[3], true).replace(/\s*[,+]\s*$/g, '');
+			attributes += '"' + attr[1].toLowerCase() + '": ' + handleText(attr[2] || attr[3] || '', true).replace(/\s*[,+]\s*$/g, '');
 		}
 		return attributes + '}';
 	}
