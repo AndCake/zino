@@ -1,10 +1,11 @@
 import * as core from '../src/core';
 import {on, off} from '../src/events';
-import Document from 'nano-dom';
+import {JSDOM} from 'jsdom';
 import test from './test';
 
 test('Zino core functionality');
-let document = new Document('X<myx-tag></myx-tag>Y<my-other-tag></my-other-tag>');
+//let document = new Document('X<myx-tag></myx-tag>Y<my-other-tag></my-other-tag>');
+let document = new JSDOM('X<myx-tag></myx-tag>Y<my-other-tag></my-other-tag>').window.document;
 let body = document.body;
 
 test('render simple tag', t => {
@@ -171,6 +172,73 @@ test('re-renders tag dynamically', t => {
 	off('--zino-rerender-tag');
 });
 
+test('render and re-render with nesting', (t) => {
+	on('--zino-rerender-tag', core.render);
+
+	var rootComponent = document.createElement('test');
+	var test2Count = 20;
+	rootComponent.props = {
+		testcount: test2Count
+	};
+	body.appendChild(rootComponent);
+
+	core.registerTag((Tag) => {
+		return {
+			tagName: 'test-2-1',
+			render: () => {
+				return [Tag('div', null, ['test-2-1'])];
+			}
+		};
+	});
+
+	core.registerTag((Tag) => {
+		return {
+			tagName: 'test-2',
+			render: () => {
+				return [
+					Tag('test-2-1', {'test': 'foo'})
+				];
+			}
+		};
+	});
+
+	core.registerTag((Tag) => {
+		return {
+			tagName: 'test',
+			render: (data) => {
+				var result = [];
+				for (var i = 0; i < data.props.testcount; i += 1) {
+					result.push(Tag('test-2', {'productid': i}));
+				}
+				return result;
+			}
+		};
+	}, document);
+
+	checkStructure();
+
+	test2Count = 40;
+	rootComponent.props.testcount = test2Count;
+	rootComponent.setProps('testcount', test2Count);
+
+	checkStructure();
+	off('--zino-rerender-tag', core.render);
+
+	function checkStructure() {
+		t.is(rootComponent.children[0].children.length, test2Count);
+
+		for (var i = 0; i < test2Count; i += 1) {
+			var test2 = getNthChild(rootComponent, i);
+			t.is(test2.nodeName, 'TEST-2');
+			t.is(test2.attrs.productid, i, `${test2Count} ${i}`);
+
+			var test2_1 = getNthChild(test2, 0);
+			t.is(test2_1.nodeName, 'TEST-2-1');
+			t.is(test2_1.attrs.test, 'foo');
+		}
+	}
+});
+
 test('pre-rendered tags', t => {
 	on('--zino-rerender-tag', core.render);
 	body.innerHTML = '<pre-rendered><div class="-shadow-root">Value: 2</div></pre-rendered><not-prerendered></not-prerendered>';
@@ -211,3 +279,7 @@ test('pre-rendered tags', t => {
 	t.is(isRenderedValue, false, 'isRendered is false if it has not been rendered yet');
 	t.is(isRenderedAfterRendered, true, 'isRendered is true once it has been rendered');
 });
+
+function getNthChild(root, pos) {
+	return root.children[0].children[pos];
+}
