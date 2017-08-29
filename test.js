@@ -685,7 +685,7 @@ function attachSubEvents(subEvents, tag) {
 			attachEvent(el, event.hostEvents, el);
 			el.children[0].__eventsAttached = true;
 		}
-		isFn(el.onready) && el.onready();
+		isFn(el.onready) && el.onready.call(el);
 	});
 }
 
@@ -776,7 +776,7 @@ on('--zino-unmount-tag', unmountTag);
 on('--zino-mount-tag', mount);
 
 var tagRegExp = /<(\/?)([\w-]+)([^>]*?)(\/?)>/g;
-var attrRegExp = /([\w_-]+)=(?:'([^']*?)'|"([^"]*?)")/g;
+var attrRegExp = /([\w_-]+)(?:=(?:'([^']*?)'|"([^"]*?)"))?/g;
 var commentRegExp = /<!--(?:[^-]|-[^-])*-->/g;
 var syntax = /\{\{\s*([^\}]+)\s*\}\}\}?/g;
 
@@ -885,9 +885,6 @@ function parse(data) {
 				if (level < 0) {
 					throw new Error('Unexpected end of block: ' + key.substr(1));
 				}
-			} else if (key[0] === '!') {
-				// ignore comments
-				result += '';
 			} else if (key[0] === '^') {
 				// handle inverted block start
 				result += '(safeAccess(' + getData() + ', \'' + value + '\') && (typeof safeAccess(' + getData() + ', \'' + value + '\') === \'boolean\' || safeAccess(' + getData() + ', \'' + value + '\').length > 0)) ? \'\' : spread([1].map(function() { var data$' + (level + 1) + ' = merge({}, data' + (0 >= level ? '' : '$' + level) + '); return [].concat(';
@@ -902,14 +899,14 @@ function parse(data) {
 			} else if (key[0] === '+') {
 				// handle deep data transfer "{{+myvar}}"
 				result += 'safeAccess(' + getData() + ', \'' + value + '\')' + cat;
-			} else if (key[0] !== '{') {
+			} else if (key[0] !== '{' && key[0] !== '!') {
 				// handle non-escaping prints "{{{myvar}}}"
 				value = key;
 				result += '\'\'+safeAccess(' + getData() + ', \'' + value + '\', true)' + cat;
-			} else {
+			} else if (key[0] !== '!') {
 				// regular prints "{{myvar}}"
 				result += '\'\'+safeAccess(' + getData() + ', \'' + value + '\')' + cat;
-			}
+			} // ignore comments
 		}
 		if (text.substr(lastIndex).length > 0) {
 			result += "'" + text.substr(lastIndex).replace(/\n/g, '').replace(/'/g, '\\\'') + "'" + cat;
@@ -924,7 +921,7 @@ function parse(data) {
 
 		while (attr = attrRegExp.exec(attrs)) {
 			if (attributes !== '{') attributes += ', ';
-			attributes += '"' + attr[1].toLowerCase() + '": ' + handleText(attr[2] || attr[3], true).replace(/\s*[,+]\s*$/g, '');
+			attributes += '"' + attr[1].toLowerCase() + '": ' + handleText(attr[2] || attr[3] || '', true).replace(/\s*[,+]\s*$/g, '');
 		}
 		return attributes + '}';
 	}

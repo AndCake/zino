@@ -184,7 +184,7 @@ export function parse(data) {
 			} else if (key[0] === '+') {
 				// handle deep data transfer "{{+myvar}}"
 				result += `safeAccess(${getData()}, '${value}')${cat}`;
-			} else if (key[0] !== '{') {
+			} else if (key[0] !== '{' && key[0] !== '!') {
 				// handle non-escaping prints "{{{myvar}}}"
 				value = key;
 				result += `''+safeAccess(${getData()}, '${value}', true)${cat}`
