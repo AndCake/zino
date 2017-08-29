@@ -607,18 +607,22 @@ function renderTag(tag) {
 	// render all contained sub components
 	// retrieve the tags that the vdom was made aware of (all our registered components)
 	renderedSubElements = getTagsCreated();
-	renderedSubElements.forEach(function (subEl) {
+	for (var idx = 0, len = renderedSubElements.length; idx < len; idx += 1) {
+		var subEl = renderedSubElements[idx];
+
 		// initialize them all
 		var subElEvents = initializeTag.call({
 			noRenderCallback: true,
 			noEvents: true
 		}, subEl, tagRegistry[subEl.tagName]);
 		if (subElEvents) {
-			renderedSubElements = renderedSubElements.concat(subElEvents.subElements);
+			renderedSubElements.splice.apply(renderedSubElements, [idx + 1, 0].concat(subElEvents.subElements));
+			idx += subElEvents.subElements.length;
+			len += subElEvents.subElements.length;
 			events = events.concat(subElEvents.events);
 			renderCallbacks = renderCallbacks.concat(subElEvents.renderCallbacks);
 		}
-	});
+	}
 
 	if (tag.attributes.__ready && Math.abs(renderedDOM.__complexity - (tag.__complexity || 0)) < 50 && tag.ownerDocument) {
 		// has been rendered before, so just apply diff

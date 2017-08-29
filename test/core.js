@@ -1,10 +1,11 @@
 import * as core from '../src/core';
 import {on, off} from '../src/events';
-import Document from 'nano-dom';
+import {JSDOM} from 'jsdom';
 import test from './test';
 
 test('Zino core functionality');
-let document = new Document('X<myx-tag></myx-tag>Y<my-other-tag></my-other-tag>');
+//let document = new Document('X<myx-tag></myx-tag>Y<my-other-tag></my-other-tag>');
+let document = new JSDOM('X<myx-tag></myx-tag>Y<my-other-tag></my-other-tag>').window.document;
 let body = document.body;
 
 test('render simple tag', t => {
@@ -228,11 +229,11 @@ test('render and re-render with nesting', (t) => {
 
 		for (var i = 0; i < test2Count; i += 1) {
 			var test2 = getNthChild(rootComponent, i);
-			t.is(test2.nodeName, 'TEST-2');
+			t.is(test2.nodeName.toLowerCase(), 'test-2');
 			t.is(test2.attrs.productid, i, `${test2Count} ${i}`);
 
 			var test2_1 = getNthChild(test2, 0);
-			t.is(test2_1.nodeName, 'TEST-2-1');
+			t.is(test2_1.nodeName.toLowerCase(), 'test-2-1');
 			t.is(test2_1.attrs.test, 'foo');
 		}
 	}

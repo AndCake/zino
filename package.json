@@ -41,12 +41,13 @@
         "rollup-plugin-babel": "^2.7.1",
         "rollup-plugin-multi-entry": "^2.0.1",
         "rollup-watch": "^3.2.2",
+        "jsdom": "^11.2.0",
         "uglify-js": "^2.8.22"
     },
     "dependencies": {
         "colors": "^1.1.2",
         "fast-diff": "^1.1.1",
-        "nano-dom": "^0.0.9",
+        "nano-dom": "^0.1.4",
         "readline-sync": "^1.4.7"
     },
     "optionalDependencies": {
