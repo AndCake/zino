@@ -7,6 +7,19 @@ permalink: /releases
 
 This page contains a summary of changes to the previous version
 
+Version 3.3.0
+-------------
+
+- Migrated to MIT license
+- added some comments to the code
+- implemented feature #3: Support different base path for urls in component css
+- implemented feature #6: HTML boolean attributes without values are no longer removed during the rendering process
+- fixed a bug with rendering inverted sub blocks
+- fixed issue #1: Not able to nest three levels or more
+- fixed issue with "this" within the render function of sub components
+- fixed an issue with nested blocks
+- fixed an issue with mustache comments
+
 Version 3.2.0
 -------------
 

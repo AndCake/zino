@@ -5,3 +5,5 @@ examples/dist
 .saucelabs.json
 yarn.lock
 .sass-cache
+
+yarn-error\.log
