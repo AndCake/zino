@@ -221,7 +221,9 @@ function renderTag(tag, registryEntry = tagRegistry[tag.tagName.toLowerCase()]) 
 			noEvents: true
 		}, subEl, tagRegistry[subEl.tagName]);
 		if (subElEvents) {
+			// make sure that we build the hierarchical order of sub elements (same as what comes back from querySelectorAll)
 			renderedSubElements.splice.apply(renderedSubElements, [idx + 1, 0].concat(subElEvents.subElements));
+			// array has been extended, adapt...
 			idx += subElEvents.subElements.length;
 			len += subElEvents.subElements.length;
 			events = events.concat(subElEvents.events);
@@ -268,18 +270,29 @@ function renderTag(tag, registryEntry = tagRegistry[tag.tagName.toLowerCase()]) 
 
 function attachSubEvents(subEvents, tag) {
 	var count = {};
-	subEvents.events.forEach(event => {
-		let el = event.tag;
-		if (!isObj(el)) {
-			count[el] = (count[el] || 0) + 1;
-			el = tag.querySelectorAll(el)[count[el] - 1];
-		}
-		if (!el.children[0].__eventsAttached) {
-			attachEvent(el.children[0], event.childEvents, el);
-			attachEvent(el, event.hostEvents, el);
-			el.children[0].__eventsAttached = true;
-		}
-		isFn(el.onready) && el.onready.call(el);
+	// make sure that we only attach events if we are actually in browser context
+	if (tag.addEventListener.toString().indexOf('[native code]') >= 0) {
+		subEvents.events.forEach(event => {
+			let el = event.tag;
+			if (!isObj(el)) {
+				// we have a selector rather than an element
+				count[el] = (count[el] || 0) + 1;
+				// turn the selector into the corresponding element
+				el = tag.querySelectorAll(el)[count[el] - 1];
+			}
+			// if no events have been attached yet
+			if (!el.children[0].__eventsAttached) {
+				// attach children tag events to the shadow root
+				attachEvent(el.children[0], event.childEvents, el);
+				// attach host events directly to the component
+				attachEvent(el, event.hostEvents, el);
+				el.children[0].__eventsAttached = true;
+			}
+		});
+	}
+	[tag].concat(tag.__subs).forEach(function(el) {
+		let actual = el && el.getHost() || {};
+		isFn(actual.onready) && actual.onready.call(actual);
 	});
 }
 
