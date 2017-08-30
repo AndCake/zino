@@ -527,7 +527,7 @@ function defineAttribute(tag, name, value) {
 		// if it's the same as setAttribute 
 		if (tag.__s === tag.setAttribute) {
 			// we might have a double override => use the original HTMLElement's setAttribute instead to avoid endless recursion 
-			HTMLElement.prototype.setAttribute.call(tag, name, value);
+			(tag.prototype || HTMLElement.prototype).setAttribute.call(tag, name, value);
 		} else {
 			// we now know it's the original setAttribute (also works for vdom nodes) 
 			tag.__s(name, value);
@@ -537,7 +537,7 @@ function defineAttribute(tag, name, value) {
 		// but it is a regular HTML element 
 		if (tag.ownerDocument) {
 			// use the HTMLElement's setAttribute to define the attribute 
-			HTMLElement.prototype.setAttribute.call(tag, name, value);
+			(tag.prototype || HTMLElement.prototype).setAttribute.call(tag, name, value);
 		} else {
 			// we now know it can only be a vdom node, so set attribute vdom-style 
 			tag.attributes[name] = { name: name, value: value };
@@ -694,7 +694,7 @@ function attachSubEvents(subEvents, tag) {
 			if (!el.children[0].__eventsAttached) {
 				// attach children tag events to the shadow root
 				attachEvent(el.children[0], event.childEvents, el);
-				// attach host events directly to the component
+				// attach host events directly to the component!
 				attachEvent(el, event.hostEvents, el);
 				el.children[0].__eventsAttached = true;
 			}
