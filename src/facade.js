@@ -27,7 +27,7 @@ on('publish-style', data => {
 		if (document.getElementById('style:' + data.tagName)) return;
 		let style = document.createElement('style');
 		style.innerHTML = data.styles;
-		style.id = 'style:' + data.tagName;
+		style.setAttribute('id', 'style:' + data.tagName);
 		document.head.appendChild(style);
 	}
 });

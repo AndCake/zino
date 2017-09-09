@@ -28,5 +28,5 @@ test('getInnerHTML', t => {
 test('applyDOM', t => {
 	let jdom = new Document('<!DOCTYPE html><html><head></head><body></body></html>');
 	vdom.applyDOM(jdom.documentElement, dom, jdom);
-	t.is(jdom.documentElement.outerHTML, '<html><head><title>page title</title></head><body><h1 class="title">Headline</h1><p>Hello, World!</p><h1></h1></body></html>');
+	t.is(jdom.documentElement.outerHTML, '<html><head><title>page title</title></head><body><h1 class="title">Headline</h1><p>Hello, World!</p></body></html>');
 });

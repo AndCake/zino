@@ -2,16 +2,14 @@ import * as vdom from './vdom';
 import {emptyFunc, isFn, isObj, uuid, merge, toArray} from './utils';
 import {trigger, on, attachSubEvents} from './events';
 
-export let renderOptions = {
-	resolveData(key, value, oldID) {
-		let id = uuid();
-		if (oldID) {
-			// unregister old entry
-			delete dataRegistry[oldID];
-		}
-		dataRegistry[id] = value;
-		return id;
+let resolveData = (key, value, oldID) => {
+	let id = uuid();
+	if (oldID) {
+		// unregister old entry
+		delete dataRegistry[oldID];
 	}
+	dataRegistry[id] = value;
+	return id;
 };
 
 let tagRegistry = {},
@@ -31,13 +29,14 @@ let tagRegistry = {},
 				tag.props[name] = value;
 				let attrName = 'data-' + name.replace(/[A-Z]/g, g => `-${g.toLowerCase()}`);
 				if (tag.attributes[attrName]) {
-					defineAttribute(tag, attrName, `--${renderOptions.resolveData(name, value, tag.attributes[attrName].value)}--`);
+					defineAttribute(tag, attrName, `--${resolveData(name, value, tag.attributes[attrName].value)}--`);
 				}
 			}
 			!tag.mounting && trigger('--zino-rerender-tag', tag);
 		}
 	};
 
+export function setResolveData(fn) { resolveData = fn; }
 export function registerTag(fn, document, Zino) {
 	let firstElement = fn(vdom.Tag, Zino),
 		tagName = firstElement.tagName;
@@ -56,9 +55,9 @@ export function registerTag(fn, document, Zino) {
 }
 
 export function mount(tag, ignoreRender) {
-	if (!tag.tagName) return;
+	if (!tag.tagName) return {};
 	let entry = tagRegistry[tag.tagName.toLowerCase()];
-	if (!entry || tag.getAttribute('__ready')) return;
+	if (!entry || tag.getAttribute('__ready')) return {};
 	if (ignoreRender) entry.functions.render = emptyFunc;
 	return initializeTag.call(ignoreRender ? {noEvents: true} : this, tag, entry);
 }
@@ -185,7 +184,7 @@ function renderTag(tag, registryEntry = tagRegistry[tag.tagName.toLowerCase()]) 
 		renderedDOM;
 
 	// do the actual rendering of the component
-	vdom.setDataResolver(renderOptions.resolveData);
+	vdom.setDataResolver(resolveData);
 	vdom.clearTagsCreated();
 	let data = getAttributes(tag);
 	if (isFn(registryEntry.render)) {
