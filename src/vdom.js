@@ -1,4 +1,4 @@
-import {uuid} from './utils';
+import {uuid, toArray} from './utils';
 import {trigger} from './events';
 
 let tagFilter = [];
@@ -30,28 +30,6 @@ export function Tag(tagName, attributes, children) {
 	};
 	if (tagFilter.indexOf(tagName) >= 0) tagsCreated.push(tag);
 	return tag;
-}
-
-/**
- * Returns all tags with a given tag name. If the provided context contains a getElementsByTagName() function,
- * that will be used to retrieve the data, else a manual recursive lookup will be done
- *
- * @param  {String} name - name of the tag to retrieve the elements  of
- * @param  {Object} dom - either a VDOM node or a DOM node
- * @return {Array} - list of elements that match the provided tag name
- */
-export function getElementsByTagName(name, dom) {
-	let result = [];
-	name = (name || '').toLowerCase();
-	if (typeof dom.getElementsByTagName === 'function') return [].slice.call(dom.getElementsByTagName(name));
-
-	if (dom.children) {
-		result = result.concat(dom.children.filter(child => child.tagName && child.tagName.toLowerCase() === name));
-		dom.children.forEach(child => {
-			result = result.concat(getElementsByTagName(name, child));
-		});
-	}
-	return result;
 }
 
 /**
@@ -149,7 +127,7 @@ function applyText(domChild, dom, node, document) {
 	} else {
 		// it's just a text node, so simply replace the element with the text node
 		dom.replaceChild(createElement(node.replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&'), document), domChild);
-	}	
+	}
 }
 
 /**
@@ -231,6 +209,6 @@ export function applyDOM(dom, vdom, document) {
 	});
 	if (dom.childNodes.length > children.length) {
 		// remove superfluous child nodes
-		[].slice.call(dom.childNodes, children.length).forEach(child => dom.removeChild(child));
+		toArray(dom.childNodes, children.length).forEach(child => dom.removeChild(child));
 	}
 }

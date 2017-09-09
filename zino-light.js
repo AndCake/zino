@@ -1,4 +1,4 @@
-var Zino = (function () {
+(function (exports) {
 'use strict';
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) {
@@ -13,7 +13,7 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
  * @param  {...Object} args list of arguments
  * @return {Object}         the merged object (same as first argument)
  */
-function merge$1(target) {
+function merge(target) {
 	for (var _len = arguments.length, args = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
 		args[_key - 1] = arguments[_key];
 	}
@@ -68,7 +68,7 @@ function uuid() {
 	});
 }
 
-function toArray$1(obj, startIdx) {
+function toArray$$1(obj, startIdx) {
 	return Array.prototype.slice.call(obj, startIdx || 0);
 }
 
@@ -173,280 +173,6 @@ function attachSubEvents(subEvents, tag) {
 			}
 		});
 	}
-}
-
-var tagRegExp = /<(\/?)([\w-]+)([^>]*?)(\/?)>/g;
-var attrRegExp = /([\w_-]+)(?:=(?:'([^']*?)'|"([^"]*?)"))?/g;
-var commentRegExp = /<!--(?:[^-]|-[^-])*-->/g;
-var syntax = /\{\{\s*([^\}]+)\s*\}\}\}?/g;
-
-/* helper functions to be used inside the generated code */
-
-/** @function safeAccess
- * safely access the given property in the object obj.
- *
- * @param obj (Object) - the object to read the property from
- * @param attrs (String) - the name of the property to access (allows for object paths via ., e.g. "myprop.firstValue")
- * @param escape (Boolean) - if the value should be HTML escaped to prevent XSS attacks and such
- * @return any
- */
-var safeAccess = 'function safeAccess(t,e,r){if(!e)return t;if("."===e[0])return t[e];for(e=e.split(".");e.length>0&&void 0!==(t=t[e.shift()]););return"string"==typeof t&&r===!0?t.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;").replace(/>/g,"&gt;"):"function"==typeof t?t.call(__i):"number"==typeof t?t:t||""}';
-
-/** @function toArray
- * turn property value of an object into an array
- *
- * @param data (Object) - the object to read the property value from
- * @param value (String) - the property whose value should be read from the object
- * @return Array
- */
-var toArray = 'function toArray(t,e){var r=safeAccess(t,e);return r?"[object Array]"===Object.prototype.toString.call(r)?r:"function"==typeof r?r():[r]:[]}';
-
-/** @function spread
- * turns an array of arrays into an array of all containing elements (reduces the array depth by 1)
- *
- * @param array (Array) - the array to spread the values along
- * @return Array - a new array containing all the values of the sub elements
- */
-var spread = 'function spread(t){var e=[];return t.forEach(function(t){e=e.concat(t)}),e}';
-
-/** @function merge
- * merges any number of objects into the target object
- * @param target (Object) - the object the other object should be merged into
- * @param obj1 (Object) - the first object to be merged into the target object
- * @param objn (Object) - all nth object to be merged into the target object
- * @return Object - the target object
- */
-var merge = 'function merge(t){return[].slice.call(arguments,1).forEach(function(e){for(var r in e)t[r]=e[r]}),t}';
-
-/** @function renderStyle
- * transforms an object into CSS properties
- *
- * @param value (Object) - the object to be transformed
- * @param context (Object) - for any functions defined in the object, context will be provided within as `this`
- * @return String - the CSS property list separated by semicolon
- */
-var renderStyle = 'function renderStyle(t,r){var e="";if(transform=function(t){return"function"==typeof t?transform(t.apply(r)):t+("number"==typeof t&&null!==t?r.styles&&r.styles.defaultUnit||"px":"")},"object"==typeof t)for(var n in t)e+=n.replace(/[A-Z]/g,function(t){return"-"+t.toLowerCase()})+":"+transform(t[n])+";";return e}';
-
-/* this is the base structure of a Zino tag */
-var baseCode = 'function (Tag,Zino){var __i;{{helperFunctions}};return{tagName:"{{tagName}}",{{styles}}render:function(data){return __i=this,[].concat({{render}})},functions:{{functions}}}}';
-
-/** parses style information from within a style tag makes sure it is localized */
-function handleStyles(tagName, styles) {
-	styles = (styles || []).map(function (style) {
-		var code = style;
-		return code.replace(/[\r\n]*([^%\{;\}]+?)\{/gm, function (global, match) {
-			if (match.trim().match(/^@/)) {
-				return match + '{';
-			}
-			var selectors = match.split(',').map(function (selector) {
-				selector = selector.trim();
-				if (selector.match(/:host\b/) || selector.match(new RegExp('^\\s*' + tagName + '\\b')) || selector.match(/^\s*(?:(?:\d+%)|(?:from)|(?:to)|(?:@\w+)|\})\s*$/)) {
-					return selector;
-				}
-				return tagName + ' ' + selector;
-			});
-			return global.replace(match, selectors.join(','));
-		}).replace(/:host\b/gm, tagName) + '\n';
-	});
-	return styles;
-}
-
-/** takes an HTML string containing mustache code and turns it into executable JS code that generates a vdom */
-function parse(data) {
-	var resultObject = {
-		styles: [],
-		helperFunctions: [safeAccess],
-		tagName: '',
-		render: '',
-		functions: []
-	};
-	var usesMerge = false,
-	    usesRenderStyle = false,
-	    usesSpread = false;
-	var match = void 0,
-	    lastIndex = 0,
-	    level = 0,
-	    tagStack = [];
-
-	// return the correct data level for multi-level mustache blocks
-	function getData() {
-		return 'data' + (level === 0 ? '' : '$' + level);
-	}
-
-	// text is the only place where mustache code can be found
-	function handleText(text, isAttr) {
-		var match = void 0,
-		    result = '',
-		    lastIndex = 0;
-		var cat = isAttr ? ' + ' : ', ';
-		if (!text.match(syntax)) {
-			return result += "'" + text.substr(lastIndex).replace(/\n/g, '').replace(/'/g, '\\\'') + "'" + cat;
-		}
-		// locate mustache syntax within the text
-		while (match = syntax.exec(text)) {
-			if (match.index < lastIndex) continue;
-			var frag = text.substring(lastIndex, match.index).replace(/^\s+/g, '');
-			if (frag.length > 0) {
-				result += "'" + frag.replace(/\n/g, '').replace(/'/g, '\\\'') + "'" + cat;
-			}
-			lastIndex = match.index + match[0].length;
-			var key = match[1];
-			// of "{{#test}}" value will be "test"
-			var value = key.substr(1);
-			if (key[0] === '#') {
-				// handle block start
-				result += 'spread(toArray(' + getData() + ', \'' + value + '\').map(function (e, i, a) {\n\t\t\t\t\t\tvar data$' + (level + 1) + ' = merge({}, data' + (0 >= level ? '' : '$' + level) + ', {\'.\': e, \'.index\': i, \'.length\': a.length}, e);\n\t\t\t\t\t\treturn [].concat(';
-				level += 1;
-				usesMerge = true;
-				usesSpread = true;
-			} else if (key[0] === '/') {
-				// handle block end
-				result += '\'\'); }))' + (isAttr ? '.join("")' : '') + cat;
-				level -= 1;
-				if (level < 0) {
-					throw new Error('Unexpected end of block: ' + key.substr(1));
-				}
-			} else if (key[0] === '^') {
-				// handle inverted block start
-				result += '(safeAccess(' + getData() + ', \'' + value + '\') && (typeof safeAccess(' + getData() + ', \'' + value + '\') === \'boolean\' || safeAccess(' + getData() + ', \'' + value + '\').length > 0)) ? \'\' : spread([1].map(function() { var data$' + (level + 1) + ' = merge({}, data' + (0 >= level ? '' : '$' + level) + '); return [].concat(';
-				usesSpread = true;
-				level += 1;
-			} else if (key[0] === '%') {
-				// handle style rendering "{{%myvar}}" - only to be used for attribute values!
-				result += key.substr(1).split(/\s*,\s*/).map(function (value) {
-					return 'renderStyle(safeAccess(' + getData() + ', \'' + value + '\'), ' + getData() + ')';
-				}).join(' + ');
-				usesRenderStyle = true;
-			} else if (key[0] === '+') {
-				// handle deep data transfer "{{+myvar}}"
-				result += 'safeAccess(' + getData() + ', \'' + value + '\')' + cat;
-			} else if (key[0] !== '{' && key[0] !== '!') {
-				// handle non-escaping prints "{{{myvar}}}"
-				value = key;
-				result += '\'\'+safeAccess(' + getData() + ', \'' + value + '\', true)' + cat;
-			} else if (key[0] !== '!') {
-				// regular prints "{{myvar}}"
-				result += '\'\'+safeAccess(' + getData() + ', \'' + value + '\')' + cat;
-			} // ignore comments
-		}
-		if (text.substr(lastIndex).length > 0) {
-			result += "'" + text.substr(lastIndex).replace(/\n/g, '').replace(/'/g, '\\\'') + "'" + cat;
-		}
-		return result;
-	}
-
-	// generate attribute objects for vdom creation
-	function makeAttributes(attrs) {
-		var attributes = '{';
-		var attr = void 0;
-
-		while (attr = attrRegExp.exec(attrs)) {
-			if (attributes !== '{') attributes += ', ';
-			attributes += '"' + attr[1].toLowerCase() + '": ' + handleText(attr[2] || attr[3] || '', true).replace(/\s*[,+]\s*$/g, '');
-		}
-		return attributes + '}';
-	}
-
-	// clean up code
-	on('--zino-addscript', function (content) {
-		content = content.trim().replace(/;$/, '').replace(/(['"`])([^\1\n]*)\1/gm, function (g, m, c) {
-			return g.replace(c, c.replace(/\/\//g, '\\/\\/'));
-		}).replace(/\/\/.*$/gm, '');
-		if (content.trim()) {
-			resultObject.functions.push(content);
-			usesMerge = true;
-		}
-	});
-	// handle all scripts and styles
-	data = data.replace(commentRegExp, '').replace(/<(script|style)(\s+[^>]*?)?>((?:.|\n)*?)<\/\1>/gi, function (g, x, a, m) {
-		if (x === 'style') {
-			resultObject.styles.push(m);
-		} else {
-			if (a && a.match(/\s+src=(?:(?:'([^']+)')|(?:"([^"]+)"))/g)) {
-				trigger('publish-script', RegExp.$1 || RegExp.$2);
-			} else {
-				trigger('--zino-addscript', m);
-			}
-		}
-		return '';
-	}).trim();
-	off('--zino-addscript');
-
-	// check if we have an actual HTML component code (looking for the starting tag)
-	if (!data.match(tagRegExp)) {
-		throw new Error('No proper component provided');
-	}
-	// find out how the component is called
-	resultObject.tagName = data.match(/^<([\w_-]+)>/)[1].toLowerCase();
-	resultObject.styles = handleStyles(resultObject.tagName, resultObject.styles);
-
-	// loop through all HTML tags in code
-	while (match = tagRegExp.exec(data)) {
-		// skip the ones we already processed
-		if (match.index < lastIndex) continue;
-		var text = data.substring(lastIndex, match.index).replace(/^[ \t]+|[ \t]$/g, ' ').trim();
-		lastIndex = match.index + match[0].length;
-		// if we have some leading text (before the first tag)
-		if (text.length > 0) {
-			// it must be a text node
-			resultObject.render += handleText(text);
-		}
-		// if we found the tag's definition, skip it
-		if (match[2] === resultObject.tagName) continue;
-		if (match[1]) {
-			// closing tag
-			var expected = tagStack.pop();
-			if (expected !== match[2]) {
-				throw new Error('Unexpected end of tag: ' + match[2] + '; expected to end ' + expected);
-			}
-			resultObject.render = resultObject.render.replace(/,\s*$/g, '') + ')), ';
-		} else {
-			// opening tag
-			tagStack.push(match[2]);
-			var attributes = makeAttributes(match[3]);
-			resultObject.render += 'new Tag(\'' + match[2] + '\', ' + attributes;
-			if (!match[4]) {
-				// not a self-closing tag, so prepare for it's content
-				resultObject.render += ', [].concat(';
-			} else {
-				// self-closing tag, close it immediately
-				resultObject.render += '), ';
-				tagStack.pop();
-			}
-		}
-	}
-	if (tagStack.length > 0) {
-		throw new Error('Unclosed tags: ' + tagStack.join(', '));
-	}
-	if (level > 0) {
-		throw new Error('Unexpected end of block');
-	}
-	// if we have content after the last found tag node
-	if (data.substr(lastIndex).trim().length > 0) {
-		// it must be a text node
-		resultObject.render += handleText(data.substr(lastIndex).replace(/^[ \t]+|[ \t]$/g, ' ').trim());
-	}
-	resultObject.render = resultObject.render.replace(/,\s*$/g, '');
-
-	// add helper functions that were used by the code
-	if (usesMerge) {
-		resultObject.helperFunctions.push(merge);
-		resultObject.helperFunctions.push(toArray);
-	}
-	if (usesSpread) {
-		resultObject.helperFunctions.push(spread);
-	}
-	if (usesRenderStyle) {
-		resultObject.helperFunctions.push(renderStyle);
-	}
-	resultObject.functions = resultObject.functions.length > 0 ? 'merge({}, ' + (resultObject.functions.join(', ') || '{}') + ')' : '{}';
-	resultObject.styles = resultObject.styles.length > 0 ? 'styles: ' + JSON.stringify(resultObject.styles) + ',' : '';
-	resultObject.helperFunctions = resultObject.helperFunctions.join('\n');
-
-	// fill in place-holders in base code and return the result
-	return baseCode.replace(/\{\{([^\}]+)\}\}/g, function (g, m) {
-		return resultObject[m];
-	});
 }
 
 var tagFilter = [];
@@ -659,7 +385,7 @@ function applyDOM(dom, vdom, document) {
 	});
 	if (dom.childNodes.length > children.length) {
 		// remove superfluous child nodes
-		toArray$1(dom.childNodes, children.length).forEach(function (child) {
+		toArray$$1(dom.childNodes, children.length).forEach(function (child) {
 			return dom.removeChild(child);
 		});
 	}
@@ -691,7 +417,7 @@ var defaultFunctions = {
 	setProps: function setProps(name, value) {
 		var tag = this.getHost();
 		if (isObj$1(name)) {
-			merge$1(tag.props, name);
+			merge(tag.props, name);
 		} else {
 			tag.props[name] = value;
 			var attrName = 'data-' + name.replace(/[A-Z]/g, function (g) {
@@ -715,11 +441,11 @@ function registerTag(fn, document, Zino) {
 	}
 
 	trigger('publish-style', { styles: firstElement.styles, tagName: tagName });
-	firstElement.functions = merge$1({}, defaultFunctions, firstElement.functions);
+	firstElement.functions = merge({}, defaultFunctions, firstElement.functions);
 	tagRegistry[tagName] = firstElement;
 
 	// initialize all occurences in provided context
-	document && toArray$1(document.getElementsByTagName(tagName)).forEach(function (tag) {
+	document && toArray$$1(document.getElementsByTagName(tagName)).forEach(function (tag) {
 		return initializeTag(tag, tagRegistry[tagName]);
 	});
 }
@@ -817,7 +543,7 @@ function initializeNode(_ref) {
 			if (isFn(entry)) {
 				tag[all] = entry.bind(tag);
 			} else {
-				tag[all] = isObj$1(tag[all]) ? merge$1({}, entry, tag[all]) : entry;
+				tag[all] = isObj$1(tag[all]) ? merge({}, entry, tag[all]) : entry;
 			}
 		}
 	}
@@ -841,7 +567,7 @@ function initializeNode(_ref) {
 	};
 
 	// call mount callback
-	tag.props = merge$1({}, functions.props, getAttributes(tag, true));
+	tag.props = merge({}, functions.props, getAttributes(tag, true));
 	tag.attrs = getAttributes(tag);
 
 	try {
@@ -914,9 +640,9 @@ function renderTag(tag) {
 	//tag.__complexity = renderedDOM.__complexity;
 
 	// if we have rendered any sub components, retrieve their actual DOM node
-	renderedSubElements.length > 0 && (tag.querySelectorAll && toArray$1(tag.querySelectorAll('[__ready]')) || []).forEach(function (subEl, index) {
+	renderedSubElements.length > 0 && (tag.querySelectorAll && toArray$$1(tag.querySelectorAll('[__ready]')) || []).forEach(function (subEl, index) {
 		// apply all additional functionality to them (custom functions, attributes, etc...)
-		merge$1(subEl, renderedSubElements[index]);
+		merge(subEl, renderedSubElements[index]);
 		// update getHost to return the DOM node instead of the vdom node
 		subEl.getHost = renderedSubElements[index].getHost = defaultFunctions.getHost.bind(subEl);
 	});
@@ -1003,7 +729,7 @@ on('--zino-initialize-node', initializeNode);
 var document$1 = void 0;
 var loadComponent = emptyFunc;
 
-var Zino$1 = {
+var Zino = {
 	on: on, one: one, off: off, trigger: trigger,
 	fetch: emptyFunc,
 
@@ -1011,7 +737,7 @@ var Zino$1 = {
 		var callback = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : emptyFunc;
 
 		loadComponent((this.path || '') + path, function (code) {
-			code && registerTag(code, document$1.body, Zino$1);
+			code && registerTag(code, document$1.body, Zino);
 			callback();
 		});
 	}
@@ -1051,8 +777,8 @@ var tagObserver = new MutationObserver(function (records) {
 	});
 });
 
-window.Zino = Zino$1;
-Zino$1.fetch = function (url, callback, cache, code) {
+window.Zino = Zino;
+Zino.fetch = function (url, callback, cache, code) {
 	if (cache && urlRegistry[url] && !urlRegistry[url].callback) {
 		return callback(urlRegistry[url], 200);
 	} else if (isObj$1(urlRegistry[url])) {
@@ -1079,7 +805,7 @@ Zino$1.fetch = function (url, callback, cache, code) {
 	req.send();
 };
 setComponentLoader(function (url, fn) {
-	Zino$1.fetch(url, function (data, status) {
+	Zino.fetch(url, function (data, status) {
 		var path = url.replace(/[^\/]+$/g, '');
 		if (status === 200) {
 			var code = void 0;
@@ -1103,12 +829,12 @@ function setParser(fn) {
 	parseCode = fn;
 }
 
-Zino$1.on('--zino-rerender-tag', function (tag) {
+Zino.on('--zino-rerender-tag', function (tag) {
 	return dirtyTags.indexOf(tag) < 0 && dirtyTags.push(tag);
 });
-Zino$1.trigger('publish-style', '[__ready] { contain: content; }');
-toArray$1(document.querySelectorAll('[rel="zino-tag"]')).forEach(function (tag) {
-	return Zino$1.import(tag.href);
+Zino.trigger('publish-style', '[__ready] { contain: content; }');
+toArray$$1(document.querySelectorAll('[rel="zino-tag"]')).forEach(function (tag) {
+	return Zino.import(tag.href);
 });
 tagObserver.observe(document.body, {
 	subtree: true,
@@ -1122,17 +848,8 @@ requestAnimationFrame(function reRender() {
 	requestAnimationFrame(reRender);
 });
 
-setParser(function (data) {
-	// if we have HTML input
-	if (data.trim().indexOf('<') === 0) {
-		// convert it to JS
-		data = parse(data);
-	}
+exports.Zino = Zino;
+exports.setParser = setParser;
 
-	return data;
-});
-
-return Zino$1;
-
-}());
-//# sourceMappingURL=zino.js.map
+}((this.Zino = this.Zino || {})));
+//# sourceMappingURL=zino-light.js.map

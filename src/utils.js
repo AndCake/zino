@@ -98,6 +98,11 @@ export function uuid() {
 		return (c == 'x' ? r : r & 0x3 | 0x8).toString(16);
 	});
 }
+
+export function toArray(obj, startIdx) {
+	return Array.prototype.slice.call(obj, startIdx || 0);
+}
+
 export var isObj = obj => typeof obj === 'object';
 export var isFn = fn => typeof fn === 'function';
 export var emptyFunc = () => {};

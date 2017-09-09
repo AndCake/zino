@@ -41,7 +41,7 @@ function merge(target) {
 }
 
 function propDetails(obj, attribute) {
-	return isObj(obj) && Object.getOwnPropertyDescriptor(obj, attribute) || {};
+	return isObj$1(obj) && Object.getOwnPropertyDescriptor(obj, attribute) || {};
 }
 
 /**
@@ -78,7 +78,12 @@ function uuid() {
 		return (c == 'x' ? r : r & 0x3 | 0x8).toString(16);
 	});
 }
-var isObj = function isObj(obj) {
+
+function toArray$$1(obj, startIdx) {
+	return Array.prototype.slice.call(obj, startIdx || 0);
+}
+
+var isObj$1 = function isObj(obj) {
 	return (typeof obj === 'undefined' ? 'undefined' : _typeof(obj)) === 'object';
 };
 var isFn = function isFn(fn) {
@@ -132,7 +137,7 @@ function one(name, fn) {
 function attachEvent(el, events, host) {
 	if (!isFn(el.addEventListener)) return;
 	var findEl = function findEl(selector, target) {
-		var node = [].slice.call(el.querySelectorAll(selector));
+		var node = el.querySelectorAll(selector);
 		while (node.length > 0 && target !== host) {
 			if (node.indexOf(target) >= 0) return node[node.indexOf(target)];
 			target = target.parentNode;
@@ -152,6 +157,30 @@ function attachEvent(el, events, host) {
 			}, false);
 		});
 	});
+}
+
+function attachSubEvents(subEvents, tag) {
+	var count = {};
+	// make sure that we only attach events if we are actually in browser context
+	if (tag.addEventListener.toString().indexOf('[native code]') >= 0) {
+		subEvents.events.forEach(function (event) {
+			var el = event.tag;
+			if (!isObj(el)) {
+				// we have a selector rather than an element
+				count[el] = (count[el] || 0) + 1;
+				// turn the selector into the corresponding element
+				el = tag.querySelectorAll(el)[count[el] - 1];
+			}
+			// if no events have been attached yet
+			if (!el.children[0].__eventsAttached) {
+				// attach children tag events to the shadow root
+				attachEvent(el.children[0], event.childEvents, el);
+				// attach host events directly to the component!
+				attachEvent(el, event.hostEvents, el);
+				el.children[0].__eventsAttached = true;
+			}
+		});
+	}
 }
 
 var tagFilter = [];
@@ -185,30 +214,6 @@ function Tag(tagName, attributes, children) {
 	};
 	if (tagFilter.indexOf(tagName) >= 0) tagsCreated.push(tag);
 	return tag;
-}
-
-/**
- * Returns all tags with a given tag name. If the provided context contains a getElementsByTagName() function,
- * that will be used to retrieve the data, else a manual recursive lookup will be done
- *
- * @param  {String} name - name of the tag to retrieve the elements  of
- * @param  {Object} dom - either a VDOM node or a DOM node
- * @return {Array} - list of elements that match the provided tag name
- */
-function getElementsByTagName(name, dom) {
-	var result = [];
-	name = (name || '').toLowerCase();
-	if (typeof dom.getElementsByTagName === 'function') return [].slice.call(dom.getElementsByTagName(name));
-
-	if (dom.children) {
-		result = result.concat(dom.children.filter(function (child) {
-			return child.tagName && child.tagName.toLowerCase() === name;
-		}));
-		dom.children.forEach(function (child) {
-			result = result.concat(getElementsByTagName(name, child));
-		});
-	}
-	return result;
 }
 
 /**
@@ -388,7 +393,7 @@ function applyDOM(dom, vdom, document) {
 	});
 	if (dom.childNodes.length > children.length) {
 		// remove superfluous child nodes
-		[].slice.call(dom.childNodes, children.length).forEach(function (child) {
+		toArray$$1(dom.childNodes, children.length).forEach(function (child) {
 			return dom.removeChild(child);
 		});
 	}
@@ -419,7 +424,7 @@ var defaultFunctions = {
 	},
 	setProps: function setProps(name, value) {
 		var tag = this.getHost();
-		if (isObj(name)) {
+		if (isObj$1(name)) {
 			merge(tag.props, name);
 		} else {
 			tag.props[name] = value;
@@ -443,12 +448,12 @@ function registerTag(fn, document, Zino) {
 		return;
 	}
 
-	handleStyles(firstElement);
+	trigger('publish-style', { styles: firstElement.styles, tagName: tagName });
 	firstElement.functions = merge({}, defaultFunctions, firstElement.functions);
 	tagRegistry[tagName] = firstElement;
 
 	// initialize all occurences in provided context
-	document && [].slice.call(getElementsByTagName(tagName, document)).forEach(function (tag) {
+	document && toArray$$1(document.getElementsByTagName(tagName)).forEach(function (tag) {
 		return initializeTag(tag, tagRegistry[tagName]);
 	});
 }
@@ -516,32 +521,23 @@ function initializeTag(tag, registryEntry) {
 	if (!this || this.noEvents !== true) {
 		// attach sub events
 		attachSubEvents(subEvents, tag);
+
+		[tag].concat(tag.__subs).forEach(function (el) {
+			var actual = el && el.getHost() || {};
+			isFn(actual.onready) && actual.onready.call(actual);
+		});
 	} else {
 		return subEvents;
 	}
 }
 
 function defineAttribute(tag, name, value) {
-	// if __s is already defined (which means the component has been mounted already) 
-	if (isFn(tag.__s)) {
-		// if it's the same as setAttribute 
-		if (tag.__s === tag.setAttribute) {
-			// we might have a double override => use the original HTMLElement's setAttribute instead to avoid endless recursion 
-			(tag.prototype || HTMLElement.prototype).setAttribute.call(tag, name, value);
-		} else {
-			// we now know it's the original setAttribute (also works for vdom nodes) 
-			tag.__s(name, value);
-		}
+	if (tag.ownerDocument) {
+		// use the HTMLElement's setAttribute to define the attribute
+		(tag.prototype || HTMLElement.prototype).setAttribute.call(tag, name, value);
 	} else {
-		// if the element is not a mounted component 
-		// but it is a regular HTML element 
-		if (tag.ownerDocument) {
-			// use the HTMLElement's setAttribute to define the attribute 
-			(tag.prototype || HTMLElement.prototype).setAttribute.call(tag, name, value);
-		} else {
-			// we now know it can only be a vdom node, so set attribute vdom-style 
-			tag.attributes[name] = { name: name, value: value };
-		}
+		// we now know it can only be a vdom node, so set attribute vdom-style
+		tag.attributes[name] = { name: name, value: value };
 	}
 }
 
@@ -557,7 +553,7 @@ function initializeNode(_ref) {
 			if (isFn(entry)) {
 				tag[all] = entry.bind(tag);
 			} else {
-				tag[all] = isObj(tag[all]) ? merge({}, entry, tag[all]) : entry;
+				tag[all] = isObj$1(tag[all]) ? merge({}, entry, tag[all]) : entry;
 			}
 		}
 	}
@@ -575,7 +571,6 @@ function initializeNode(_ref) {
 			}
 		});
 	}
-	tag.__s = tag.setAttribute;
 	tag.setAttribute = function (attr, val) {
 		defineAttribute(this, attr, val);
 		trigger('--zino-rerender-tag', this);
@@ -615,7 +610,7 @@ function renderTag(tag) {
 	}
 
 	// unmount previously rendered sub components
-	tag.__subs && tag.__subs.forEach(unmountTag);
+	tag.__subs && tag.__subs.forEach(unmount);
 
 	// render all contained sub components
 	// retrieve the tags that the vdom was made aware of (all our registered components)
@@ -639,23 +634,23 @@ function renderTag(tag) {
 		}
 	}
 
-	if (tag.attributes.__ready && Math.abs(renderedDOM.__complexity - (tag.__complexity || 0)) < 50 && tag.ownerDocument) {
+	if ( /*tag.attributes.__ready && (Math.abs(renderedDOM.__complexity - (tag.__complexity || 0)) < 50) && */tag.ownerDocument) {
 		// has been rendered before, so just apply diff
 		applyDOM(tag.children[0], renderedDOM, tag.ownerDocument);
 	} else {
-		// simply render everything inside
-		if (tag.ownerDocument) {
-			tag.children[0].innerHTML = getInnerHTML(renderedDOM);
-		} else {
-			tag.children[0] = renderedDOM;
-		}
+		/*// simply render everything inside
+  if (tag.ownerDocument) {
+  	tag.children[0].innerHTML = vdom.getInnerHTML(renderedDOM);
+  } else {*/
+		tag.children[0] = renderedDOM;
+		//}
 	}
 	tag.__subs = renderedSubElements;
 	tag.__vdom = renderedDOM;
-	tag.__complexity = renderedDOM.__complexity;
+	//tag.__complexity = renderedDOM.__complexity;
 
 	// if we have rendered any sub components, retrieve their actual DOM node
-	renderedSubElements.length > 0 && (tag.querySelectorAll && [].slice.call(tag.querySelectorAll('[__ready]')) || []).forEach(function (subEl, index) {
+	renderedSubElements.length > 0 && (tag.querySelectorAll && toArray$$1(tag.querySelectorAll('[__ready]')) || []).forEach(function (subEl, index) {
 		// apply all additional functionality to them (custom functions, attributes, etc...)
 		merge(subEl, renderedSubElements[index]);
 		// update getHost to return the DOM node instead of the vdom node
@@ -678,35 +673,7 @@ function renderTag(tag) {
 	return { events: events, renderCallbacks: renderCallbacks, data: data, subElements: renderedSubElements };
 }
 
-function attachSubEvents(subEvents, tag) {
-	var count = {};
-	// make sure that we only attach events if we are actually in browser context
-	if (tag.addEventListener.toString().indexOf('[native code]') >= 0) {
-		subEvents.events.forEach(function (event) {
-			var el = event.tag;
-			if (!isObj(el)) {
-				// we have a selector rather than an element
-				count[el] = (count[el] || 0) + 1;
-				// turn the selector into the corresponding element
-				el = tag.querySelectorAll(el)[count[el] - 1];
-			}
-			// if no events have been attached yet
-			if (!el.children[0].__eventsAttached) {
-				// attach children tag events to the shadow root
-				attachEvent(el.children[0], event.childEvents, el);
-				// attach host events directly to the component!
-				attachEvent(el, event.hostEvents, el);
-				el.children[0].__eventsAttached = true;
-			}
-		});
-	}
-	[tag].concat(tag.__subs).forEach(function (el) {
-		var actual = el && el.getHost() || {};
-		isFn(actual.onready) && actual.onready.call(actual);
-	});
-}
-
-function unmountTag(tag) {
+function unmount(tag) {
 	var name = (tag.tagName || '').toLowerCase(),
 	    entry = tagRegistry[name];
 	if (entry) {
@@ -767,30 +734,7 @@ function setElementAttr(source) {
 	target.element = baseAttrs;
 }
 
-function handleStyles(element) {
-	var tagName = element.tagName;
-	var styles = (element.styles || []).map(function (style) {
-		var code = style;
-		return code.replace(/[\r\n]*([^%\{;\}]+?)\{/gm, function (global, match) {
-			if (match.trim().match(/^@/)) {
-				return match + '{';
-			}
-			var selectors = match.split(',').map(function (selector) {
-				selector = selector.trim();
-				if (selector.match(/:host\b/) || selector.match(new RegExp('^\\s*' + tagName + '\\b')) || selector.match(/^\s*(?:(?:\d+%)|(?:from)|(?:to)|(?:@\w+)|\})\s*$/)) {
-					return selector;
-				}
-				return tagName + ' ' + selector;
-			});
-			return global.replace(match, selectors.join(','));
-		}).replace(/:host\b/gm, tagName) + '\n';
-	}).join('\n');
-	trigger('publish-style', { styles: styles, tagName: tagName });
-}
-
 on('--zino-initialize-node', initializeNode);
-on('--zino-unmount-tag', unmountTag);
-on('--zino-mount-tag', mount);
 
 var tagRegExp = /<(\/?)([\w-]+)([^>]*?)(\/?)>/g;
 var attrRegExp = /([\w_-]+)(?:=(?:'([^']*?)'|"([^"]*?)"))?/g;
@@ -801,7 +745,7 @@ var syntax = /\{\{\s*([^\}]+)\s*\}\}\}?/g;
 
 /** @function safeAccess
  * safely access the given property in the object obj.
- * 
+ *
  * @param obj (Object) - the object to read the property from
  * @param attrs (String) - the name of the property to access (allows for object paths via ., e.g. "myprop.firstValue")
  * @param escape (Boolean) - if the value should be HTML escaped to prevent XSS attacks and such
@@ -811,16 +755,16 @@ var safeAccess$1 = 'function safeAccess(t,e,r){if(!e)return t;if("."===e[0])retu
 
 /** @function toArray
  * turn property value of an object into an array
- * 
+ *
  * @param data (Object) - the object to read the property value from
  * @param value (String) - the property whose value should be read from the object
  * @return Array
  */
-var toArray$1 = 'function toArray(t,e){var r=safeAccess(t,e);return r?"[object Array]"===Object.prototype.toString.call(r)?r:"function"==typeof r?r():[r]:[]}';
+var toArray$2 = 'function toArray(t,e){var r=safeAccess(t,e);return r?"[object Array]"===Object.prototype.toString.call(r)?r:"function"==typeof r?r():[r]:[]}';
 
 /** @function spread
  * turns an array of arrays into an array of all containing elements (reduces the array depth by 1)
- * 
+ *
  * @param array (Array) - the array to spread the values along
  * @return Array - a new array containing all the values of the sub elements
  */
@@ -837,7 +781,7 @@ var merge$1 = 'function merge(t){return[].slice.call(arguments,1).forEach(functi
 
 /** @function renderStyle
  * transforms an object into CSS properties
- * 
+ *
  * @param value (Object) - the object to be transformed
  * @param context (Object) - for any functions defined in the object, context will be provided within as `this`
  * @return String - the CSS property list separated by semicolon
@@ -846,6 +790,27 @@ var renderStyle = 'function renderStyle(t,r){var e="";if(transform=function(t){r
 
 /* this is the base structure of a Zino tag */
 var baseCode = 'function (Tag,Zino){var __i;{{helperFunctions}};return{tagName:"{{tagName}}",{{styles}}render:function(data){return __i=this,[].concat({{render}})},functions:{{functions}}}}';
+
+/** parses style information from within a style tag makes sure it is localized */
+function handleStyles(tagName, styles) {
+	styles = (styles || []).map(function (style) {
+		var code = style;
+		return code.replace(/[\r\n]*([^%\{;\}]+?)\{/gm, function (global, match) {
+			if (match.trim().match(/^@/)) {
+				return match + '{';
+			}
+			var selectors = match.split(',').map(function (selector) {
+				selector = selector.trim();
+				if (selector.match(/:host\b/) || selector.match(new RegExp('^\\s*' + tagName + '\\b')) || selector.match(/^\s*(?:(?:\d+%)|(?:from)|(?:to)|(?:@\w+)|\})\s*$/)) {
+					return selector;
+				}
+				return tagName + ' ' + selector;
+			});
+			return global.replace(match, selectors.join(','));
+		}).replace(/:host\b/gm, tagName) + '\n';
+	});
+	return styles;
+}
 
 /** takes an HTML string containing mustache code and turns it into executable JS code that generates a vdom */
 function parse(data) {
@@ -974,6 +939,7 @@ function parse(data) {
 	}
 	// find out how the component is called
 	resultObject.tagName = data.match(/^<([\w_-]+)>/)[1].toLowerCase();
+	resultObject.styles = handleStyles(resultObject.tagName, resultObject.styles);
 
 	// loop through all HTML tags in code
 	while (match = tagRegExp.exec(data)) {
@@ -1026,7 +992,7 @@ function parse(data) {
 	// add helper functions that were used by the code
 	if (usesMerge) {
 		resultObject.helperFunctions.push(merge$1);
-		resultObject.helperFunctions.push(toArray$1);
+		resultObject.helperFunctions.push(toArray$2);
 	}
 	if (usesSpread) {
 		resultObject.helperFunctions.push(spread);
@@ -1104,7 +1070,7 @@ function matchesSnapshot() {
 		args[_key] = arguments[_key];
 	}
 
-	if (isObj(args[0])) {
+	if (isObj$1(args[0])) {
 		var _args$ = args[0],
 		    html = _args$.html,
 		    _args$$props = _args$.props,
