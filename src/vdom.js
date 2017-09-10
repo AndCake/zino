@@ -80,7 +80,12 @@ export function getInnerHTML(node) {
 					return attr+'="' + child.attributes[attr].value + '"';
 				}
 			}));
-			return `<${child.tagName}${attributes.join(' ')}>${getInnerHTML(child)}</${child.tagName}>`;
+			let innerHTML = getInnerHTML(child);
+			if (innerHTML.length > 0) {
+				return `<${child.tagName}${attributes.join(' ')}>${getInnerHTML(child)}</${child.tagName}>`;
+			} else {
+				return `<${child.tagName}${attributes.join(' ')}/>`;
+			}
 		}
 	}).join('');
 }

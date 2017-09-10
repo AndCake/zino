@@ -530,7 +530,12 @@ function getInnerHTML(node) {
 					return attr + '="' + child.attributes[attr].value + '"';
 				}
 			}));
-			return '<' + child.tagName + attributes.join(' ') + '>' + getInnerHTML(child) + '</' + child.tagName + '>';
+			var innerHTML = getInnerHTML(child);
+			if (innerHTML.length > 0) {
+				return '<' + child.tagName + attributes.join(' ') + '>' + getInnerHTML(child) + '</' + child.tagName + '>';
+			} else {
+				return '<' + child.tagName + attributes.join(' ') + '/>';
+			}
 		}
 	}).join('');
 }
@@ -665,16 +670,14 @@ function applyDOM(dom, vdom, document) {
 	}
 }
 
-var renderOptions = {
-	resolveData: function resolveData(key, value, oldID) {
-		var id = uuid();
-		if (oldID) {
-			// unregister old entry
-			delete dataRegistry[oldID];
-		}
-		dataRegistry[id] = value;
-		return id;
+var resolveData = function resolveData(key, value, oldID) {
+	var id = uuid();
+	if (oldID) {
+		// unregister old entry
+		delete dataRegistry[oldID];
 	}
+	dataRegistry[id] = value;
+	return id;
 };
 
 var tagRegistry = {};
@@ -698,12 +701,13 @@ var defaultFunctions = {
 				return '-' + g.toLowerCase();
 			});
 			if (tag.attributes[attrName]) {
-				defineAttribute(tag, attrName, '--' + renderOptions.resolveData(name, value, tag.attributes[attrName].value) + '--');
+				defineAttribute(tag, attrName, '--' + resolveData(name, value, tag.attributes[attrName].value) + '--');
 			}
 		}
 		!tag.mounting && trigger('--zino-rerender-tag', tag);
 	}
 };
+
 
 function registerTag(fn, document, Zino) {
 	var firstElement = fn(Tag, Zino),
@@ -725,9 +729,9 @@ function registerTag(fn, document, Zino) {
 }
 
 function mount(tag, ignoreRender) {
-	if (!tag.tagName) return;
+	if (!tag.tagName) return {};
 	var entry = tagRegistry[tag.tagName.toLowerCase()];
-	if (!entry || tag.getAttribute('__ready')) return;
+	if (!entry || tag.getAttribute('__ready')) return {};
 	if (ignoreRender) entry.functions.render = emptyFunc;
 	return initializeTag.call(ignoreRender ? { noEvents: true } : this, tag, entry);
 }
@@ -862,7 +866,7 @@ function renderTag(tag) {
 	    renderedDOM = void 0;
 
 	// do the actual rendering of the component
-	setDataResolver(renderOptions.resolveData);
+	setDataResolver(resolveData);
 	clearTagsCreated();
 	var data = getAttributes(tag);
 	if (isFn(registryEntry.render)) {
@@ -1029,7 +1033,7 @@ on('publish-style', function (data) {
 		if (document$1.getElementById('style:' + data.tagName)) return;
 		var style = document$1.createElement('style');
 		style.innerHTML = data.styles;
-		style.id = 'style:' + data.tagName;
+		style.setAttribute('id', 'style:' + data.tagName);
 		document$1.head.appendChild(style);
 	}
 });
