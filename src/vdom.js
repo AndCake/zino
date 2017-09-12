@@ -19,7 +19,7 @@ export function Tag(tagName, attributes, children) {
 	tagName = tagName.toLowerCase();
 	attributes = attributes || {};
 	Object.keys(attributes).forEach(attr => {
-		attributes[attr] = {name: attr, value: attributes[attr]};
+		attributes[attr] = {name: attr, value: typeof attributes[attr] !== 'object' ? attributes[attr] : ('--' + dataResolver(attr, attributes[attr]) + '--')};
 	});
 	children = children && (typeof children !== 'object' || children.tagName) ? [children] : children || [];
 	let tag = {
@@ -73,13 +73,7 @@ export function getInnerHTML(node) {
 		} else if (isArray(child)) {
 			return getInnerHTML(child);
 		} else {
-			let attributes = [''].concat(Object.keys(child.attributes).map(attr => {
-				if (typeof child.attributes[attr].value === 'object') {
-					return attr + '="--' + dataResolver(attr, child.attributes[attr].value) + '--"';
-				} else {
-					return attr+'="' + child.attributes[attr].value + '"';
-				}
-			}));
+			let attributes = [''].concat(Object.keys(child.attributes).map(attr => attr+'="' + child.attributes[attr].value + '"'));
 			let innerHTML = getInnerHTML(child);
 			if (innerHTML.length > 0) {
 				return `<${child.tagName}${attributes.join(' ')}>${getInnerHTML(child)}</${child.tagName}>`;
@@ -108,10 +102,6 @@ function createElement(node, document) {
 		Object.keys(node.attributes).forEach((attr) => {
 			tag.setAttribute(attr, node.attributes[attr].value);
 		});
-		if (node.__vdom) {
-			// it's a component, so don't forget to initialize this new instance
-			trigger('--zino-initialize-node', {tag, node: node.functions});
-		}
 		// define it's inner structure
 		tag.innerHTML = getInnerHTML(node);
 	}

@@ -23,7 +23,7 @@ export function setComponentLoader(fn) { loadComponent = fn; }
 export {flushRegisteredTags};
 
 on('publish-style', data => {
-	if (typeof data.tagName === 'string' && data.styles.length > 0) {
+	if (typeof data.tagName === 'string' && data.styles && data.styles.length > 0) {
 		if (document.getElementById('style:' + data.tagName)) return;
 		let style = document.createElement('style');
 		style.innerHTML = data.styles;

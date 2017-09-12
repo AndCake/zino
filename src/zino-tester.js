@@ -82,7 +82,7 @@ export function matchesSnapshot(...args) {
 	callback(code.children[0]);
 
 	let eventList = [];
-	events = events.forEach(e => eventList = eventList.concat(e.childEvents, e.hostEvents));
+	events = (events || []).forEach(e => eventList = eventList.concat(e.childEvents, e.hostEvents));
 	events = Object.keys(eventList).map(el => {
 		let obj = {};
 		if (eventList[el]) {
