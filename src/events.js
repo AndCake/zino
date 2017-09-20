@@ -1,4 +1,4 @@
-import {isFn} from './utils';
+import {isFn, isObj, toArray} from './utils';
 
 let eventQueue = {};
 
@@ -46,7 +46,7 @@ export function one(name, fn) {
 function attachEvent (el, events, host) {
 	if (!isFn(el.addEventListener)) return;
 	let findEl = (selector, target) => {
-		let node = el.querySelectorAll(selector);
+		let node = toArray(el.querySelectorAll(selector));
 		while (node.length > 0 && target !== host) {
 			if (node.indexOf(target) >= 0) return node[node.indexOf(target)];
 			target = target.parentNode;

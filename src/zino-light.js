@@ -1,7 +1,7 @@
 import {isObj, toArray, identity} from './utils';
 import {Zino, actions, setDocument, setComponentLoader} from './facade';
 
-let urlRegistry = {}.
+let urlRegistry = window.zinoTagRegistry || {},
 	dirtyTags = [],
 	parseCode = identity,
 	tagObserver = new MutationObserver(records => {
@@ -13,7 +13,7 @@ let urlRegistry = {}.
 				[].forEach.call(added, actions.mount);
 			} else if (removed.length > 0) {
 				[].forEach.call(removed, tag => {
-					(tag.children && $('[__ready]', tag) || []).concat(tag).forEach(actions.unmount);
+					(tag.children && toArray(tag.querySelectorAll('[__ready]')) || []).concat(tag).forEach(actions.unmount);
 				});
 			}
 		});
@@ -55,6 +55,9 @@ setComponentLoader((url, fn) => {
 						if (url.indexOf('data:') === 0 || url.indexOf('http') === 0 || url.indexOf('//') === 0 || url.indexOf('/') === 0) return g;
 						return 'url(' + path + url + ')';
 					}).replace(/\bZino.import\s*\(/g, 'Zino.import.call({path: ' + JSON.stringify(path) + '}, ').trim().replace(/;$/, ''))();
+				if (typeof code(() => {}, Zino) === 'function') {
+					code = code();
+				}
 			} catch(e) {
 				e.message = 'Unable to import tag ' + url.replace(/.*\//g, '') + ': ' + e.message;
 				throw e;

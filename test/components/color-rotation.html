@@ -1,0 +1,42 @@
+<color-rotation>
+	<div style="{{%styles.bar, styles.rotation, styles.color}}"></div>
+	<script>
+		({
+			props: {
+				degree: 0
+			},
+			render: function() {
+				requestAnimationFrame(function() {
+					this.setProps('degree', (this.props.degree + 1) % 360);
+				}.bind(this));
+			},
+			mount: function() {
+				this.props.degree = parseInt(this.getAttribute('degree') || '0', 10);
+			},
+			styles: {
+				bar: {
+					width: 50,
+					height: 5,
+					display: 'inline-block',
+					borderRadius: 5
+				},
+				rotation: {
+					transform: function() {
+						return 'rotateZ(' + this.props.degree + 'deg)';
+					}
+				},
+				color: {
+					background: function() {
+						return 'hsl(' + this.props.degree + ', 100%, 50%)';
+					}
+				}
+			}
+		})
+	</script>
+	<style>
+		:host {
+			display: inline-block;
+			width: 10px;
+		}
+	</style>
+</color-rotation>

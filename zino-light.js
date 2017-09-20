@@ -30,7 +30,7 @@ function merge(target) {
 }
 
 function propDetails(obj, attribute) {
-	return isObj$1(obj) && Object.getOwnPropertyDescriptor(obj, attribute) || {};
+	return isObj(obj) && Object.getOwnPropertyDescriptor(obj, attribute) || {};
 }
 
 /**
@@ -72,7 +72,7 @@ function toArray$$1(obj, startIdx) {
 	return Array.prototype.slice.call(obj, startIdx || 0);
 }
 
-var isObj$1 = function isObj(obj) {
+var isObj = function isObj(obj) {
 	return (typeof obj === 'undefined' ? 'undefined' : _typeof(obj)) === 'object';
 };
 var isFn = function isFn(fn) {
@@ -129,7 +129,7 @@ function one(name, fn) {
 function attachEvent(el, events, host) {
 	if (!isFn(el.addEventListener)) return;
 	var findEl = function findEl(selector, target) {
-		var node = el.querySelectorAll(selector);
+		var node = toArray$$1(el.querySelectorAll(selector));
 		while (node.length > 0 && target !== host) {
 			if (node.indexOf(target) >= 0) return node[node.indexOf(target)];
 			target = target.parentNode;
@@ -185,24 +185,43 @@ function isArray(obj) {
 	return Object.prototype.toString.call(obj) === '[object Array]';
 }
 
+function hashCode(str) {
+	var hash = 0,
+	    i = void 0,
+	    chr = void 0;
+	if (str.length === 0) return hash;
+	for (i = 0; i < str.length; i++) {
+		chr = str.charCodeAt(i);
+		hash = (hash << 5) - hash + chr;
+		hash |= 0;
+	}
+	return hash;
+}
+
 function setDataResolver(resolver) {
 	dataResolver = resolver;
 }
 
-function Tag(tagName, attributes, children) {
+function Tag(tagName, attributes) {
+	for (var _len = arguments.length, children = Array(_len > 2 ? _len - 2 : 0), _key = 2; _key < _len; _key++) {
+		children[_key - 2] = arguments[_key];
+	}
+
 	tagName = tagName.toLowerCase();
 	attributes = attributes || {};
+	var attributeHash = '';
 	Object.keys(attributes).forEach(function (attr) {
-		attributes[attr] = { name: attr, value: attributes[attr] };
+		attributes[attr] = { name: attr, value: _typeof(attributes[attr]) !== 'object' ? attributes[attr] : '--' + dataResolver(attr, attributes[attr]) + '--' };
+		attributeHash += attr + attributes[attr].value;
 	});
-	children = children && ((typeof children === 'undefined' ? 'undefined' : _typeof(children)) !== 'object' || children.tagName) ? [children] : children || [];
+	children = children.length === 1 && Array.isArray(children[0]) ? children[0] : children;
 	var tag = {
 		tagName: tagName,
 		attributes: attributes,
 		children: children,
-		__complexity: children.reduce(function (a, b) {
-			return a + (b.__complexity || 1);
-		}, 0) + children.length
+		__hash: hashCode(tagName + '!' + attributeHash + '@' + children.map(function (child) {
+			return child && child.__hash || child;
+		}).join('!'))
 	};
 	if (tagFilter.indexOf(tagName) >= 0) tagsCreated.push(tag);
 	return tag;
@@ -250,14 +269,9 @@ function getInnerHTML(node) {
 			return getInnerHTML(child);
 		} else {
 			var attributes = [''].concat(Object.keys(child.attributes).map(function (attr) {
-				if (_typeof(child.attributes[attr].value) === 'object') {
-					return attr + '="--' + dataResolver(attr, child.attributes[attr].value) + '--"';
-				} else {
-					return attr + '="' + child.attributes[attr].value + '"';
-				}
+				return attr + '="' + child.attributes[attr].value + '"';
 			}));
-			var innerHTML = getInnerHTML(child);
-			if (innerHTML.length > 0) {
+			if (['img', 'link', 'meta', 'input', 'br', 'area', 'base', 'param', 'source', 'hr', 'embed'].indexOf(child.tagName) < 0) {
 				return '<' + child.tagName + attributes.join(' ') + '>' + getInnerHTML(child) + '</' + child.tagName + '>';
 			} else {
 				return '<' + child.tagName + attributes.join(' ') + '/>';
@@ -284,12 +298,9 @@ function createElement(node, document) {
 		Object.keys(node.attributes).forEach(function (attr) {
 			tag.setAttribute(attr, node.attributes[attr].value);
 		});
-		if (node.__vdom) {
-			// it's a component, so don't forget to initialize this new instance
-			trigger('--zino-initialize-node', { tag: tag, node: node.functions });
-		}
 		// define it's inner structure
 		tag.innerHTML = getInnerHTML(node);
+		tag.__hash = node.__hash;
 	}
 
 	return tag;
@@ -297,7 +308,7 @@ function createElement(node, document) {
 
 function applyText(domChild, dom, node, document) {
 	// simply apply the value
-	if (node.match(/<[\w:_-]+[^>]*>/)) {
+	if ((node || '').match(/<[\w:_-]+[^>]*>/)) {
 		if (dom.childNodes.length === 1) {
 			dom.innerHTML = node;
 		} else {
@@ -307,7 +318,7 @@ function applyText(domChild, dom, node, document) {
 		}
 	} else {
 		// it's just a text node, so simply replace the element with the text node
-		dom.replaceChild(createElement(node.replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&'), document), domChild);
+		dom.replaceChild(createElement((node || '').replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&'), document), domChild);
 	}
 }
 
@@ -324,45 +335,47 @@ function applyDOM(dom, vdom, document) {
 	if (!isArray(vdom)) {
 		// if we have a node
 		if (!isArray(vdom.children)) vdom.children = [vdom.children];
-		// if the tag name is not the same
-		if (vdom.tagName !== dom.tagName.toLowerCase()) {
-			// replace the node entirely
-			dom.parentNode.replaceChild(createElement(vdom, document), dom);
-		} else {
-			// check all vdom attributes
-			Object.keys(vdom.attributes).forEach(function (attr) {
-				// if the VDOM attribute is a non-object
-				if (_typeof(vdom.attributes[attr].value) !== 'object') {
-					// check if it differs
-					if (dom.getAttribute(attr) != vdom.attributes[attr].value) {
-						// if so, apply it
-						dom.setAttribute(attr, vdom.attributes[attr].value);
-					}
-				} else {
-					// the attribute is an object
-					if (dom.getAttribute(attr) && dom.getAttribute(attr).match(/^--|--$/g)) {
-						// if it has a complex value, use the data resolver to define it on the DOM
-						var id = dataResolver(attr, vdom.attributes[attr].value, dom.getAttribute(attr).replace(/^--|--$/g, ''));
-						// only set the ID with markers so that we know it is supposed to be a complex value
-						dom.setAttribute(attr, '--' + id + '--');
-					}
-				}
-			});
-			// if we have too many attributes in our DOM
-			if (dom.attributes.length > Object.keys(vdom.attributes)) {
-				[].forEach.call(dom.attributes, function (attr) {
-					// if the respective attribute does not exist on the VDOM
-					if (typeof vdom.attributes[attr.name] === 'undefined') {
-						// remove it
-						dom.removeAttribute(attr.name);
+		if (dom.__hash !== vdom.__hash) {
+			// if the tag name is not the same
+			if (vdom.tagName !== dom.tagName.toLowerCase()) {
+				// replace the node entirely
+				dom.parentNode.replaceChild(createElement(vdom, document), dom);
+			} else {
+				// check all vdom attributes
+				Object.keys(vdom.attributes).forEach(function (attr) {
+					// if the VDOM attribute is a non-object
+					if (_typeof(vdom.attributes[attr].value) !== 'object') {
+						// check if it differs
+						if (dom.getAttribute(attr) != vdom.attributes[attr].value) {
+							// if so, apply it
+							dom.setAttribute(attr, vdom.attributes[attr].value);
+						}
+					} else {
+						// the attribute is an object
+						if (dom.getAttribute(attr) && dom.getAttribute(attr).match(/^--|--$/g)) {
+							// if it has a complex value, use the data resolver to define it on the DOM
+							var id = dataResolver(attr, vdom.attributes[attr].value, dom.getAttribute(attr).replace(/^--|--$/g, ''));
+							// only set the ID with markers so that we know it is supposed to be a complex value
+							dom.setAttribute(attr, '--' + id + '--');
+						}
 					}
 				});
+				// if we have too many attributes in our DOM
+				if (dom.attributes.length > Object.keys(vdom.attributes)) {
+					[].forEach.call(dom.attributes, function (attr) {
+						// if the respective attribute does not exist on the VDOM
+						if (typeof vdom.attributes[attr.name] === 'undefined') {
+							// remove it
+							dom.removeAttribute(attr.name);
+						}
+					});
+				}
 			}
 		}
 	}
 
 	// deal with the vdom's children
-	var children = isArray(vdom) ? vdom : vdom.children;
+	var children = isArray(vdom) ? vdom : vdom.__hash !== dom.__hash ? vdom.children : [];
 	children.forEach(function (node, index) {
 		if (isArray(node)) return applyDOM(dom, node, document);
 		var domChild = dom.childNodes[index];
@@ -388,12 +401,13 @@ function applyDOM(dom, vdom, document) {
 			}
 		}
 	});
-	if (dom.childNodes.length > children.length) {
+	if (dom.__hash !== vdom.__hash && dom.childNodes.length > children.length) {
 		// remove superfluous child nodes
 		toArray$$1(dom.childNodes, children.length).forEach(function (child) {
 			return dom.removeChild(child);
 		});
 	}
+	dom.__hash = vdom.__hash;
 }
 
 var resolveData = function resolveData(key, value, oldID) {
@@ -419,7 +433,7 @@ var defaultFunctions = {
 	},
 	setProps: function setProps(name, value) {
 		var tag = this.getHost();
-		if (isObj$1(name)) {
+		if (isObj(name)) {
 			merge(tag.props, name);
 		} else {
 			tag.props[name] = value;
@@ -547,7 +561,7 @@ function initializeNode(_ref) {
 			if (isFn(entry)) {
 				tag[all] = entry.bind(tag);
 			} else {
-				tag[all] = isObj$1(tag[all]) ? merge({}, entry, tag[all]) : entry;
+				tag[all] = isObj(tag[all]) ? merge({}, entry, tag[all]) : entry;
 			}
 		}
 	}
@@ -628,20 +642,15 @@ function renderTag(tag) {
 		}
 	}
 
-	if ( /*tag.attributes.__ready && (Math.abs(renderedDOM.__complexity - (tag.__complexity || 0)) < 50) && */tag.ownerDocument) {
+	if (tag.ownerDocument) {
 		// has been rendered before, so just apply diff
 		applyDOM(tag.children[0], renderedDOM, tag.ownerDocument);
 	} else {
-		/*// simply render everything inside
-  if (tag.ownerDocument) {
-  	tag.children[0].innerHTML = vdom.getInnerHTML(renderedDOM);
-  } else {*/
 		tag.children[0] = renderedDOM;
-		//}
+		tag.children[0].__hash = renderedDOM.__hash;
 	}
 	tag.__subs = renderedSubElements;
 	tag.__vdom = renderedDOM;
-	//tag.__complexity = renderedDOM.__complexity;
 
 	// if we have rendered any sub components, retrieve their actual DOM node
 	renderedSubElements.length > 0 && (tag.querySelectorAll && toArray$$1(tag.querySelectorAll('[__ready]')) || []).forEach(function (subEl, index) {
@@ -741,7 +750,10 @@ var Zino = {
 		var callback = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : emptyFunc;
 
 		loadComponent((this.path || '') + path, function (code) {
-			code && registerTag(code, document$1.body, Zino);
+			if (code) {
+				isFn(code.setDocument) && code.setDocument(document$1);
+				registerTag(code, document$1.body, Zino);
+			}
 			callback();
 		});
 	}
@@ -755,7 +767,7 @@ function setComponentLoader(fn) {
 	loadComponent = fn;
 }
 on('publish-style', function (data) {
-	if (typeof data.tagName === 'string' && data.styles.length > 0) {
+	if (typeof data.tagName === 'string' && data.styles && data.styles.length > 0) {
 		if (document$1.getElementById('style:' + data.tagName)) return;
 		var style = document$1.createElement('style');
 		style.innerHTML = data.styles;
@@ -764,7 +776,8 @@ on('publish-style', function (data) {
 	}
 });
 
-var urlRegistry = {}.dirtyTags = [];
+var urlRegistry = window.zinoTagRegistry || {};
+var dirtyTags = [];
 var parseCode = identity;
 var tagObserver = new MutationObserver(function (records) {
 	records.forEach(function (record) {
@@ -775,7 +788,7 @@ var tagObserver = new MutationObserver(function (records) {
 			[].forEach.call(added, actions.mount);
 		} else if (removed.length > 0) {
 			[].forEach.call(removed, function (tag) {
-				(tag.children && $('[__ready]', tag) || []).concat(tag).forEach(actions.unmount);
+				(tag.children && toArray$$1(tag.querySelectorAll('[__ready]')) || []).concat(tag).forEach(actions.unmount);
 			});
 		}
 	});
@@ -785,7 +798,7 @@ window.Zino = Zino;
 Zino.fetch = function (url, callback, cache, code) {
 	if (cache && urlRegistry[url] && !urlRegistry[url].callback) {
 		return callback(urlRegistry[url], 200);
-	} else if (isObj$1(urlRegistry[url])) {
+	} else if (isObj(urlRegistry[url])) {
 		return urlRegistry[url].callback.push(callback);
 	}
 	urlRegistry[url] = code || {
@@ -809,6 +822,7 @@ Zino.fetch = function (url, callback, cache, code) {
 	req.send();
 };
 setComponentLoader(function (url, fn) {
+	console.log('loading from url ', url);
 	Zino.fetch(url, function (data, status) {
 		var path = url.replace(/[^\/]+$/g, '');
 		if (status === 200) {
@@ -819,6 +833,9 @@ setComponentLoader(function (url, fn) {
 					if (url.indexOf('data:') === 0 || url.indexOf('http') === 0 || url.indexOf('//') === 0 || url.indexOf('/') === 0) return g;
 					return 'url(' + path + url + ')';
 				}).replace(/\bZino.import\s*\(/g, 'Zino.import.call({path: ' + JSON.stringify(path) + '}, ').trim().replace(/;$/, ''))();
+				if (typeof code(function () {}, Zino) === 'function') {
+					code = code();
+				}
 			} catch (e) {
 				e.message = 'Unable to import tag ' + url.replace(/.*\//g, '') + ': ' + e.message;
 				throw e;

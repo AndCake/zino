@@ -220,20 +220,15 @@ function renderTag(tag, registryEntry = tagRegistry[tag.tagName.toLowerCase()]) 
 		}
 	}
 
-	if (/*tag.attributes.__ready && (Math.abs(renderedDOM.__complexity - (tag.__complexity || 0)) < 50) && */tag.ownerDocument) {
+	if (tag.ownerDocument) {
 		// has been rendered before, so just apply diff
 		vdom.applyDOM(tag.children[0], renderedDOM, tag.ownerDocument);
 	} else {
-		/*// simply render everything inside
-		if (tag.ownerDocument) {
-			tag.children[0].innerHTML = vdom.getInnerHTML(renderedDOM);
-		} else {*/
-			tag.children[0] = renderedDOM;
-		//}
+		tag.children[0] = renderedDOM;
+		tag.children[0].__hash = renderedDOM.__hash;
 	}
 	tag.__subs = renderedSubElements;
 	tag.__vdom = renderedDOM;
-	//tag.__complexity = renderedDOM.__complexity;
 
 	// if we have rendered any sub components, retrieve their actual DOM node
 	renderedSubElements.length > 0 && (tag.querySelectorAll && toArray(tag.querySelectorAll('[__ready]')) || []).forEach((subEl, index) => {

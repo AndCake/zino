@@ -1,5 +1,5 @@
 import {registerTag, render, mount, unmount, flushRegisteredTags} from './core';
-import {emptyFunc, identity, isObj, toArray} from './utils';
+import {emptyFunc, identity, isObj, toArray, isFn} from './utils';
 import {on, one, off, trigger} from './events';
 
 let document,
@@ -11,7 +11,10 @@ export let Zino = {
 
 	import: function(path, callback = emptyFunc) {
 		loadComponent((this.path || '') + path, code => {
-			code && registerTag(code, document.body, Zino);
+			if (code) {
+				isFn(code.setDocument) && code.setDocument(document);
+				registerTag(code, document.body, Zino);
+			}
 			callback();
 		})
 	}

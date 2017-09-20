@@ -11,22 +11,35 @@ function isArray(obj) {
 	return Object.prototype.toString.call(obj) === '[object Array]';
 }
 
+function hashCode(str) {
+	let hash = 0, i, chr;
+	if (str.length === 0) return hash;
+	for (i = 0; i < str.length; i++) {
+		chr   = str.charCodeAt(i);
+		hash  = ((hash << 5) - hash) + chr;
+		hash |= 0;
+	}
+	return hash;
+}
+
 export function setDataResolver(resolver) {
 	dataResolver = resolver;
 }
 
-export function Tag(tagName, attributes, children) {
+export function Tag(tagName, attributes, ...children) {
 	tagName = tagName.toLowerCase();
 	attributes = attributes || {};
+	let attributeHash = '';
 	Object.keys(attributes).forEach(attr => {
 		attributes[attr] = {name: attr, value: typeof attributes[attr] !== 'object' ? attributes[attr] : ('--' + dataResolver(attr, attributes[attr]) + '--')};
+		attributeHash += attr + attributes[attr].value;
 	});
-	children = children && (typeof children !== 'object' || children.tagName) ? [children] : children || [];
+	children = children.length === 1 && Array.isArray(children[0]) ? children[0] : children;
 	let tag = {
 		tagName,
 		attributes,
 		children: children,
-		__complexity: children.reduce(((a, b) => a + (b.__complexity || 1)), 0) + children.length
+		__hash: hashCode(tagName + '!' + attributeHash + '@' + children.map(child => (child && child.__hash || child)).join('!'))
 	};
 	if (tagFilter.indexOf(tagName) >= 0) tagsCreated.push(tag);
 	return tag;
@@ -74,8 +87,7 @@ export function getInnerHTML(node) {
 			return getInnerHTML(child);
 		} else {
 			let attributes = [''].concat(Object.keys(child.attributes).map(attr => attr+'="' + child.attributes[attr].value + '"'));
-			let innerHTML = getInnerHTML(child);
-			if (innerHTML.length > 0) {
+			if (['img', 'link', 'meta', 'input', 'br', 'area', 'base', 'param', 'source', 'hr', 'embed'].indexOf(child.tagName) < 0) {
 				return `<${child.tagName}${attributes.join(' ')}>${getInnerHTML(child)}</${child.tagName}>`;
 			} else {
 				return `<${child.tagName}${attributes.join(' ')}/>`;
@@ -104,6 +116,7 @@ function createElement(node, document) {
 		});
 		// define it's inner structure
 		tag.innerHTML = getInnerHTML(node);
+		tag.__hash = node.__hash;
 	}
 
 	return tag;
@@ -111,7 +124,7 @@ function createElement(node, document) {
 
 function applyText(domChild, dom, node, document) {
 	// simply apply the value
-	if (node.match(/<[\w:_-]+[^>]*>/)) {
+	if ((node || '').match(/<[\w:_-]+[^>]*>/)) {
 		if (dom.childNodes.length === 1) {
 			dom.innerHTML = node;
 		} else {
@@ -121,7 +134,7 @@ function applyText(domChild, dom, node, document) {
 		}
 	} else {
 		// it's just a text node, so simply replace the element with the text node
-		dom.replaceChild(createElement(node.replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&'), document), domChild);
+		dom.replaceChild(createElement((node || '').replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&'), document), domChild);
 	}
 }
 
@@ -138,45 +151,47 @@ export function applyDOM(dom, vdom, document) {
 	if (!isArray(vdom)) {
 		// if we have a node
 		if (!isArray(vdom.children)) vdom.children = [vdom.children];
-		// if the tag name is not the same
-		if (vdom.tagName !== dom.tagName.toLowerCase()) {
-			// replace the node entirely
-			dom.parentNode.replaceChild(createElement(vdom, document), dom);
-		} else {
-			// check all vdom attributes
-			Object.keys(vdom.attributes).forEach(attr => {
-				// if the VDOM attribute is a non-object
-				if (typeof vdom.attributes[attr].value !== 'object') {
-					// check if it differs
-					if (dom.getAttribute(attr) != vdom.attributes[attr].value) {
-						// if so, apply it
-						dom.setAttribute(attr, vdom.attributes[attr].value);
+		if (dom.__hash !== vdom.__hash) {
+			// if the tag name is not the same
+			if (vdom.tagName !== dom.tagName.toLowerCase()) {
+				// replace the node entirely
+				dom.parentNode.replaceChild(createElement(vdom, document), dom);
+			} else {
+				// check all vdom attributes
+				Object.keys(vdom.attributes).forEach(attr => {
+					// if the VDOM attribute is a non-object
+					if (typeof vdom.attributes[attr].value !== 'object') {
+						// check if it differs
+						if (dom.getAttribute(attr) != vdom.attributes[attr].value) {
+							// if so, apply it
+							dom.setAttribute(attr, vdom.attributes[attr].value);
+						}
+					} else {
+						// the attribute is an object
+						if (dom.getAttribute(attr) && dom.getAttribute(attr).match(/^--|--$/g)) {
+							// if it has a complex value, use the data resolver to define it on the DOM
+							let id = dataResolver(attr, vdom.attributes[attr].value, dom.getAttribute(attr).replace(/^--|--$/g, ''));
+							// only set the ID with markers so that we know it is supposed to be a complex value
+							dom.setAttribute(attr, `--${id}--`);
+						}
 					}
-				} else {
-					// the attribute is an object
-					if (dom.getAttribute(attr) && dom.getAttribute(attr).match(/^--|--$/g)) {
-						// if it has a complex value, use the data resolver to define it on the DOM
-						let id = dataResolver(attr, vdom.attributes[attr].value, dom.getAttribute(attr).replace(/^--|--$/g, ''));
-						// only set the ID with markers so that we know it is supposed to be a complex value
-						dom.setAttribute(attr, `--${id}--`);
-					}
+				});
+				// if we have too many attributes in our DOM
+				if (dom.attributes.length > Object.keys(vdom.attributes)) {
+					[].forEach.call(dom.attributes, attr => {
+						// if the respective attribute does not exist on the VDOM
+						if (typeof vdom.attributes[attr.name] === 'undefined') {
+							// remove it
+							dom.removeAttribute(attr.name);
+						}
+					})
 				}
-			});
-			// if we have too many attributes in our DOM
-			if (dom.attributes.length > Object.keys(vdom.attributes)) {
-				[].forEach.call(dom.attributes, attr => {
-					// if the respective attribute does not exist on the VDOM
-					if (typeof vdom.attributes[attr.name] === 'undefined') {
-						// remove it
-						dom.removeAttribute(attr.name);
-					}
-				})
 			}
 		}
 	}
 
 	// deal with the vdom's children
-	let children = (isArray(vdom) ? vdom : vdom.children);
+	let children = (isArray(vdom) ? vdom : vdom.__hash !== dom.__hash ? vdom.children : []);
 	children.forEach((node, index) => {
 		if (isArray(node)) return applyDOM(dom, node, document);
 		let domChild = dom.childNodes[index];
@@ -202,8 +217,9 @@ export function applyDOM(dom, vdom, document) {
 			}
 		}
 	});
-	if (dom.childNodes.length > children.length) {
+	if (dom.__hash !== vdom.__hash && dom.childNodes.length > children.length) {
 		// remove superfluous child nodes
 		toArray(dom.childNodes, children.length).forEach(child => dom.removeChild(child));
 	}
+	dom.__hash = vdom.__hash;
 }
