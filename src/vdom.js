@@ -38,7 +38,7 @@ export function Tag(tagName, attributes, ...children) {
 	let tag = {
 		tagName,
 		attributes,
-		children: children,
+		children: children.filter(child => child),
 		__hash: hashCode(tagName + '!' + attributeHash + '@' + children.map(child => (child && child.__hash || child)).join('!'))
 	};
 	if (tagFilter.indexOf(tagName) >= 0) tagsCreated.push(tag);

@@ -25,6 +25,7 @@ test('renders styles and events properly', t => {
 	zino.matchesSnapshot('<comment-form></comment-form>');
 
 	zino.importTag('test/components/second-tag.html');
+	debugger;
 	zino.matchesSnapshot('<second-tag me="Welt!"></second-tag>');
 });
 test('uses the provided name attribute', t => {

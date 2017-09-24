@@ -220,7 +220,9 @@ function Tag(tagName, attributes) {
 	var tag = {
 		tagName: tagName,
 		attributes: attributes,
-		children: children,
+		children: children.filter(function (child) {
+			return child;
+		}),
 		__hash: hashCode(tagName + '!' + attributeHash + '@' + children.map(function (child) {
 			return child && child.__hash || child;
 		}).join('!'))
@@ -785,10 +787,43 @@ var extBasePath = '';
 var staticBasePath = '';
 var componentRegistry = {};
 var document = null;
+var collector = function collector(callback) {
+	callback();
+};
 
 if (typeof global !== 'undefined') {
 	global.Zino = Zino;
 }
+
+function SyncPromise(fn) {
+	var resolveValue = void 0,
+	    rejectValue = void 0;
+
+	this.then = function (resolve, reject) {
+		return new SyncPromise(function (resFn, rejFn) {
+			if (!rejectValue) {
+				resFn(resolve(resolveValue));
+			} else {
+				rejFn(reject(rejectValue));
+			}
+		});
+	};
+	this.catch = function (reject) {
+		if (rejectValue) {
+			reject(rejectValue);
+		}
+	};
+
+	function resolveFn(data) {
+		resolveValue = data;
+	}
+	function rejectFn(data) {
+		rejectValue = data || 'Error';
+	}
+	fn(resolveFn, rejectFn);
+}
+
+var Promised = typeof Promise === 'undefined' ? SyncPromise : Promise;
 
 setComponentLoader(function (path, fn) {
 	var originalExtBasePath = extBasePath;
@@ -826,6 +861,12 @@ function setStaticBasePath(path) {
 	}
 }
 
+function setCollector(fn) {
+	collector = fn;
+}
+
+var zino = Zino;
+
 /** renders a single component */
 function renderComponent(name, path, props) {
 	flushRegisteredTags();
@@ -841,26 +882,37 @@ function renderComponent(name, path, props) {
 	// import and render component
 	Zino.import(path);
 
-	document.body.querySelectorAll('[__ready]').forEach(function (component) {
-		if (component.body) {
-			var div = document.createElement('div');
-			div.setAttribute('class', '-original-root');
-			div.innerHTML = component.body;
-			component.appendChild(div);
-		}
-		var name = component.tagName;
-		if (componentRegistry[name]) {
-			renderedComponents.push('window.zinoTagRegistry["' + staticBasePath + componentRegistry[name].path + '"]=' + JSON.stringify(componentRegistry[name].code));
-		}
-	});
-	var styles = document.head.innerHTML;
-	var output = document.body.innerHTML;
-	var preloader = '<script>window.zinoTagRegistry = window.zinoTagRegistry || {};\n' + renderedComponents.join(';\n') + '</script>';
+	return new Promised(function (resolve, reject) {
+		collector(function (err) {
+			if (err) {
+				reject(err);
+			}
+			var registryList = [];
+			document.body.querySelectorAll('[__ready]').forEach(function (component) {
+				if (component.__i) {
+					var div = document.createElement('div');
+					div.setAttribute('class', '-original-root');
+					div.innerHTML = component.__i;
+					component.appendChild(div);
+				}
+				var name = component.tagName;
+				if (componentRegistry[name] && registryList.indexOf(name) < 0) {
+					registryList.push(name);
+					renderedComponents.push('window.zinoTagRegistry["' + staticBasePath + componentRegistry[name].path + '"]=' + JSON.stringify(componentRegistry[name].code));
+				}
+			});
+			var styles = document.head.innerHTML;
+			var output = document.body.innerHTML;
+			var preloader = '<script>window.zinoTagRegistry = window.zinoTagRegistry || {};\n' + renderedComponents.join(';\n') + '</script>';
 
-	return styles + output + preloader;
+			resolve(styles + output + preloader);
+		});
+	});
 }
 
 exports.setBasePath = setBasePath;
 exports.setStaticBasePath = setStaticBasePath;
+exports.setCollector = setCollector;
+exports.zino = zino;
 exports.renderComponent = renderComponent;
 //# sourceMappingURL=zino-ssr.js.map

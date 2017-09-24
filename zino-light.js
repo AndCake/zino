@@ -218,7 +218,9 @@ function Tag(tagName, attributes) {
 	var tag = {
 		tagName: tagName,
 		attributes: attributes,
-		children: children,
+		children: children.filter(function (child) {
+			return child;
+		}),
 		__hash: hashCode(tagName + '!' + attributeHash + '@' + children.map(function (child) {
 			return child && child.__hash || child;
 		}).join('!'))
@@ -822,7 +824,6 @@ Zino.fetch = function (url, callback, cache, code) {
 	req.send();
 };
 setComponentLoader(function (url, fn) {
-	console.log('loading from url ', url);
 	Zino.fetch(url, function (data, status) {
 		var path = url.replace(/[^\/]+$/g, '');
 		if (status === 200) {

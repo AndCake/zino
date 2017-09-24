@@ -6,10 +6,40 @@ let extBasePath = '';
 let staticBasePath = '';
 let componentRegistry = {};
 let document = null;
+let collector = function(callback) { callback(); };
 
 if (typeof global !== 'undefined') {
 	global.Zino = Zino;
 }
+
+function SyncPromise(fn) {
+	let resolveValue, rejectValue;
+
+	this.then = function(resolve, reject) {
+		return new SyncPromise(function(resFn, rejFn) {
+			if (!rejectValue) {
+				resFn(resolve(resolveValue));
+			} else {
+				rejFn(reject(rejectValue));
+			}
+		});
+	};
+	this.catch = function(reject) {
+		if (rejectValue) {
+			reject(rejectValue);
+		}
+	};
+
+	function resolveFn(data) {
+		resolveValue = data;
+	}
+	function rejectFn(data) {
+		rejectValue = data || 'Error';
+	}
+	fn(resolveFn, rejectFn);
+}
+
+let Promised = typeof Promise === 'undefined' ? SyncPromise : Promise;
 
 setComponentLoader((path, fn) => {
 	let originalExtBasePath = extBasePath;
@@ -47,6 +77,12 @@ export function setStaticBasePath(path) {
 	}
 }
 
+export function setCollector(fn) {
+	collector = fn;
+}
+
+export var zino = Zino;
+
 /** renders a single component */
 export function renderComponent(name, path, props) {
 	flushRegisteredTags();
@@ -62,21 +98,30 @@ export function renderComponent(name, path, props) {
 	// import and render component
 	Zino.import(path);
 
-	document.body.querySelectorAll('[__ready]').forEach(component => {
-		if (component.body) {
-			let div = document.createElement('div');
-			div.setAttribute('class', '-original-root');
-			div.innerHTML = component.body;
-			component.appendChild(div);
-		}
-		let name = component.tagName;
-		if (componentRegistry[name]) {
-			renderedComponents.push('window.zinoTagRegistry["' + staticBasePath + componentRegistry[name].path + '"]=' + JSON.stringify(componentRegistry[name].code));
-		}
-	});
-	let styles = document.head.innerHTML;
-	let output = document.body.innerHTML;
-	let preloader = '<script>window.zinoTagRegistry = window.zinoTagRegistry || {};\n' + renderedComponents.join(';\n') + '</script>';
+	return new Promised((resolve, reject) => {
+		collector(function(err) {
+			if (err) {
+				reject(err);
+			}
+			let registryList = [];
+			document.body.querySelectorAll('[__ready]').forEach(component => {
+				if (component.__i) {
+					let div = document.createElement('div');
+					div.setAttribute('class', '-original-root');
+					div.innerHTML = component.__i;
+					component.appendChild(div);
+				}
+				let name = component.tagName;
+				if (componentRegistry[name] && registryList.indexOf(name) < 0) {
+					registryList.push(name);
+					renderedComponents.push('window.zinoTagRegistry["' + staticBasePath + componentRegistry[name].path + '"]=' + JSON.stringify(componentRegistry[name].code));
+				}
+			});
+			let styles = document.head.innerHTML;
+			let output = document.body.innerHTML;
+			let preloader = '<script>window.zinoTagRegistry = window.zinoTagRegistry || {};\n' + renderedComponents.join(';\n') + '</script>';
 
-	return styles + output + preloader;
+			resolve(styles + output + preloader);
+		});
+	});
 }
