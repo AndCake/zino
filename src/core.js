@@ -1,17 +1,15 @@
 import * as vdom from './vdom';
-import {emptyFunc, isFn, isObj, uuid, merge} from './utils';
-import {trigger, on, attachEvent} from './events';
+import {emptyFunc, isFn, isObj, uuid, merge, toArray} from './utils';
+import {trigger, on, attachSubEvents} from './events';
 
-export let renderOptions = {
-	resolveData(key, value, oldID) {
-		let id = uuid();
-		if (oldID) {
-			// unregister old entry
-			delete dataRegistry[oldID];
-		}
-		dataRegistry[id] = value;
-		return id;
+let resolveData = (key, value, oldID) => {
+	let id = uuid();
+	if (oldID) {
+		// unregister old entry
+		delete dataRegistry[oldID];
 	}
+	dataRegistry[id] = value;
+	return id;
 };
 
 let tagRegistry = {},
@@ -31,13 +29,14 @@ let tagRegistry = {},
 				tag.props[name] = value;
 				let attrName = 'data-' + name.replace(/[A-Z]/g, g => `-${g.toLowerCase()}`);
 				if (tag.attributes[attrName]) {
-					defineAttribute(tag, attrName, `--${renderOptions.resolveData(name, value, tag.attributes[attrName].value)}--`);
+					defineAttribute(tag, attrName, `--${resolveData(name, value, tag.attributes[attrName].value)}--`);
 				}
 			}
 			!tag.mounting && trigger('--zino-rerender-tag', tag);
 		}
 	};
 
+export function setResolveData(fn) { resolveData = fn; }
 export function registerTag(fn, document, Zino) {
 	let firstElement = fn(vdom.Tag, Zino),
 		tagName = firstElement.tagName;
@@ -47,18 +46,18 @@ export function registerTag(fn, document, Zino) {
 		return;
 	}
 
-	handleStyles(firstElement);
+	trigger('publish-style', {styles: firstElement.styles, tagName});
 	firstElement.functions = merge({}, defaultFunctions, firstElement.functions);
 	tagRegistry[tagName] = firstElement;
 
 	// initialize all occurences in provided context
-	document && [].slice.call(vdom.getElementsByTagName(tagName, document)).forEach(tag => initializeTag(tag, tagRegistry[tagName]));
+	document && toArray(document.getElementsByTagName(tagName)).forEach(tag => initializeTag(tag, tagRegistry[tagName]));
 }
 
 export function mount(tag, ignoreRender) {
-	if (!tag.tagName) return;
+	if (!tag.tagName) return {};
 	let entry = tagRegistry[tag.tagName.toLowerCase()];
-	if (!entry || tag.getAttribute('__ready')) return;
+	if (!entry || tag.getAttribute('__ready')) return {};
 	if (ignoreRender) entry.functions.render = emptyFunc;
 	return initializeTag.call(ignoreRender ? {noEvents: true} : this, tag, entry);
 }
@@ -98,7 +97,7 @@ function initializeTag(tag, registryEntry) {
 
 	// render the tag's content
 	let subEvents = !tag.isRendered && renderTag.call(this, tag) || {events:[]};
-	
+
 	// attach events
 	let hostEvents = [],
 		events = functions.events || [],
@@ -116,34 +115,25 @@ function initializeTag(tag, registryEntry) {
 	if (!this || this.noEvents !== true) {
 		// attach sub events
 		attachSubEvents(subEvents, tag);
+
+		[tag].concat(tag.__subs).forEach(function(el) {
+			let actual = el && el.getHost() || {};
+			isFn(actual.onready) && actual.onready.call(actual);
+		});
 	} else {
 		return subEvents;
 	}
 }
 
-function defineAttribute(tag, name, value) { 
-	// if __s is already defined (which means the component has been mounted already) 
-	if (isFn(tag.__s)) { 
-		// if it's the same as setAttribute 
-		if (tag.__s === tag.setAttribute) { 
-			// we might have a double override => use the original HTMLElement's setAttribute instead to avoid endless recursion 
-			(tag.prototype || HTMLElement.prototype).setAttribute.call(tag, name, value); 
-		} else { 
-			// we now know it's the original setAttribute (also works for vdom nodes) 
-			tag.__s(name, value); 
-		} 
-	} else { 
-		// if the element is not a mounted component 
-		// but it is a regular HTML element 
-		if (tag.ownerDocument) { 
-			// use the HTMLElement's setAttribute to define the attribute 
-			(tag.prototype || HTMLElement.prototype).setAttribute.call(tag, name, value); 
-		} else { 
-			// we now know it can only be a vdom node, so set attribute vdom-style 
-			tag.attributes[name] = {name, value}; 
-		} 
-	} 
-} 
+function defineAttribute(tag, name, value) {
+	if (tag.ownerDocument) {
+		// use the HTMLElement's setAttribute to define the attribute
+		(tag.prototype || HTMLElement.prototype).setAttribute.call(tag, name, value);
+	} else {
+		// we now know it can only be a vdom node, so set attribute vdom-style
+		tag.attributes[name] = {name, value};
+	}
+}
 
 function initializeNode({tag, node: functions = defaultFunctions}) {
 	// copy all defined functions/attributes
@@ -169,7 +159,6 @@ function initializeNode({tag, node: functions = defaultFunctions}) {
 			get() { return tag.__i; }
 		});
 	}
-	tag.__s = tag.setAttribute;
 	tag.setAttribute = function(attr, val) {
 		defineAttribute(this, attr, val);
 		trigger('--zino-rerender-tag', this);
@@ -195,7 +184,7 @@ function renderTag(tag, registryEntry = tagRegistry[tag.tagName.toLowerCase()]) 
 		renderedDOM;
 
 	// do the actual rendering of the component
-	vdom.setDataResolver(renderOptions.resolveData);
+	vdom.setDataResolver(resolveData);
 	vdom.clearTagsCreated();
 	let data = getAttributes(tag);
 	if (isFn(registryEntry.render)) {
@@ -207,7 +196,7 @@ function renderTag(tag, registryEntry = tagRegistry[tag.tagName.toLowerCase()]) 
 	}
 
 	// unmount previously rendered sub components
-	tag.__subs && tag.__subs.forEach(unmountTag);
+	tag.__subs && tag.__subs.forEach(unmount);
 
 	// render all contained sub components
 	// retrieve the tags that the vdom was made aware of (all our registered components)
@@ -231,23 +220,18 @@ function renderTag(tag, registryEntry = tagRegistry[tag.tagName.toLowerCase()]) 
 		}
 	}
 
-	if (tag.attributes.__ready && (Math.abs(renderedDOM.__complexity - (tag.__complexity || 0)) < 50) && tag.ownerDocument) {
+	if (tag.ownerDocument) {
 		// has been rendered before, so just apply diff
 		vdom.applyDOM(tag.children[0], renderedDOM, tag.ownerDocument);
 	} else {
-		// simply render everything inside
-		if (tag.ownerDocument) {
-			tag.children[0].innerHTML = vdom.getInnerHTML(renderedDOM);
-		} else {
-			tag.children[0] = renderedDOM;
-		}
+		tag.children[0] = renderedDOM;
+		tag.children[0].__hash = renderedDOM.__hash;
 	}
 	tag.__subs = renderedSubElements;
 	tag.__vdom = renderedDOM;
-	tag.__complexity = renderedDOM.__complexity;
 
 	// if we have rendered any sub components, retrieve their actual DOM node
-	renderedSubElements.length > 0 && (tag.querySelectorAll && [].slice.call(tag.querySelectorAll('[__ready]')) || []).forEach((subEl, index) => {
+	renderedSubElements.length > 0 && (tag.querySelectorAll && toArray(tag.querySelectorAll('[__ready]')) || []).forEach((subEl, index) => {
 		// apply all additional functionality to them (custom functions, attributes, etc...)
 		merge(subEl, renderedSubElements[index]);
 		// update getHost to return the DOM node instead of the vdom node
@@ -268,35 +252,7 @@ function renderTag(tag, registryEntry = tagRegistry[tag.tagName.toLowerCase()]) 
 	return {events, renderCallbacks, data, subElements: renderedSubElements};
 }
 
-function attachSubEvents(subEvents, tag) {
-	var count = {};
-	// make sure that we only attach events if we are actually in browser context
-	if (tag.addEventListener.toString().indexOf('[native code]') >= 0) {
-		subEvents.events.forEach(event => {
-			let el = event.tag;
-			if (!isObj(el)) {
-				// we have a selector rather than an element
-				count[el] = (count[el] || 0) + 1;
-				// turn the selector into the corresponding element
-				el = tag.querySelectorAll(el)[count[el] - 1];
-			}
-			// if no events have been attached yet
-			if (!el.children[0].__eventsAttached) {
-				// attach children tag events to the shadow root
-				attachEvent(el.children[0], event.childEvents, el);
-				// attach host events directly to the component!
-				attachEvent(el, event.hostEvents, el);
-				el.children[0].__eventsAttached = true;
-			}
-		});
-	}
-	[tag].concat(tag.__subs).forEach(function(el) {
-		let actual = el && el.getHost() || {};
-		isFn(actual.onready) && actual.onready.call(actual);
-	});
-}
-
-function unmountTag(tag) {
+export function unmount(tag) {
 	let name = (tag.tagName || '').toLowerCase(),
 		entry = tagRegistry[name];
 	if (entry) {
@@ -349,29 +305,4 @@ function setElementAttr(source, target = source) {
 	target.element = baseAttrs;
 }
 
-function handleStyles(element) {
-	let tagName = element.tagName;
-	let styles = (element.styles || []).map(style => {
-			let code = style;
-			return code.replace(/[\r\n]*([^%\{;\}]+?)\{/gm, (global, match) => {
-				if (match.trim().match(/^@/)) {
-					return match + '{';
-				}
-				var selectors = match.split(',').map(selector => {
-					selector = selector.trim();
-					if (selector.match(/:host\b/) ||
-						selector.match(new RegExp(`^\\s*${tagName}\\b`)) ||
-						selector.match(/^\s*(?:(?:\d+%)|(?:from)|(?:to)|(?:@\w+)|\})\s*$/)) {
-						return selector;
-					}
-					return tagName + ' ' + selector;
-				});
-				return global.replace(match, selectors.join(','));
-			}).replace(/:host\b/gm, tagName) + '\n';
-		}).join('\n');
-	trigger('publish-style', {styles, tagName});
-}
-
 on('--zino-initialize-node', initializeNode);
-on('--zino-unmount-tag', unmountTag);
-on('--zino-mount-tag', mount);

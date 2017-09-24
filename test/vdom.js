@@ -25,17 +25,8 @@ test('getInnerHTML', t => {
 	t.is(vdom.getInnerHTML(dom), expected, 'correctly renders latest changes to the DOM');
 });
 
-test('getElementsByTagName', t => {
-	dom.children[1].children.push(vdom.Tag('h1', {}));
-
-	let result = vdom.getElementsByTagName('h1', dom);
-	t.is(result.length, 2, 'correctly finds both h1 elements');
-	result = vdom.getElementsByTagName('title', dom);
-	t.is(result.length, 1, 'correctly find only one title element');
-});
-
 test('applyDOM', t => {
 	let jdom = new Document('<!DOCTYPE html><html><head></head><body></body></html>');
 	vdom.applyDOM(jdom.documentElement, dom, jdom);
-	t.is(jdom.documentElement.outerHTML, '<html><head><title>page title</title></head><body><h1 class="title">Headline</h1><p>Hello, World!</p><h1></h1></body></html>');
+	t.is(jdom.documentElement.outerHTML, '<html><head><title>page title</title></head><body><h1 class="title">Headline</h1><p>Hello, World!</p></body></html>');
 });

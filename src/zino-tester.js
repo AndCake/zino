@@ -72,7 +72,7 @@ export function matchesSnapshot(...args) {
 
 	name = name.replace(/[^a-zA-Z0-9._-]/g, '-');
 	fileName = './test/snapshots/' + code.children[0].tagName.toLowerCase() + '-' + (name && name + '-' || '') + sha1(html + JSON.stringify(props) + callback.toString()).substr(0, 5);
-	core.renderOptions.resolveData = (key, value) => sha1(key + '-' + JSON.stringify(value));
+	core.setResolveData((key, value) => sha1(key + '-' + JSON.stringify(value)));
 	let {events, data} = core.mount(code.children[0], true);
 
 	if (Object.keys(props).length > 0) {
@@ -82,7 +82,7 @@ export function matchesSnapshot(...args) {
 	callback(code.children[0]);
 
 	let eventList = [];
-	events = events.forEach(e => eventList = eventList.concat(e.childEvents, e.hostEvents));
+	events = (events || []).forEach(e => eventList = eventList.concat(e.childEvents, e.hostEvents));
 	events = Object.keys(eventList).map(el => {
 		let obj = {};
 		if (eventList[el]) {

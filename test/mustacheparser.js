@@ -64,7 +64,7 @@ test('styles generated', t => {
 
 	result = run(parse('<styleguide-color>Hello World!<style>my style</style></styleguide-color>'));
 	t.not(typeof result.styles, 'undefined');
-	t.is(result.styles[0], 'my style');
+	t.is(result.styles[0].trim(), 'my style');
 	dom = result.render(result.functions);
 	t.is(dom[0], 'Hello World!');
 });
@@ -114,38 +114,38 @@ test('value escaping', t => {
 test('renders styles', t => {
 	t.is(render(`<a>x<img style="{{%test}}"/>y</a>`, {test: {
 		value: 'hallo'
-	}}), 'x<img style="value:hallo;"></img>y', 'renders simple style entry');
+	}}), 'x<img style="value:hallo;"/>y', 'renders simple style entry');
 	t.is(render(`<a>x<img style="{{%test}}"/>y</a>`, {test: {
 		display: 'block',
 		background: 'red'
-	}}), 'x<img style="display:block;background:red;"></img>y', 'renders style entries');
+	}}), 'x<img style="display:block;background:red;"/>y', 'renders style entries');
 	t.is(render(`<a>x<img style="{{%test}}"/>y</a>`, {test: {
 		isMe: 'ja'
-	}}), 'x<img style="is-me:ja;"></img>y', 'converts style property camel-case to dashed');
+	}}), 'x<img style="is-me:ja;"/>y', 'converts style property camel-case to dashed');
 	t.is(render(`<a>x<img style="{{%test, tust}}"/>y</a>`, {test: {
 		value: 'hallo'
 	}, tust: {
 		greeting: 'hi'
-	}}), 'x<img style="value:hallo;greeting:hi;"></img>y', 'renders multiple styles');
+	}}), 'x<img style="value:hallo;greeting:hi;"/>y', 'renders multiple styles');
 	t.is(render(`<a>x<img style="{{%test}}"/>y</a>`, {test: {
 		value: 2
-	}}), 'x<img style="value:2px;"></img>y', 'converts number to pixels');
+	}}), 'x<img style="value:2px;"/>y', 'converts number to pixels');
 	t.is(render(`<a>x<img style="{{%test}}"/>y</a>`, {test: {
 		value: 2
-	}, styles: {defaultUnit: 'rem'}}), 'x<img style="value:2rem;"></img>y', 'converts number to configured unit');
+	}, styles: {defaultUnit: 'rem'}}), 'x<img style="value:2rem;"/>y', 'converts number to configured unit');
 	t.is(render(`<a>x<img style="{{%test}}"/>y</a>`, {test: {
 		value: () => 'test'
-	}}), 'x<img style="value:test;"></img>y', 'evaluates function values');
+	}}), 'x<img style="value:test;"/>y', 'evaluates function values');
 });
 
 test('complex data', t => {
 	setDataResolver((attr, value) => {
 		return attr;
 	});
-	t.is(render(`<a>x<img data-test="{{+data}}"/>y</a>`, {data: [1, 2, 3]}), 'x<img data-test="--data-test--"></img>y', 'returns data name if no data resolver is set');
+	t.is(render(`<a>x<img data-test="{{+data}}"/>y</a>`, {data: [1, 2, 3]}), 'x<img data-test="--data-test--"/>y', 'returns data name if no data resolver is set');
 	setDataResolver((key, value) => {
 		t.is(value.toString(), '1,2,3', 'value handed to data resolver over correctly');
 		return 'abcde';
 	});
-	t.is(render(`<a>x<img data-test="{{+data}}"/>y</a>`, {data: [1, 2, 3]}), 'x<img data-test="--abcde--"></img>y', 'returns data name if no data resolver is set');
+	t.is(render(`<a>x<img data-test="{{+data}}"/>y</a>`, {data: [1, 2, 3]}), 'x<img data-test="--abcde--"/>y', 'returns data name if no data resolver is set');
 });

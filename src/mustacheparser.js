@@ -9,7 +9,7 @@ const syntax = /\{\{\s*([^\}]+)\s*\}\}\}?/g;
 
 /** @function safeAccess
  * safely access the given property in the object obj.
- * 
+ *
  * @param obj (Object) - the object to read the property from
  * @param attrs (String) - the name of the property to access (allows for object paths via ., e.g. "myprop.firstValue")
  * @param escape (Boolean) - if the value should be HTML escaped to prevent XSS attacks and such
@@ -33,7 +33,7 @@ const safeAccess = 'function safeAccess(t,e,r){if(!e)return t;if("."===e[0])retu
 
 /** @function toArray
  * turn property value of an object into an array
- * 
+ *
  * @param data (Object) - the object to read the property value from
  * @param value (String) - the property whose value should be read from the object
  * @return Array
@@ -53,7 +53,7 @@ const toArray = 'function toArray(t,e){var r=safeAccess(t,e);return r?"[object A
 
 /** @function spread
  * turns an array of arrays into an array of all containing elements (reduces the array depth by 1)
- * 
+ *
  * @param array (Array) - the array to spread the values along
  * @return Array - a new array containing all the values of the sub elements
  */
@@ -84,7 +84,7 @@ const merge = 'function merge(t){return[].slice.call(arguments,1).forEach(functi
 
 /** @function renderStyle
  * transforms an object into CSS properties
- * 
+ *
  * @param value (Object) - the object to be transformed
  * @param context (Object) - for any functions defined in the object, context will be provided within as `this`
  * @return String - the CSS property list separated by semicolon
@@ -121,6 +121,29 @@ const baseCode = 'function (Tag,Zino){var __i;{{helperFunctions}};return{tagName
 		functions: {{functions}}
 	};
 }`*/;
+
+/** parses style information from within a style tag makes sure it is localized */
+function handleStyles(tagName, styles) {
+	styles = (styles || []).map(style => {
+			let code = style;
+			return code.replace(/[\r\n]*([^%\{;\}]+?)\{/gm, (global, match) => {
+				if (match.trim().match(/^@/)) {
+					return match + '{';
+				}
+				var selectors = match.split(',').map(selector => {
+					selector = selector.trim();
+					if (selector.match(/:host\b/) ||
+						selector.match(new RegExp(`^\\s*${tagName}\\b`)) ||
+						selector.match(/^\s*(?:(?:\d+%)|(?:from)|(?:to)|(?:@\w+)|\})\s*$/)) {
+						return selector;
+					}
+					return tagName + ' ' + selector;
+				});
+				return global.replace(match, selectors.join(','));
+			}).replace(/:host\b/gm, tagName) + '\n';
+		});
+	return styles;
+}
 
 /** takes an HTML string containing mustache code and turns it into executable JS code that generates a vdom */
 export function parse(data) {
@@ -218,7 +241,7 @@ export function parse(data) {
 			resultObject.functions.push(content);
 			usesMerge = true;
 		}
-	});	 
+	});
 	// handle all scripts and styles
 	data = data.replace(commentRegExp, '').replace(/<(script|style)(\s+[^>]*?)?>((?:.|\n)*?)<\/\1>/gi, (g, x, a, m) => {
 		if (x === 'style') {
@@ -240,6 +263,7 @@ export function parse(data) {
 	}
 	// find out how the component is called
 	resultObject.tagName = data.match(/^<([\w_-]+)>/)[1].toLowerCase();
+	resultObject.styles = handleStyles(resultObject.tagName, resultObject.styles);
 
 	// loop through all HTML tags in code
 	while (match = tagRegExp.exec(data)) {

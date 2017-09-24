@@ -5,6 +5,7 @@
 	<link href="components/todolist.html" rel="zino-tag"/>
 	<link rel="zino-tag" href="components/comment-box.html"/>
 	<link rel="zino-tag" href="components/btn.html"/>
+	<link rel="zino-tag" href="components/color-rotation.html"/>
 	<script>
 		var version = navigator.userAgent.match(/Trident\/(\d+)/),
 			loadScript = function(arr) {
@@ -46,6 +47,19 @@
 				};
 				document.body.appendChild(st);
 			};
+
+			var el = document.createElement('color-rotation'),
+				counter = 0;
+			(function nextRotator() {
+				var x = el.cloneNode(false);
+				x.setAttribute('degree', counter * 5);
+				document.body.appendChild(x);
+				counter++;
+				if (counter < 60) {
+					nextRotator();
+				}
+			}());
+			
 
 			loadScript(loadArray.concat(['../zino.js', 'components/mystore.js', 'components/comment-store.js']));
 		</script>
