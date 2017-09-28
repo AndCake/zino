@@ -5,6 +5,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'default' in ex) ? ex['default'] : ex; }
 
 var Document = _interopDefault(require('nano-dom'));
+var NowPromise = _interopDefault(require('now-promise'));
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) {
   return typeof obj;
@@ -795,36 +796,6 @@ if (typeof global !== 'undefined') {
 	global.Zino = Zino;
 }
 
-function SyncPromise(fn) {
-	var resolveValue = void 0,
-	    rejectValue = void 0;
-
-	this.then = function (resolve, reject) {
-		return new SyncPromise(function (resFn, rejFn) {
-			if (!rejectValue) {
-				resFn(resolve(resolveValue));
-			} else {
-				rejFn(reject(rejectValue));
-			}
-		});
-	};
-	this.catch = function (reject) {
-		if (rejectValue) {
-			reject(rejectValue);
-		}
-	};
-
-	function resolveFn(data) {
-		resolveValue = data;
-	}
-	function rejectFn(data) {
-		rejectValue = data || 'Error';
-	}
-	fn(resolveFn, rejectFn);
-}
-
-var Promised = typeof Promise === 'undefined' ? SyncPromise : Promise;
-
 setComponentLoader(function (path, fn) {
 	var originalExtBasePath = extBasePath;
 	if (originalExtBasePath.length > 0 && originalExtBasePath.split('').pop() !== '/') originalExtBasePath += '/';
@@ -875,14 +846,13 @@ function renderComponent(name, path, props) {
 	var renderedComponents = [];
 	var linkTags = [];
 
-	(typeof global !== 'undefined' ? global : this).document = document;
 	setDocument(document);
 	// initialize props
 	document.body.children[0].props = props;
 	// import and render component
 	Zino.import(path);
 
-	return new Promised(function (resolve, reject) {
+	return new NowPromise(function (resolve, reject) {
 		collector(function (err) {
 			if (err) {
 				reject(err);
@@ -906,7 +876,17 @@ function renderComponent(name, path, props) {
 			var output = document.body.innerHTML;
 			var preloader = '<script>window.zinoTagRegistry = window.zinoTagRegistry || {};\n' + renderedComponents.join(';\n') + '</script>';
 
-			resolve(styles + output + preloader);
+			var result = {
+				styles: styles,
+				preloader: preloader,
+				body: output,
+				components: componentRegistry
+			};
+			result.toString = function () {
+				return styles + output + preloader;
+			};
+
+			resolve(result);
 		});
 	});
 }

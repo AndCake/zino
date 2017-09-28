@@ -1,5 +1,6 @@
 import {Zino, setComponentLoader, actions, setDocument, flushRegisteredTags} from './facade';
 import Document from 'nano-dom';
+import NowPromise from 'now-promise';
 
 let basePath = './';
 let extBasePath = '';
@@ -11,35 +12,6 @@ let collector = function(callback) { callback(); };
 if (typeof global !== 'undefined') {
 	global.Zino = Zino;
 }
-
-function SyncPromise(fn) {
-	let resolveValue, rejectValue;
-
-	this.then = function(resolve, reject) {
-		return new SyncPromise(function(resFn, rejFn) {
-			if (!rejectValue) {
-				resFn(resolve(resolveValue));
-			} else {
-				rejFn(reject(rejectValue));
-			}
-		});
-	};
-	this.catch = function(reject) {
-		if (rejectValue) {
-			reject(rejectValue);
-		}
-	};
-
-	function resolveFn(data) {
-		resolveValue = data;
-	}
-	function rejectFn(data) {
-		rejectValue = data || 'Error';
-	}
-	fn(resolveFn, rejectFn);
-}
-
-let Promised = typeof Promise === 'undefined' ? SyncPromise : Promise;
 
 setComponentLoader((path, fn) => {
 	let originalExtBasePath = extBasePath;
@@ -91,14 +63,13 @@ export function renderComponent(name, path, props) {
 	let renderedComponents = [];
 	let linkTags = [];
 
-	(typeof global !== 'undefined' ? global : this).document = document;
 	setDocument(document);
 	// initialize props
 	document.body.children[0].props = props;
 	// import and render component
 	Zino.import(path);
 
-	return new Promised((resolve, reject) => {
+	return new NowPromise((resolve, reject) => {
 		collector(function(err) {
 			if (err) {
 				reject(err);
@@ -122,7 +93,17 @@ export function renderComponent(name, path, props) {
 			let output = document.body.innerHTML;
 			let preloader = '<script>window.zinoTagRegistry = window.zinoTagRegistry || {};\n' + renderedComponents.join(';\n') + '</script>';
 
-			resolve(styles + output + preloader);
+			let result = {
+				styles,
+				preloader,
+				body: output,
+				components: componentRegistry
+			};
+			result.toString = function() {
+				return styles + output + preloader;
+			};
+
+			resolve(result);
 		});
 	});
 }
