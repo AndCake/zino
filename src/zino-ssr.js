@@ -102,6 +102,7 @@ export function renderComponent(name, path, props) {
 		collector(function(err) {
 			if (err) {
 				reject(err);
+				return;
 			}
 			let registryList = [];
 			document.body.querySelectorAll('[__ready]').forEach(component => {
