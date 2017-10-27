@@ -177,7 +177,7 @@ export function applyDOM(dom, vdom, document) {
 					}
 				});
 				// if we have too many attributes in our DOM
-				if (dom.attributes.length > Object.keys(vdom.attributes)) {
+				if (dom.attributes.length > Object.keys(vdom.attributes).length) {
 					[].forEach.call(dom.attributes, attr => {
 						// if the respective attribute does not exist on the VDOM
 						if (typeof vdom.attributes[attr.name] === 'undefined') {

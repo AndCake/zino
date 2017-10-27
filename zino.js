@@ -90,9 +90,9 @@ function publishEvent(type, data) {
 }
 
 function trigger(name, data) {
+	publishEvent('trigger', { name: name, data: data });
 	if (!eventQueue[name]) return;
 	for (var index in eventQueue[name]) {
-		publishEvent('trigger', { name: name, fn: eventQueue[name][index], data: data });
 		var result = eventQueue[name][index](data);
 		if (result === false) break;
 	}
@@ -637,7 +637,7 @@ function applyDOM(dom, vdom, document) {
 					}
 				});
 				// if we have too many attributes in our DOM
-				if (dom.attributes.length > Object.keys(vdom.attributes)) {
+				if (dom.attributes.length > Object.keys(vdom.attributes).length) {
 					[].forEach.call(dom.attributes, function (attr) {
 						// if the respective attribute does not exist on the VDOM
 						if (typeof vdom.attributes[attr.name] === 'undefined') {
@@ -725,12 +725,22 @@ var defaultFunctions = {
 };
 
 
+function setDataRegistry(newValues) {
+	dataRegistry = newValues;
+}
+
 function registerTag(fn, document, Zino) {
 	var firstElement = fn(Tag, Zino),
-	    tagName = firstElement.tagName;
+	    tagName = firstElement.tagName || (fn.name || '').replace(/([A-Z])/g, function (g, beginning) {
+		return '-' + beginning;
+	}).toLowerCase().replace(/^-/, '');
 
 	if (tagRegistry[tagName]) {
 		// tag is already registered
+		// initialize all occurences in provided context
+		document && toArray$1(document.getElementsByTagName(tagName)).forEach(function (tag) {
+			return initializeTag(tag, tagRegistry[tagName]);
+		});
 		return;
 	}
 
@@ -779,6 +789,9 @@ function initializeTag(tag, registryEntry) {
 		setElementAttr(tag);
 		tag.innerHTML = '<div class="-shadow-root"></div>';
 		tag.isRendered = false;
+	}
+	if (!tag.nodeType) while (tag.children.length > 1) {
+		tag.children.pop();
 	}
 	trigger('--zino-initialize-node', { tag: tag, node: functions });
 	tag.__vdom = {};
@@ -1025,13 +1038,18 @@ var Zino$1 = {
 	import: function _import(path) {
 		var callback = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : emptyFunc;
 
-		loadComponent((this.path || '') + path, function (code) {
+		var runCode = function runCode(code) {
 			if (code) {
 				isFn(code.setDocument) && code.setDocument(document$1);
 				registerTag(code, document$1.body, Zino$1);
 			}
 			callback();
-		});
+		};
+		if (typeof path === 'function') {
+			runCode(path);
+		} else {
+			loadComponent((this.path || '') + path, runCode);
+		}
 	}
 };
 
@@ -1070,7 +1088,11 @@ var tagObserver = new MutationObserver(function (records) {
 	});
 });
 
+setDataRegistry(window.zinoDataRegistry || {});
+
 window.Zino = Zino$1;
+Zino$1.isBrowser = true;
+Zino$1.isServer = false;
 Zino$1.fetch = function (url, callback, cache, code) {
 	if (cache && urlRegistry[url] && !urlRegistry[url].callback) {
 		return callback(urlRegistry[url], 200);

@@ -10,13 +10,18 @@ export let Zino = {
 	fetch: emptyFunc,
 
 	import: function(path, callback = emptyFunc) {
-		loadComponent((this.path || '') + path, code => {
+		let runCode = code => {
 			if (code) {
 				isFn(code.setDocument) && code.setDocument(document);
 				registerTag(code, document.body, Zino);
 			}
 			callback();
-		})
+		};
+		if (typeof path === 'function') {
+			runCode(path);
+		} else {
+			loadComponent((this.path || '') + path, runCode);
+		}
 	}
 };
 

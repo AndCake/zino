@@ -1,5 +1,6 @@
 import {isObj, toArray, identity} from './utils';
 import {Zino, actions, setDocument, setComponentLoader} from './facade';
+import {setDataRegistry} from './core';
 
 let urlRegistry = window.zinoTagRegistry || {},
 	dirtyTags = [],
@@ -19,7 +20,11 @@ let urlRegistry = window.zinoTagRegistry || {},
 		});
 	});
 
+setDataRegistry(window.zinoDataRegistry || {});
+
 window.Zino = Zino;
+Zino.isBrowser = true;
+Zino.isServer = false;
 Zino.fetch = function(url, callback, cache, code) {
 	if (cache && urlRegistry[url] && !urlRegistry[url].callback) {
 		return callback(urlRegistry[url], 200);

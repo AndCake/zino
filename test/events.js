@@ -55,10 +55,9 @@ test('calls debugging events', t => {
 	let triggered = false;
 	let registered = false;
 	let removed = false;
-	events.on('--event-trigger', ({name, fn, data}) => {
+	events.on('--event-trigger', ({name, data}) => {
 		triggered = true;
 		t.is(typeof name, 'string', 'event trigger event name provided');
-		t.is(typeof fn, 'function', 'function triggered provided');
 		t.is(typeof data, 'object', 'data triggered provided');
 	});
 	events.on('--event-register', ({name, fn}) => {

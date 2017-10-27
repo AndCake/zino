@@ -7,9 +7,9 @@ function publishEvent(type, data) {
 }
 
 export function trigger(name, data) {
+	publishEvent('trigger', {name, data});
 	if (!eventQueue[name]) return;
 	for (let index in eventQueue[name]) {
-		publishEvent('trigger', {name, fn: eventQueue[name][index], data});
 		let result = eventQueue[name][index](data);
 		if (result === false) break;
 	}

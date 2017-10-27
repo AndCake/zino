@@ -1,4 +1,5 @@
 import {Zino, setComponentLoader, actions, setDocument, flushRegisteredTags} from './facade';
+import {getDataRegistry} from './core';
 import Document from 'nano-dom';
 import NowPromise from 'now-promise';
 
@@ -13,10 +14,13 @@ if (typeof global !== 'undefined') {
 	global.Zino = Zino;
 }
 
+Zino.isBrowser = false;
+Zino.isServer = true;
+
 setComponentLoader((path, fn) => {
 	let originalExtBasePath = extBasePath;
 	if (originalExtBasePath.length > 0 && originalExtBasePath.split('').pop() !== '/') originalExtBasePath += '/';
-	extBasePath += path.split('/').slice(0, -1).join('/');
+	extBasePath += path.split('/').slice(0, -1).join('/') + '/';
 	try {
 		let code = require(basePath + originalExtBasePath + path);
 		let element = code(() => {}, Zino);
@@ -25,7 +29,8 @@ setComponentLoader((path, fn) => {
 			element = element(() => {}, Zino);
 			isDeep = true;
 		}
-		componentRegistry[element.tagName] = {path: originalExtBasePath + path, code: code.toString()};
+		let tagName = element.tagName || (isDeep ? code() : code).name.replace(/([a-z])([A-Z])/g, (g, end, beginning) => end + '-' + beginning).toLowerCase();
+		componentRegistry[tagName] = {path: originalExtBasePath + path, code: code.toString()};
 		fn(isDeep ? code() : code);
 	} catch(e) {
 		e.message = 'Unable to load component ' + path + ': ' + e.message;
@@ -54,6 +59,23 @@ export function setCollector(fn) {
 }
 
 export var zino = Zino;
+
+function toJSON(obj) {
+	if (typeof obj === 'string') {
+		return `"${obj.replace(/"/g, '\\"')}"`;
+	}
+	if (obj === null) return 'null';
+	if (obj === undefined) return 'undefined';
+	if (typeof obj !== 'object') {
+		return obj.toString();
+	}
+	if (Object.prototype.toString.call(obj) === '[object Array]') {
+		return '[' + obj.map(entry => toJSON(entry)) + ']';
+	}
+	return '{' + Object.keys(obj).map(entry => {
+		return `"${entry}": ${toJSON(obj[entry])}`;
+	}).join(',') + '}';
+}
 
 /** renders a single component */
 export function renderComponent(name, path, props) {
@@ -89,9 +111,14 @@ export function renderComponent(name, path, props) {
 					renderedComponents.push('window.zinoTagRegistry["' + staticBasePath + componentRegistry[name].path + '"]=' + JSON.stringify(componentRegistry[name].code));
 				}
 			});
+			let dataRegistry = getDataRegistry();
 			let styles = document.head.innerHTML;
 			let output = document.body.innerHTML;
-			let preloader = '<script>window.zinoTagRegistry = window.zinoTagRegistry || {};\n' + renderedComponents.join(';\n') + '</script>';
+			let preloader = '<script>window.zinoDataRegistry = window.zinoDataRegistry || {}; ';
+			preloader += 'window.zinoTagRegistry = window.zinoTagRegistry || {};\n';
+			preloader += renderedComponents.join(';\n') + ';\n';
+			preloader += Object.keys(dataRegistry).map(entry => `window.zinoDataRegistry["${entry}"] = ${toJSON(dataRegistry[entry])}`).join(';\n');
+			preloader += '</script>';
 
 			let result = {
 				styles,

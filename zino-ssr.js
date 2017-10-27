@@ -93,9 +93,9 @@ function publishEvent(type, data) {
 }
 
 function trigger(name, data) {
+	publishEvent('trigger', { name: name, data: data });
 	if (!eventQueue[name]) return;
 	for (var index in eventQueue[name]) {
-		publishEvent('trigger', { name: name, fn: eventQueue[name][index], data: data });
 		var result = eventQueue[name][index](data);
 		if (result === false) break;
 	}
@@ -366,7 +366,7 @@ function applyDOM(dom, vdom, document) {
 					}
 				});
 				// if we have too many attributes in our DOM
-				if (dom.attributes.length > Object.keys(vdom.attributes)) {
+				if (dom.attributes.length > Object.keys(vdom.attributes).length) {
 					[].forEach.call(dom.attributes, function (attr) {
 						// if the respective attribute does not exist on the VDOM
 						if (typeof vdom.attributes[attr.name] === 'undefined') {
@@ -453,13 +453,23 @@ var defaultFunctions = {
 	}
 };
 
+function getDataRegistry() {
+	return dataRegistry;
+}
+
 
 function registerTag(fn, document, Zino) {
 	var firstElement = fn(Tag, Zino),
-	    tagName = firstElement.tagName;
+	    tagName = firstElement.tagName || (fn.name || '').replace(/([A-Z])/g, function (g, beginning) {
+		return '-' + beginning;
+	}).toLowerCase().replace(/^-/, '');
 
 	if (tagRegistry[tagName]) {
 		// tag is already registered
+		// initialize all occurences in provided context
+		document && toArray$$1(document.getElementsByTagName(tagName)).forEach(function (tag) {
+			return initializeTag(tag, tagRegistry[tagName]);
+		});
 		return;
 	}
 
@@ -510,6 +520,9 @@ function initializeTag(tag, registryEntry) {
 		setElementAttr(tag);
 		tag.innerHTML = '<div class="-shadow-root"></div>';
 		tag.isRendered = false;
+	}
+	if (!tag.nodeType) while (tag.children.length > 1) {
+		tag.children.pop();
 	}
 	trigger('--zino-initialize-node', { tag: tag, node: functions });
 	tag.__vdom = {};
@@ -756,13 +769,18 @@ var Zino = {
 	import: function _import(path) {
 		var callback = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : emptyFunc;
 
-		loadComponent((this.path || '') + path, function (code) {
+		var runCode = function runCode(code) {
 			if (code) {
 				isFn(code.setDocument) && code.setDocument(document$1);
 				registerTag(code, document$1.body, Zino);
 			}
 			callback();
-		});
+		};
+		if (typeof path === 'function') {
+			runCode(path);
+		} else {
+			loadComponent((this.path || '') + path, runCode);
+		}
 	}
 };
 
@@ -796,10 +814,13 @@ if (typeof global !== 'undefined') {
 	global.Zino = Zino;
 }
 
+Zino.isBrowser = false;
+Zino.isServer = true;
+
 setComponentLoader(function (path, fn) {
 	var originalExtBasePath = extBasePath;
 	if (originalExtBasePath.length > 0 && originalExtBasePath.split('').pop() !== '/') originalExtBasePath += '/';
-	extBasePath += path.split('/').slice(0, -1).join('/');
+	extBasePath += path.split('/').slice(0, -1).join('/') + '/';
 	try {
 		var code = require(basePath + originalExtBasePath + path);
 		var element = code(function () {}, Zino);
@@ -808,7 +829,10 @@ setComponentLoader(function (path, fn) {
 			element = element(function () {}, Zino);
 			isDeep = true;
 		}
-		componentRegistry[element.tagName] = { path: originalExtBasePath + path, code: code.toString() };
+		var tagName = element.tagName || (isDeep ? code() : code).name.replace(/([a-z])([A-Z])/g, function (g, end, beginning) {
+			return end + '-' + beginning;
+		}).toLowerCase();
+		componentRegistry[tagName] = { path: originalExtBasePath + path, code: code.toString() };
 		fn(isDeep ? code() : code);
 	} catch (e) {
 		e.message = 'Unable to load component ' + path + ': ' + e.message;
@@ -837,6 +861,25 @@ function setCollector(fn) {
 }
 
 var zino = Zino;
+
+function toJSON(obj) {
+	if (typeof obj === 'string') {
+		return '"' + obj.replace(/"/g, '\\"') + '"';
+	}
+	if (obj === null) return 'null';
+	if (obj === undefined) return 'undefined';
+	if ((typeof obj === 'undefined' ? 'undefined' : _typeof(obj)) !== 'object') {
+		return obj.toString();
+	}
+	if (Object.prototype.toString.call(obj) === '[object Array]') {
+		return '[' + obj.map(function (entry) {
+			return toJSON(entry);
+		}) + ']';
+	}
+	return '{' + Object.keys(obj).map(function (entry) {
+		return '"' + entry + '": ' + toJSON(obj[entry]);
+	}).join(',') + '}';
+}
 
 /** renders a single component */
 function renderComponent(name, path, props) {
@@ -872,9 +915,16 @@ function renderComponent(name, path, props) {
 					renderedComponents.push('window.zinoTagRegistry["' + staticBasePath + componentRegistry[name].path + '"]=' + JSON.stringify(componentRegistry[name].code));
 				}
 			});
+			var dataRegistry = getDataRegistry();
 			var styles = document.head.innerHTML;
 			var output = document.body.innerHTML;
-			var preloader = '<script>window.zinoTagRegistry = window.zinoTagRegistry || {};\n' + renderedComponents.join(';\n') + '</script>';
+			var preloader = '<script>window.zinoDataRegistry = window.zinoDataRegistry || {}; ';
+			preloader += 'window.zinoTagRegistry = window.zinoTagRegistry || {};\n';
+			preloader += renderedComponents.join(';\n') + ';\n';
+			preloader += Object.keys(dataRegistry).map(function (entry) {
+				return 'window.zinoDataRegistry["' + entry + '"] = ' + toJSON(dataRegistry[entry]);
+			}).join(';\n');
+			preloader += '</script>';
 
 			var result = {
 				styles: styles,

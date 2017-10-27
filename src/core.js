@@ -36,13 +36,17 @@ let tagRegistry = {},
 		}
 	};
 
+export function getDataRegistry() { return dataRegistry; }
+export function setDataRegistry(newValues) { dataRegistry = newValues; }
 export function setResolveData(fn) { resolveData = fn; }
 export function registerTag(fn, document, Zino) {
 	let firstElement = fn(vdom.Tag, Zino),
-		tagName = firstElement.tagName;
+		tagName = firstElement.tagName || (fn.name||'').replace(/([A-Z])/g, (g, beginning) => '-' + beginning).toLowerCase().replace(/^-/, '');
 
 	if (tagRegistry[tagName]) {
 		// tag is already registered
+		// initialize all occurences in provided context
+		document && toArray(document.getElementsByTagName(tagName)).forEach(tag => initializeTag(tag, tagRegistry[tagName]));
 		return;
 	}
 
@@ -91,6 +95,9 @@ function initializeTag(tag, registryEntry) {
 		setElementAttr(tag);
 		tag.innerHTML = '<div class="-shadow-root"></div>';
 		tag.isRendered = false;
+	}
+	if (!tag.nodeType) while (tag.children.length > 1) {
+		tag.children.pop();
 	}
 	trigger('--zino-initialize-node', {tag, node: functions});
 	tag.__vdom = {};
