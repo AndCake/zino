@@ -18,6 +18,9 @@ subpages:
   - 05:
     url: /pages/tutorial/05-best-practices.html
     name: Component Best-practices
+  - 06:
+    url: /pages/tutorial/05-using-jsx.html
+    name: Using JSX
 ---
 
 For this tutorial you will need a running server to serve your static files. You can use the Gruntfile from this repository and adapt it to your needs. Don't forget to take over

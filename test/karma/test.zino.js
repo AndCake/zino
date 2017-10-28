@@ -81,38 +81,41 @@ function click(el) {
 }
 
 describe('zino', function () {
-	describe('simple element', function() {
-		Zino.import('base/test/components/btn.html');
-		var btn = document.createElement('btn');
-		btn.setAttribute('page', '#12')
-		document.body.appendChild(btn);
+	this.timeout(10000);
 
+	describe('simple element', function() {
 		it('can load a custom element', function(done) {
-			setTimeout(function() {
-				assertNotEmpty(document.querySelectorAll('.-shadow-root'), 'element is rendered');
-				assertNotEmpty(document.querySelectorAll('btn[__ready]'), 'element is ready');
-				done();
-			}, 750);
+			Zino.import('base/test/components/btn.html', function() {
+				setTimeout(function() {
+					assertNotEmpty(document.querySelectorAll('.-shadow-root'), 'element is rendered');
+					assertNotEmpty(document.querySelectorAll('btn[__ready]'), 'element is ready');
+					done();
+				}, 100);
+			});
+			var btn = document.createElement('btn');
+			btn.setAttribute('page', '#12')
+			document.body.appendChild(btn);
 		});
 		it('binds an event to it', function(done) {
 			setTimeout(function() {
 				click(document.querySelector('button'));
 				assertEqual(location.hash, '#12', 'event did trigger');
 				done();
-			}, 10);
+			}, 500);
 		});
 	});
 	describe('complex element', function () {
-		Zino.import('base/test/components/comment.html');
-		var comment = document.createElement('comment');
-		document.body.appendChild(comment);
-
+		var comment;
 		it('renders empty', function (done) {
-			setTimeout(function() {
-				assertElementHasContent('comment h2', '""', 'headline empty');
-				assertElementIsEmpty('comment p', 'paragraph is empty');
-				done();
-			}, 750)
+			Zino.import('base/test/components/comment.html', function() {
+				setTimeout(function() {
+					assertElementHasContent('comment h2', '""', 'headline empty');
+					assertElementIsEmpty('comment p', 'paragraph is empty');
+					done();
+				}, 100);
+			});
+			comment = document.createElement('comment');
+			document.body.appendChild(comment);
 		});
 		it('reacts to attribute change', function(done) {
 			comment.setAttribute('author', 'Tester');
@@ -126,16 +129,17 @@ describe('zino', function () {
 		});
 	});
 	describe('multi-component element', function () {
-		Zino.import('base/test/components/second-tag.html');
-		var secondTag = document.createElement('second-tag');
-		secondTag.setAttribute('me', 'test');
-		document.body.appendChild(secondTag);
-
+		var secondTag;
 		it('render the sub component', function (done) {
-			setTimeout(function() {
-				assertNotEmpty(document.querySelectorAll('todo-list .-shadow-root'), 'sub component rendered');
-				done();
-			}, 1000);
+			Zino.import('base/test/components/second-tag.html', function() {
+				setTimeout(function() {
+					assertNotEmpty(document.querySelectorAll('todo-list .-shadow-root'), 'sub component rendered');
+					done();
+				}, 2000);
+			});
+			secondTag = document.createElement('second-tag');
+			secondTag.setAttribute('me', 'test');
+			document.body.appendChild(secondTag);
 		});
 		it('should react to props change', function (done) {
 			secondTag.setProps('name', 'Minkelhutz');
@@ -235,7 +239,7 @@ describe('zino', function () {
 			}, 32);
 		});
 	});
-	
+
 	describe('Escaping', function() {
 		var cb = document.createElement('cb');
 		cb.innerHTML = '<div class="me">123</div>'
