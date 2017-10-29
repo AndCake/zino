@@ -44,7 +44,7 @@ To learn about the latest changes to Zino, please take a look at the [Release No
 | AngularJS | 4.1.3   | 237.41 KB                 |         |
 | Polymer   | 1.8.0   | 66.3 KB                   | with Web Components Polyfill Lite |
 | ReactJS   | 15.6.1  | 51.1 KB                   | with Redux |
-| Zino      | 4.0.0   | 4.7 KB                    | Zino-light |
+| Zino      | 4.0.x   | 4.7 KB                    | Zino-light |
 
 Installation
 ------------
