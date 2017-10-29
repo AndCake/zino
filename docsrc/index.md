@@ -20,7 +20,7 @@ To learn about the latest changes to Zino, please take a look at the [Release No
 
 - no polyfills required
 - define custom components in a human-readable way
-- uses Mustache-like Syntax to keep components clean
+- can use Mustache-like Syntax or JSX to keep components clean
 - event handling
 - lifecycle events
 - Flux support - simply define your stores
@@ -35,13 +35,16 @@ To learn about the latest changes to Zino, please take a look at the [Release No
   - write your JS in ES6, Typescript or CoffeeScript, and/or use Browserify
 - use CSS in JS the React way or define an automatically scoped fully-fledged stylesheet or mix both
 - no extra editor/editor plugins for specialized syntax highlighting necessary
+- server-side rendering
 
 ## Comparison
 
-- AngularJS 4.1.3: 237.41 KB minified & gzipped
-- Polymer 1.8.0 + Web Components Polyfill Lite: 66.3 KB minified & gzipped
-- ReactJS (15.6.1 + Redux): 51.1KB minified & gzipped
-- Zino: 6.0 KB minified & gzipped
+| Name | Version      | Size (minified & gzipped) | Comment |
+|------|--------------|---------------------------|---------|
+| AngularJS | 4.1.3   | 237.41 KB                 |         |
+| Polymer   | 1.8.0   | 66.3 KB                   | with Web Components Polyfill Lite |
+| ReactJS   | 15.6.1  | 51.1 KB                   | with Redux |
+| Zino      | 4.0.0   | 4.7 KB                    | Zino-light |
 
 Installation
 ------------
@@ -56,4 +59,7 @@ Alternatively, you can use the unpkg CDN by adding a script tag to your page:
 
 {% highlight html %}
 <script src="https://unpkg.com/zino"></script>
+
+<!-- or if you don't want Mustache Support, you can use zino-light -->
+<script src="https://unpkg.com/zino/zino-light.min.js"></script>
 {% endhighlight %}

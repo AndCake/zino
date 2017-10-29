@@ -19,7 +19,7 @@ subpages:
     url: /pages/tutorial/05-best-practices.html
     name: Component Best-practices
   - 06:
-    url: /pages/tutorial/05-using-jsx.html
+    url: /pages/tutorial/06-using-jsx.html
     name: Using JSX
 ---
 

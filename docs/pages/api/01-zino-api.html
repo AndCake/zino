@@ -66,6 +66,8 @@
             
                 <li><a class="page-link" href="/zino/pages/tutorial/05-best-practices.html">Component Best-practices</a></li>
             
+                <li><a class="page-link" href="/zino/pages/tutorial/06-using-jsx.html">Using JSX</a></li>
+            
             </ul>
         </li>
         
@@ -79,8 +81,12 @@
             
                 <li><a class="page-link" href="/zino/pages/api/02-component-api.html">Component API</a></li>
             
+                <li><a class="page-link" href="/zino/pages/api/03-server-side-rendering.html">Server-side Rendering</a></li>
+            
             </ul>
         </li>
+        
+      
         
       
         
@@ -136,11 +142,17 @@
       
         
       
+        
+      
   </ul>
 
   <hr>
 
   <ul class="trigger">
+    
+      
+    
+      
     
       
     
@@ -261,6 +273,14 @@ the callback.</p>
 
 <p>Do a very simple AJAX call (supports only GET). The response body will be handed
 into the callback function as <code class="highlighter-rouge">data</code>. If the code property is transmitted, then the callback parameter can be left empty and not actual AJAX request will be triggered. This works similar to having the global <code class="highlighter-rouge">zinoTagRegistry</code> variable prefilled when loading Zino.</p>
+
+<h4 id="isbrowser">isBrowser()</h4>
+
+<p>Allows to check if the environment running is a browser (which will make it return <code class="highlighter-rouge">true</code>, else <code class="highlighter-rouge">false</code>).</p>
+
+<h4 id="isserver">isServer()</h4>
+
+<p>Allows to check if the environment running is a server (which will make it return <code class="highlighter-rouge">true</code>, else <code class="highlighter-rouge">false</code>).</p>
 
   </div>
 

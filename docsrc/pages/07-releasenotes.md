@@ -13,7 +13,7 @@ Version 4.0.0
 - added server-side rendering support, including promise-base asynchronous data injection and transfer, you can find more information on the [server-side rendering](/pages/api/03-server-side-rendering.html) page.
 - added support for JSX by using Webpack or Buble, you can find an example over at [Using JSX with Zino](/pages/tutorial/06-using-jsx.html)
 - made Mustache parser optional (only included in zino.js)
-- `require('zino')` no longer provides test interface but instead the server-side rendering. To get the test interface back, do `require('zino/test')`
+- `require('zino')` no longer provides client-side CommonJS interface but instead the server-side rendering. To get the client-side interface back, do `require('zino/zino')`
 - added zino-light.js (which does not contain the mustache parser and is only 4.7kB)
 - increased performance by using hash-based tree-level comparison
 - made sure that the `--event-trigger` event is always triggered, independent of whether there is a listener for it

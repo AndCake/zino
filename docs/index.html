@@ -66,6 +66,8 @@
             
                 <li><a class="page-link" href="/zino/pages/tutorial/05-best-practices.html">Component Best-practices</a></li>
             
+                <li><a class="page-link" href="/zino/pages/tutorial/06-using-jsx.html">Using JSX</a></li>
+            
             </ul>
         </li>
         
@@ -79,8 +81,12 @@
             
                 <li><a class="page-link" href="/zino/pages/api/02-component-api.html">Component API</a></li>
             
+                <li><a class="page-link" href="/zino/pages/api/03-server-side-rendering.html">Server-side Rendering</a></li>
+            
             </ul>
         </li>
+        
+      
         
       
         
@@ -136,11 +142,17 @@
       
         
       
+        
+      
   </ul>
 
   <hr>
 
   <ul class="trigger">
+    
+      
+    
+      
     
       
     
@@ -204,7 +216,7 @@
 <ul>
   <li>no polyfills required</li>
   <li>define custom components in a human-readable way</li>
-  <li>uses Mustache-like Syntax to keep components clean</li>
+  <li>can use Mustache-like Syntax or JSX to keep components clean</li>
   <li>event handling</li>
   <li>lifecycle events</li>
   <li>Flux support - simply define your stores</li>
@@ -225,16 +237,47 @@
   </li>
   <li>use CSS in JS the React way or define an automatically scoped fully-fledged stylesheet or mix both</li>
   <li>no extra editor/editor plugins for specialized syntax highlighting necessary</li>
+  <li>server-side rendering</li>
 </ul>
 
 <h2 id="comparison">Comparison</h2>
 
-<ul>
-  <li>AngularJS 4.1.3: 237.41 KB minified &amp; gzipped</li>
-  <li>Polymer 1.8.0 + Web Components Polyfill Lite: 66.3 KB minified &amp; gzipped</li>
-  <li>ReactJS (15.6.1 + Redux): 51.1KB minified &amp; gzipped</li>
-  <li>Zino: 6.0 KB minified &amp; gzipped</li>
-</ul>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Version</th>
+      <th>Size (minified &amp; gzipped)</th>
+      <th>Comment</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>AngularJS</td>
+      <td>4.1.3</td>
+      <td>237.41 KB</td>
+      <td> </td>
+    </tr>
+    <tr>
+      <td>Polymer</td>
+      <td>1.8.0</td>
+      <td>66.3 KB</td>
+      <td>with Web Components Polyfill Lite</td>
+    </tr>
+    <tr>
+      <td>ReactJS</td>
+      <td>15.6.1</td>
+      <td>51.1 KB</td>
+      <td>with Redux</td>
+    </tr>
+    <tr>
+      <td>Zino</td>
+      <td>4.0.0</td>
+      <td>4.7 KB</td>
+      <td>Zino-light</td>
+    </tr>
+  </tbody>
+</table>
 
 <h2 id="installation">Installation</h2>
 
@@ -244,7 +287,10 @@
 
 <p>Alternatively, you can use the unpkg CDN by adding a script tag to your page:</p>
 
-<figure class="highlight"><pre><code class="language-html" data-lang="html"><span class="nt">&lt;script </span><span class="na">src=</span><span class="s">"https://unpkg.com/zino"</span><span class="nt">&gt;&lt;/script&gt;</span></code></pre></figure>
+<figure class="highlight"><pre><code class="language-html" data-lang="html"><span class="nt">&lt;script </span><span class="na">src=</span><span class="s">"https://unpkg.com/zino"</span><span class="nt">&gt;&lt;/script&gt;</span>
+
+<span class="c">&lt;!-- or if you don't want Mustache Support, you can use zino-light --&gt;</span>
+<span class="nt">&lt;script </span><span class="na">src=</span><span class="s">"https://unpkg.com/zino/zino-light.min.js"</span><span class="nt">&gt;&lt;/script&gt;</span></code></pre></figure>
 
 
       </div>

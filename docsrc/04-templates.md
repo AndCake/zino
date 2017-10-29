@@ -24,7 +24,7 @@ subpages:
     name: Transfer Tag
 ---
 
-Zino uses an extended version of the [Mustache templating language](https://mustache.github.io/mustache.5.html).
+Zino uses an extended version of the [Mustache templating language](https://mustache.github.io/mustache.5.html) and supports JSX as described in the [Using JSX tutorial](pages/tutorial/06-using-jsx.html) to define the component's HTML structure.
 
 Mustache can be used for HTML, config files, source code - anything. It works by expanding tags in a template using values provided in a hash or object.
 

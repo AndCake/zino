@@ -62,3 +62,11 @@ Removes the event listener for the given event.
 
 Do a very simple AJAX call (supports only GET). The response body will be handed
 into the callback function as `data`. If the code property is transmitted, then the callback parameter can be left empty and not actual AJAX request will be triggered. This works similar to having the global `zinoTagRegistry` variable prefilled when loading Zino.
+
+#### isBrowser()
+
+Allows to check if the environment running is a browser (which will make it return `true`, else `false`).
+
+#### isServer()
+
+Allows to check if the environment running is a server (which will make it return `true`, else `false`).

@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Server-side Rendering</title>
+  <meta name="description" content="A micro component framework - easy to learn and powerful.
+">
+
+  <link rel="stylesheet" href="/zino/css/main.css">
+  <link rel="canonical" href="https://andcake.github.io/zino/pages/api/03-server-side-rendering.html">
+  <link rel="alternate" type="application/rss+xml" title="zino" href="https://andcake.github.io/zino/feed.xml">
+</head>
+
+
+  <body>
+
+    <a href="https://github.com/AndCake/zino"><img style="position: absolute; top: 0; right: 0; border: 0;" src="https://camo.githubusercontent.com/365986a132ccd6a44c23a9169022c0b5c890c387/68747470733a2f2f73332e616d617a6f6e6177732e636f6d2f6769746875622f726962626f6e732f666f726b6d655f72696768745f7265645f6161303030302e706e67" alt="Fork me on GitHub" data-canonical-src="https://s3.amazonaws.com/github/ribbons/forkme_right_red_aa0000.png"></a>
+
+<header class="site-header">
+<nav class="site-nav">
+    <a class="site-title" href="/zino/">zino</a>
+
+  <a href="#" class="menu-icon">
+    <svg viewBox="0 0 18 15">
+      <path fill="#424242" d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.031C17.335,0,18,0.665,18,1.484L18,1.484z"/>
+      <path fill="#424242" d="M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0c0-0.82,0.665-1.484,1.484-1.484 h15.031C17.335,6.031,18,6.696,18,7.516L18,7.516z"/>
+      <path fill="#424242" d="M18,13.516C18,14.335,17.335,15,16.516,15H1.484C0.665,15,0,14.335,0,13.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.031C17.335,12.031,18,12.696,18,13.516L18,13.516z"/>
+    </svg>
+  </a>
+
+  <ul class="trigger">
+      
+        
+      
+        
+        <li>
+            <a class="page-link" href="/zino/getting-started">Getting Started</a>
+            <ul>
+            
+            </ul>
+        </li>
+        
+      
+        
+      
+        
+      
+        
+      
+        
+        <li>
+            <a class="page-link" href="/zino/tutorial">Tutorial</a>
+            <ul>
+            
+                <li><a class="page-link" href="/zino/pages/tutorial/01-first-component.html">Your First Component</a></li>
+            
+                <li><a class="page-link" href="/zino/pages/tutorial/02-backend-communication.html">Backend Communication</a></li>
+            
+                <li><a class="page-link" href="/zino/pages/tutorial/03-styling-components.html">Styling Components</a></li>
+            
+                <li><a class="page-link" href="/zino/pages/tutorial/04-component-lifecycle.html">Component Lifecycle</a></li>
+            
+                <li><a class="page-link" href="/zino/pages/tutorial/05-best-practices.html">Component Best-practices</a></li>
+            
+                <li><a class="page-link" href="/zino/pages/tutorial/06-using-jsx.html">Using JSX</a></li>
+            
+            </ul>
+        </li>
+        
+      
+        
+        <li>
+            <a class="page-link" href="/zino/api">API</a>
+            <ul>
+            
+                <li><a class="page-link" href="/zino/pages/api/01-zino-api.html">Zino API</a></li>
+            
+                <li><a class="page-link" href="/zino/pages/api/02-component-api.html">Component API</a></li>
+            
+                <li><a class="page-link" href="/zino/pages/api/03-server-side-rendering.html">Server-side Rendering</a></li>
+            
+            </ul>
+        </li>
+        
+      
+        
+      
+        
+      
+        
+      
+        
+        <li>
+            <a class="page-link" href="/zino/templates">Templating</a>
+            <ul>
+            
+                <li><a class="page-link" href="/zino/templates#variables">Variables</a></li>
+            
+                <li><a class="page-link" href="/zino/templates#sections--conditions--iterations">Conditions/Iterations</a></li>
+            
+                <li><a class="page-link" href="/zino/templates#inverted-sections">Inverted Sections</a></li>
+            
+                <li><a class="page-link" href="/zino/templates#section-keys">Section Keys</a></li>
+            
+                <li><a class="page-link" href="/zino/templates#style-tag">Style Tag</a></li>
+            
+                <li><a class="page-link" href="/zino/templates#transfer-tag">Transfer Tag</a></li>
+            
+            </ul>
+        </li>
+        
+      
+        
+      
+        
+        <li>
+            <a class="page-link" href="/zino/testing">Testing</a>
+            <ul>
+            
+            </ul>
+        </li>
+        
+      
+        
+        <li>
+            <a class="page-link" href="/zino/events">Events</a>
+            <ul>
+            
+            </ul>
+        </li>
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+  </ul>
+
+  <hr>
+
+  <ul class="trigger">
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </ul>
+
+  <a href="https://github.com/AndCake/zino">View the Project on GitHub</a>
+
+</nav>
+</header>
+
+
+    <div class="page-content">
+      <div class="wrapper">
+        <article class="post">
+
+  <header class="post-header">
+    <h1 class="post-title">Server-side Rendering</h1>
+  </header>
+
+  <div class="post-content">
+    <p>In order to render a component on the server-side, Zino provides the following methods:</p>
+
+<h4 id="rendercomponentname-path-props">renderComponent(name, path[, props])</h4>
+<ul>
+  <li>name (String) - the component’s name to render</li>
+  <li>path (String) - which component to load and render</li>
+  <li>props (Object) - any pre-defined properties that should be handed into the component before <code class="highlighter-rouge">mount()</code></li>
+</ul>
+
+<p>This function will render a component including all imported sub components into a virtual document. Every call of renderComponent creates a new virtual document. The function’s result is a Promise that provides an object with the following properties:</p>
+
+<ul>
+  <li>styles (String) - all generated CSS styles (including the style tags) for the rendered components</li>
+  <li>preloader (String) - HTML code required to prefetch the rendered component (without extra network requests after page load)</li>
+  <li>body (String) - HTML code of the rendered component(s)</li>
+  <li>components (Object) - more detailed information on the components that were loaded on the server-side as part of this renderComponent call (contains the component’s code and path)</li>
+  <li>toString (Function) - when called, all required information will be bundled into one output string</li>
+</ul>
+
+<p><em>A simple nodeJS example:</em></p>
+
+<figure class="highlight"><pre><code class="language-js" data-lang="js"><span class="kd">var</span> <span class="nx">Zino</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s1">'zino-ssr'</span><span class="p">);</span>
+<span class="kd">var</span> <span class="nx">http</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s1">'http'</span><span class="p">);</span>
+<span class="kd">var</span> <span class="nx">url</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s1">'url'</span><span class="p">);</span>
+<span class="kd">var</span> <span class="nx">path</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s1">'path'</span><span class="p">);</span>
+
+<span class="nx">setBasePath</span><span class="p">(</span><span class="nx">process</span><span class="p">.</span><span class="nx">cwd</span><span class="p">());</span>
+<span class="nx">setStaticBasePath</span><span class="p">(</span><span class="s1">'/static/'</span><span class="p">);</span>
+
+<span class="nx">http</span><span class="p">.</span><span class="nx">createServer</span><span class="p">(</span><span class="kd">function</span> <span class="p">(</span><span class="nx">request</span><span class="p">,</span> <span class="nx">response</span><span class="p">)</span> <span class="p">{</span>
+	<span class="kd">let</span> <span class="nx">uri</span> <span class="o">=</span> <span class="nx">url</span><span class="p">.</span><span class="nx">parse</span><span class="p">(</span><span class="nx">request</span><span class="p">.</span><span class="nx">url</span><span class="p">).</span><span class="nx">pathname</span><span class="p">,</span>
+		<span class="nx">filename</span> <span class="o">=</span> <span class="nx">path</span><span class="p">.</span><span class="nx">join</span><span class="p">(</span><span class="nx">process</span><span class="p">.</span><span class="nx">cwd</span><span class="p">(),</span> <span class="nx">uri</span><span class="p">);</span>
+
+	<span class="c1">// home page</span>
+	<span class="k">if</span> <span class="p">(</span><span class="nx">uri</span> <span class="o">===</span> <span class="s1">'/'</span><span class="p">)</span> <span class="p">{</span>
+		<span class="nx">Zino</span><span class="p">.</span><span class="nx">renderComponent</span><span class="p">(</span><span class="s1">'home'</span><span class="p">,</span> <span class="s1">'./homepage.js'</span><span class="p">).</span>
+		<span class="nx">then</span><span class="p">(</span><span class="nx">result</span> <span class="o">=&gt;</span> <span class="p">{</span>
+			<span class="nx">response</span><span class="p">.</span><span class="nx">writeHead</span><span class="p">(</span><span class="mi">200</span><span class="p">,</span> <span class="p">{</span>
+				<span class="s1">'Content-Type'</span><span class="p">:</span> <span class="s1">'text/html'</span>
+			<span class="p">});</span>
+			<span class="nx">response</span><span class="p">.</span><span class="nx">write</span><span class="p">(</span><span class="nx">result</span><span class="p">.</span><span class="nx">toString</span><span class="p">());</span>
+		<span class="p">}).</span><span class="k">catch</span><span class="p">(</span><span class="nx">error</span> <span class="o">=&gt;</span> <span class="p">{</span>
+			<span class="c1">// if the component could not be rendered correctly bail out</span>
+			<span class="nx">response</span><span class="p">.</span><span class="nx">writeHead</span><span class="p">(</span><span class="mi">500</span><span class="p">,</span> <span class="p">{</span>
+				<span class="s1">'Content-Type'</span><span class="p">:</span> <span class="s1">'text/plain'</span>
+			<span class="p">});</span>
+			<span class="nx">response</span><span class="p">.</span><span class="nx">end</span><span class="p">(</span><span class="s1">'500 - unable to render page: '</span> <span class="o">+</span> <span class="nx">error</span><span class="p">);</span>
+		<span class="p">});</span>
+	<span class="c1">// static contents loaded by browser</span>
+	<span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="nx">uri</span><span class="p">.</span><span class="nx">indexOf</span><span class="p">(</span><span class="s1">'/static/'</span><span class="p">)</span> <span class="o">===</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+		<span class="c1">// simplified static file handling for demonstration purposes only!</span>
+		<span class="k">if</span> <span class="p">(</span><span class="nx">fs</span><span class="p">.</span><span class="nx">existsSync</span><span class="p">(</span><span class="nx">filename</span><span class="p">))</span> <span class="p">{</span>
+			<span class="nx">fs</span><span class="p">.</span><span class="nx">readFile</span><span class="p">(</span><span class="nx">filename</span><span class="p">,</span> <span class="s1">'binary'</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">err</span><span class="p">,</span> <span class="nx">file</span><span class="p">)</span> <span class="p">{</span>
+				<span class="nx">response</span><span class="p">.</span><span class="nx">writeHead</span><span class="p">(</span><span class="mi">200</span><span class="p">);</span>
+				<span class="nx">response</span><span class="p">.</span><span class="nx">write</span><span class="p">(</span><span class="nx">file</span><span class="p">,</span> <span class="s1">'binary'</span><span class="p">);</span>
+				<span class="nx">response</span><span class="p">.</span><span class="nx">end</span><span class="p">();</span>
+			<span class="p">});</span>
+		<span class="p">}</span>
+	<span class="p">}</span>
+<span class="p">}).</span><span class="nx">listen</span><span class="p">(</span><span class="mi">8080</span><span class="p">);</span></code></pre></figure>
+
+<h4 id="setbasepathpath">setBasePath(path)</h4>
+<ul>
+  <li>path (String) - the path that should become the new base path</li>
+</ul>
+
+<p>This function defines from where components should be loaded on the server-side when calling <code class="highlighter-rouge">Zino.import()</code>. This path should be compatible to a require() call.</p>
+
+<h4 id="setstaticbasepathpath">setStaticBasePath(path)</h4>
+<ul>
+  <li>path (String) - the path from which all the component files will be loaded by the Browser from the server.</li>
+</ul>
+
+<p>This function defines where to load the components from on the client-side, when <code class="highlighter-rouge">Zino.import()</code> is called. Please note, that the path should be component-independent.</p>
+
+<h4 id="setcollectorfn">setCollector(fn)</h4>
+<ul>
+  <li>fn (Function) - callback function to be called when the final data has been provided</li>
+</ul>
+
+<p>If the components that are rendered require additional, asynchronous data, setCollector can be used to define a callback function which is executed as soon as the components are rendered. That callback receives a parameter <code class="highlighter-rouge">next</code> of type Function, which, when called, leads to resolution or rejection of the promise returned by <code class="highlighter-rouge">renderComponent</code>. It is rejected if the next function is provided with an error message or object.</p>
+
+<p>The default collector immediately executes the <code class="highlighter-rouge">next()</code> function.</p>
+
+  </div>
+
+</article>
+
+      </div>
+    </div>
+
+    <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">zino</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-2">
+        <ul class="social-media-list">
+          
+          <li>
+            <a href="https://github.com/AndCake"><span class="icon icon--github"><svg viewBox="0 0 16 16"><path fill="#828282" d="M7.999,0.431c-4.285,0-7.76,3.474-7.76,7.761 c0,3.428,2.223,6.337,5.307,7.363c0.388,0.071,0.53-0.168,0.53-0.374c0-0.184-0.007-0.672-0.01-1.32 c-2.159,0.469-2.614-1.04-2.614-1.04c-0.353-0.896-0.862-1.135-0.862-1.135c-0.705-0.481,0.053-0.472,0.053-0.472 c0.779,0.055,1.189,0.8,1.189,0.8c0.692,1.186,1.816,0.843,2.258,0.645c0.071-0.502,0.271-0.843,0.493-1.037 C4.86,11.425,3.049,10.76,3.049,7.786c0-0.847,0.302-1.54,0.799-2.082C3.768,5.507,3.501,4.718,3.924,3.65 c0,0,0.652-0.209,2.134,0.796C6.677,4.273,7.34,4.187,8,4.184c0.659,0.003,1.323,0.089,1.943,0.261 c1.482-1.004,2.132-0.796,2.132-0.796c0.423,1.068,0.157,1.857,0.077,2.054c0.497,0.542,0.798,1.235,0.798,2.082 c0,2.981-1.814,3.637-3.543,3.829c0.279,0.24,0.527,0.713,0.527,1.437c0,1.037-0.01,1.874-0.01,2.129 c0,0.208,0.14,0.449,0.534,0.373c3.081-1.028,5.302-3.935,5.302-7.362C15.76,3.906,12.285,0.431,7.999,0.431z"/></svg>
+</span><span class="username">AndCake</span></a>
+
+          </li>
+          
+
+          
+        </ul>
+      </div>
+
+      <div class="footer-col footer-col-3">
+        <p>A micro component framework - easy to learn and powerful.
+</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+
+<script>
+    [].slice.call(document.querySelectorAll('.site-nav li')).forEach(function(li) {
+        if (li.querySelector('a[href]').href === location.href) {
+            li.classList.add('active');
+            if (li.parentNode.parentNode.tagName === 'LI') {
+                li.parentNode.parentNode.classList.add('active');
+            }
+        }
+    });
+</script>
+
+
+  </body>
+
+</html>
