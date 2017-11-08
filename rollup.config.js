@@ -1,14 +1,17 @@
 import babel from 'rollup-plugin-babel';
 
 export default {
-	entry: 'src/zino.js',
-	dest: './zino.js',
-	format: 'iife',
-	moduleName: 'Zino',
-	sourceMap: true,
+	input: 'src/zino.js',
+	output: {
+		file: './zino.js',
+		format: 'iife',
+		name: 'Zino',
+		sourcemap: true
+	},
 	plugins: [
 		babel({
 			exclude: 'node_modules/**'
 		})
-	]
+	],
+	external: ['nano-dom', 'now-promise']
 };

@@ -86,6 +86,10 @@ tagObserver.observe(document.body, {
 
 requestAnimationFrame(function reRender() {
 	while (dirtyTags.length > 0) {
+		if (!dirtyTags[0].addEventListener) {
+			dirtyTags.shift();
+			continue;
+		}
 		actions.render(dirtyTags.shift());
 	}
 	requestAnimationFrame(reRender);

@@ -88,10 +88,14 @@ export function renderComponent(name, path, props) {
 	setDocument(document);
 	// initialize props
 	document.body.children[0].props = props;
-	// import and render component
-	Zino.import(path);
 
 	return new NowPromise((resolve, reject) => {
+		// import and render component
+		try {
+			Zino.import(path);
+		} catch(e) {
+			return reject(e);
+		}
 		collector(function(err) {
 			if (err) {
 				reject(err);

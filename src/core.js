@@ -67,6 +67,7 @@ export function mount(tag, ignoreRender) {
 }
 
 export function render(tag) {
+	if (!tag || !tag.addEventListener) return;
 	let subEvents = renderTag(tag);
 	attachSubEvents(subEvents, tag);
 }
@@ -194,6 +195,30 @@ function renderTag(tag, registryEntry = tagRegistry[tag.tagName.toLowerCase()]) 
 	vdom.setDataResolver(resolveData);
 	vdom.clearTagsCreated();
 	let data = getAttributes(tag);
+
+	function dataToString(data, depth = 0) {
+		let string = '';
+		for (let all in data) {
+			if (typeof data[all] !== 'object') {
+				string += all + ': ' + (data[all] === null || data[all] === undefined ? 'null' : data[all]).toString() + '\n';
+			} else {
+				string += all + ': {\n';
+				if (depth < 10 && !(depth === 0 && all === 'element')) {
+					string += dataToString(data[all], depth + 1);
+				}
+				string += '}\n';
+			}
+		}
+		return string;
+	}
+	let hash = vdom.hashCode(dataToString(data));
+
+	if (tag.__dataHash === hash) {
+		// data did not change, so no re-render required
+		return {events, renderCallbacks, data, subElements: renderedSubElements};
+	}
+	tag.__dataHash = hash;
+
 	if (isFn(registryEntry.render)) {
 		// tell the vdom which tags to remember to look for
 		vdom.setFilter(Object.keys(tagRegistry));
@@ -238,10 +263,14 @@ function renderTag(tag, registryEntry = tagRegistry[tag.tagName.toLowerCase()]) 
 	tag.__vdom = renderedDOM;
 
 	// if we have rendered any sub components, retrieve their actual DOM node
-	renderedSubElements.length > 0 && (tag.querySelectorAll && toArray(tag.querySelectorAll('[__ready]')) || []).forEach((subEl, index) => {
+	renderedSubElements.length > 0 && (tag.querySelectorAll && toArray(tag.querySelectorAll('[__ready]')) || []).forEach((subEl, index, arr) => {
 		// apply all additional functionality to them (custom functions, attributes, etc...)
 		merge(subEl, renderedSubElements[index]);
 		// update getHost to return the DOM node instead of the vdom node
+		if (!renderedSubElements[index] || subEl.tagName.toLowerCase() !== renderedSubElements[index].tagName) {
+			console.info('Inconsistent state - might be caused by additional components generated in render callback: ', subEl, tag.__subs, arr);
+			return;
+		}
 		subEl.getHost = renderedSubElements[index].getHost = defaultFunctions.getHost.bind(subEl);
 	});
 	tag.isRendered = true;
@@ -270,6 +299,7 @@ export function unmount(tag) {
 			}
 		});
 		try {
+			entry.__subs && entry.__subs.forEach(unmount);
 			entry.functions.unmount.call(tag);
 		} catch (e) {
 			throw new Error('Unable to unmount tag ' + name + ': ' + (e.message || e));

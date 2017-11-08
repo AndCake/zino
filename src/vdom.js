@@ -11,7 +11,7 @@ function isArray(obj) {
 	return Object.prototype.toString.call(obj) === '[object Array]';
 }
 
-function hashCode(str) {
+export function hashCode(str) {
 	let hash = 0, i, chr;
 	if (str.length === 0) return hash;
 	for (i = 0; i < str.length; i++) {

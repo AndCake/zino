@@ -164,7 +164,7 @@ function attachSubEvents(subEvents, tag) {
 				el = tag.querySelectorAll(el)[count[el] - 1];
 			}
 			// if no events have been attached yet
-			if (!el.children[0].__eventsAttached) {
+			if (el.children.length > 0 && !el.children[0].__eventsAttached) {
 				// attach children tag events to the shadow root
 				attachEvent(el.children[0], event.childEvents, el);
 				// attach host events directly to the component!
@@ -763,6 +763,7 @@ function mount(tag, ignoreRender) {
 }
 
 function render(tag) {
+	if (!tag || !tag.addEventListener) return;
 	var subEvents = renderTag(tag);
 	attachSubEvents(subEvents, tag);
 }
@@ -858,12 +859,12 @@ function initializeNode(_ref) {
 	var desc = Object.getOwnPropertyDescriptor(tag, 'body');
 	if (!desc || typeof desc.get === 'undefined') {
 		Object.defineProperty(tag, 'body', {
-			set: function set(val) {
+			set: function set$$1(val) {
 				tag.__i = val;
 				setElementAttr(tag);
 				trigger('--zino-rerender-tag', tag.getHost());
 			},
-			get: function get() {
+			get: function get$$1() {
 				return tag.__i;
 			}
 		});
@@ -898,6 +899,32 @@ function renderTag(tag) {
 	setDataResolver(resolveData);
 	clearTagsCreated();
 	var data = getAttributes(tag);
+
+	function dataToString(data) {
+		var depth = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
+
+		var string = '';
+		for (var all in data) {
+			if (_typeof(data[all]) !== 'object') {
+				string += all + ': ' + (data[all] === null || data[all] === undefined ? 'null' : data[all]).toString() + '\n';
+			} else {
+				string += all + ': {\n';
+				if (depth < 10 && !(depth === 0 && all === 'element')) {
+					string += dataToString(data[all], depth + 1);
+				}
+				string += '}\n';
+			}
+		}
+		return string;
+	}
+	var hash = hashCode(dataToString(data));
+
+	if (tag.__dataHash === hash) {
+		// data did not change, so no re-render required
+		return { events: events, renderCallbacks: renderCallbacks, data: data, subElements: renderedSubElements };
+	}
+	tag.__dataHash = hash;
+
 	if (isFn(registryEntry.render)) {
 		// tell the vdom which tags to remember to look for
 		setFilter(Object.keys(tagRegistry));
@@ -942,10 +969,14 @@ function renderTag(tag) {
 	tag.__vdom = renderedDOM;
 
 	// if we have rendered any sub components, retrieve their actual DOM node
-	renderedSubElements.length > 0 && (tag.querySelectorAll && toArray$1(tag.querySelectorAll('[__ready]')) || []).forEach(function (subEl, index) {
+	renderedSubElements.length > 0 && (tag.querySelectorAll && toArray$1(tag.querySelectorAll('[__ready]')) || []).forEach(function (subEl, index, arr) {
 		// apply all additional functionality to them (custom functions, attributes, etc...)
 		merge$1(subEl, renderedSubElements[index]);
 		// update getHost to return the DOM node instead of the vdom node
+		if (!renderedSubElements[index] || subEl.tagName.toLowerCase() !== renderedSubElements[index].tagName) {
+			console.info('Inconsistent state - might be caused by additional components generated in render callback: ', subEl, tag.__subs, arr);
+			return;
+		}
 		subEl.getHost = renderedSubElements[index].getHost = defaultFunctions.getHost.bind(subEl);
 	});
 	tag.isRendered = true;
@@ -978,6 +1009,7 @@ function unmount(tag) {
 			}
 		});
 		try {
+			entry.__subs && entry.__subs.forEach(unmount);
 			entry.functions.unmount.call(tag);
 		} catch (e) {
 			throw new Error('Unable to unmount tag ' + name + ': ' + (e.message || e));
@@ -1161,6 +1193,10 @@ tagObserver.observe(document.body, {
 
 requestAnimationFrame(function reRender() {
 	while (dirtyTags.length > 0) {
+		if (!dirtyTags[0].addEventListener) {
+			dirtyTags.shift();
+			continue;
+		}
 		actions.render(dirtyTags.shift());
 	}
 	requestAnimationFrame(reRender);

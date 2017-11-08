@@ -24,7 +24,7 @@
         "start": "npm run build:light && npm run build:fat && npm run build:server",
         "test": "(rollup -c rollup.config.test.js | node)",
         "watch": "while inotifywait -qq -r -e close_write ./src ./test; do npm test; done",
-        "debug": "rollup -c rollup.config.test.js -o index.js && node-debug index.js",
+        "debug": "rollup -c rollup.config.test.js -o index.js && node --inspect-brk index.js",
         "clean": "rm zino*.js* index.js",
         "prepublish": "rollup -c rollup.config.snapshots.js && npm start && npm test && karma start"
     },
@@ -36,15 +36,13 @@
     "license": "MIT",
     "devDependencies": {
         "babel-plugin-external-helpers": "^6.22.0",
-        "babel-preset-latest": "^6.24.1",
-        "bower": "^1.8.0",
+        "babel-preset-env": "^1.6.1",
         "jsdom": "^11.2.0",
         "karma": "^1.6.0",
         "karma-mocha": "^1.3.0",
         "karma-sauce-launcher": "^1.1.0",
         "mocha": "^3.2.0",
-        "node-inspector": "^1.1.1",
-        "rollup": "^0.41.6",
+        "rollup": "^0.51.1",
         "rollup-plugin-babel": "^2.7.1",
         "rollup-plugin-multi-entry": "^2.0.1",
         "rollup-watch": "^3.2.2",
@@ -52,9 +50,9 @@
     },
     "dependencies": {
         "colors": "^1.1.2",
-        "fast-diff": "^1.1.1",
-        "nano-dom": "^0.1.4",
-        "now-promise": "^0.0.3",
+        "fast-diff": "^1.1.2",
+        "nano-dom": "^0.1.12",
+        "now-promise": "0.0.3",
         "readline-sync": "^1.4.7"
     },
     "optionalDependencies": {
