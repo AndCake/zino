@@ -1,4 +1,4 @@
-var Zino = (function (exports) {
+var __zino = (function (exports) {
 'use strict';
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) {
@@ -433,10 +433,15 @@ var defaultFunctions = {
 	getHost: function getHost() {
 		return this;
 	},
+
 	setProps: function setProps(name, value) {
 		var tag = this.getHost();
 		if (isObj(name)) {
-			merge(tag.props, name);
+			tag.mounting = true;
+			for (var all in name) {
+				setProps.call(this, all, name[all]);
+			}
+			tag.mounting = false;
 		} else {
 			tag.props[name] = value;
 			var attrName = 'data-' + name.replace(/[A-Z]/g, function (g) {

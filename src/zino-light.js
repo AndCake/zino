@@ -74,7 +74,7 @@ setComponentLoader((url, fn) => {
 setDocument(window.document);
 
 export {Zino};
-export function setParser(fn) { parseCode = fn; }
+export function setParser(fn) { parseCode = fn; };
 
 Zino.on('--zino-rerender-tag', tag => dirtyTags.indexOf(tag) < 0 && dirtyTags.push(tag));
 Zino.trigger('publish-style', '[__ready] { contain: content; }');

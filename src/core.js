@@ -21,10 +21,14 @@ let tagRegistry = {},
 		'render': emptyFunc,
 
 		getHost() { return this; },
-		setProps(name, value) {
+		setProps: function setProps(name, value) {
 			let tag = this.getHost();
 			if (isObj(name)) {
-				merge(tag.props, name);
+				tag.mounting = true;
+				for (let all in name) {
+					setProps.call(this, all, name[all]);
+				}
+				tag.mounting = false;
 			} else {
 				tag.props[name] = value;
 				let attrName = 'data-' + name.replace(/[A-Z]/g, g => `-${g.toLowerCase()}`);

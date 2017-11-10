@@ -5,7 +5,7 @@ export default {
 	output: {
 		file: './zino.js',
 		format: 'iife',
-		name: 'Zino',
+		name: '__zino',
 		sourcemap: true
 	},
 	plugins: [

@@ -636,14 +636,16 @@ function renderTag(tag) {
 	clearTagsCreated();
 	var data = getAttributes(tag);
 
-	function dataToString(data, depth) {
+	function dataToString(data) {
+		var depth = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
+
 		var string = '';
 		for (var all in data) {
 			if (_typeof(data[all]) !== 'object') {
 				string += all + ': ' + (data[all] === null || data[all] === undefined ? 'null' : data[all]).toString() + '\n';
 			} else {
 				string += all + ': {\n';
-				if (depth < 50) {
+				if (depth < 10 && !(depth === 0 && all === 'element')) {
 					string += dataToString(data[all], depth + 1);
 				}
 				string += '}\n';
