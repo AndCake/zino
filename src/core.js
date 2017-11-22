@@ -266,17 +266,26 @@ function renderTag(tag, registryEntry = tagRegistry[tag.tagName.toLowerCase()]) 
 	tag.__subs = renderedSubElements;
 	tag.__vdom = renderedDOM;
 
-	// if we have rendered any sub components, retrieve their actual DOM node
-	renderedSubElements.length > 0 && (tag.querySelectorAll && toArray(tag.querySelectorAll('[__ready]')) || []).forEach((subEl, index, arr) => {
-		// apply all additional functionality to them (custom functions, attributes, etc...)
-		merge(subEl, renderedSubElements[index]);
-		// update getHost to return the DOM node instead of the vdom node
-		if (!renderedSubElements[index] || subEl.tagName.toLowerCase() !== renderedSubElements[index].tagName) {
-			console.info('Inconsistent state - might be caused by additional components generated in render callback: ', subEl, tag.__subs, arr);
-			return;
+	let inconsistent = false;
+
+	do {
+		if (inconsistent) {
+			tag.children[0].innerHTML = vdom.getInnerHTML(renderedDOM);
+			inconsistent = false;
 		}
-		subEl.getHost = renderedSubElements[index].getHost = defaultFunctions.getHost.bind(subEl);
-	});
+		// if we have rendered any sub components, retrieve their actual DOM node
+		renderedSubElements.length > 0 && (tag.querySelectorAll && toArray(tag.querySelectorAll('[__ready]')) || []).forEach((subEl, index, arr) => {
+			// apply all additional functionality to them (custom functions, attributes, etc...)
+			merge(subEl, renderedSubElements[index]);
+			// update getHost to return the DOM node instead of the vdom node
+			if (!renderedSubElements[index] || subEl.tagName.toLowerCase() !== renderedSubElements[index].tagName) {
+				console.info('Inconsistent state - might be caused by additional components generated in render callback: ', subEl, tag.__subs, arr);
+				inconsistent = true;
+				return;
+			}
+			subEl.getHost = renderedSubElements[index].getHost = defaultFunctions.getHost.bind(subEl);
+		});
+	} while (inconsistent);
 	tag.isRendered = true;
 
 	// if this is not a sub component's rendering run

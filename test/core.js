@@ -278,6 +278,60 @@ test('pre-rendered tags', t => {
 	}, document);
 	t.is(isRenderedValue, false, 'isRendered is false if it has not been rendered yet');
 	t.is(isRenderedAfterRendered, true, 'isRendered is true once it has been rendered');
+	off('--zino-rerender-tag', core.render);
+});
+
+test('resolve inconsistencies', t => {
+	on('--zino-rerender-tag', core.render);
+	core.flushRegisteredTags();
+	core.setDataRegistry({});
+	body.innerHTML = '<inconsistency-creator data-xname="test"></inconsistency-creator>';
+	core.registerTag(Tag => {
+		return {
+			tagName: 'inconsistency',
+			render: function(data) { return Tag('div', null, 'X: ' + data.props.name + '; Y'); },
+			functions: {
+				props: {
+					name: null
+				}
+			}
+		};
+	}, document);
+	core.registerTag(Tag => {
+		return {
+			tagName: 'consistent',
+			render: function(data) {
+				return Tag('i', {'class': 'icon-moon'}, 'label');
+			}
+		};
+	});
+	core.registerTag(Tag => {
+		return {
+			tagName: 'inconsistency-creator',
+			render: function(data) {
+				return Tag('div', {'class': 'test'}, Tag('consistent'), Tag('button', null, data.props.xname));
+			},
+			functions: {
+				props: {
+					xname: 'nothing'
+				},
+				render: function() {
+					var el = document.createElement('inconsistency');
+					el.props = {name: this.props.xname};
+					this.children[0].children[0].replaceChild(el, this.children[0].children[0].children[0]);
+					core.mount(el);
+				},
+				mount: function() {
+					this.props.xname += ' mount test';
+				}
+			}
+		};
+	}, document);
+	body.children[0].setProps('xname', 'huhu!');
+	t.is(body.children[0].children[0].innerHTML, '<div class="test"><inconsistency __ready="true"><div class="-shadow-root"><div>X: huhu!; Y</div></div></inconsistency><button>huhu!</button></div>', 'inconsistency found, resolving failed');
+	core.setDataRegistry({});
+	core.flushRegisteredTags();
+	off('--zino-rerender-tag', core.render);
 });
 
 function getNthChild(root, pos) {

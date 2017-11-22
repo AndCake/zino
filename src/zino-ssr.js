@@ -1,5 +1,5 @@
 import {Zino, setComponentLoader, actions, setDocument, flushRegisteredTags} from './facade';
-import {getDataRegistry} from './core';
+import {getDataRegistry, setDataRegistry} from './core';
 import Document from 'nano-dom';
 import NowPromise from 'now-promise';
 
@@ -80,6 +80,7 @@ function toJSON(obj) {
 /** renders a single component */
 export function renderComponent(name, path, props) {
 	flushRegisteredTags();
+	setDataRegistry({});
 
 	document = new Document('<' + name + '></' + name + '>');
 	let renderedComponents = [];
