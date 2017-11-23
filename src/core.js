@@ -124,6 +124,7 @@ function initializeTag(tag, registryEntry) {
 	if (!tag.attributes.__ready) {
 		defineAttribute(tag, '__ready', true);
 	}
+	
 	if (!this || this.noEvents !== true) {
 		// attach sub events
 		attachSubEvents(subEvents, tag);
@@ -291,13 +292,24 @@ function renderTag(tag, registryEntry = tagRegistry[tag.tagName.toLowerCase()]) 
 	// if this is not a sub component's rendering run
 	if (!this || !this.noRenderCallback) {
 		// call all of our sub component's render functions
-		renderCallbacks.forEach(callback => callback.fn.call(callback.tag.getHost()));
+		renderCallbacks.forEach(callback => {
+			try {
+				callback.fn.call(callback.tag.getHost())
+			} catch (e) {
+				throw new Error('Unable to call render callback for component ' + callback.tag.tagName + ': ' + (e.message || e));
+			}
+		});
 		// call our own rendering function
-		registryEntry.functions.render.call(tag);
+		try {
+			registryEntry.functions.render.call(tag);
+		} catch (e) {
+			throw new Error('Unable to call render callback for component ' + tag.tagName + ': ' + (e.message || e));
+		}
 	} else {
 		// just add this sub component's rendering function to the list
 		renderCallbacks.push({fn: registryEntry.functions.render, tag});
 	}
+
 	return {events, renderCallbacks, data, subElements: renderedSubElements};
 }
 

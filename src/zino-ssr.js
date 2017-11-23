@@ -39,7 +39,6 @@ setComponentLoader((path, fn) => {
 		extBasePath = originalExtBasePath;
 	}
 });
-Zino.on('--zino-rerender-tag', actions.render);
 
 export function setBasePath(path) {
 	basePath = path;
@@ -92,6 +91,7 @@ export function renderComponent(name, path, props) {
 
 	return new NowPromise((resolve, reject) => {
 		// import and render component
+		Zino.on('--zino-rerender-tag', actions.render);
 		try {
 			Zino.import(path);
 		} catch(e) {
@@ -103,7 +103,10 @@ export function renderComponent(name, path, props) {
 				return;
 			}
 			let registryList = [];
-			document.body.querySelectorAll('[__ready]').forEach(component => {
+			document.body.querySelectorAll('[__ready]').forEach((component, idx) => {
+				if (!idx) {
+					component.removeAttribute('__ready');
+				}
 				if (component.__i) {
 					let div = document.createElement('div');
 					div.setAttribute('class', '-original-root');
@@ -135,6 +138,7 @@ export function renderComponent(name, path, props) {
 				return styles + output + preloader;
 			};
 
+			Zino.off('--zino-rerender-tag', actions.render);	
 			resolve(result);
 		});
 	});

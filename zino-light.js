@@ -164,7 +164,7 @@ function attachSubEvents(subEvents, tag) {
 				el = tag.querySelectorAll(el)[count[el] - 1];
 			}
 			// if no events have been attached yet
-			if (el.children.length > 0 && !el.children[0].__eventsAttached) {
+			if (el && el.children.length > 0 && !el.children[0].__eventsAttached) {
 				// attach children tag events to the shadow root
 				attachEvent(el.children[0], event.childEvents, el);
 				// attach host events directly to the component!
@@ -547,6 +547,7 @@ function initializeTag(tag, registryEntry) {
 	if (!tag.attributes.__ready) {
 		defineAttribute(tag, '__ready', true);
 	}
+
 	if (!this || this.noEvents !== true) {
 		// attach sub events
 		attachSubEvents(subEvents, tag);
@@ -699,31 +700,49 @@ function renderTag(tag) {
 	tag.__subs = renderedSubElements;
 	tag.__vdom = renderedDOM;
 
-	// if we have rendered any sub components, retrieve their actual DOM node
-	renderedSubElements.length > 0 && (tag.querySelectorAll && toArray(tag.querySelectorAll('[__ready]')) || []).forEach(function (subEl, index, arr) {
-		// apply all additional functionality to them (custom functions, attributes, etc...)
-		merge(subEl, renderedSubElements[index]);
-		// update getHost to return the DOM node instead of the vdom node
-		if (!renderedSubElements[index] || subEl.tagName.toLowerCase() !== renderedSubElements[index].tagName) {
-			console.info('Inconsistent state - might be caused by additional components generated in render callback: ', subEl, tag.__subs, arr);
-			return;
+	var inconsistent = false;
+
+	do {
+		if (inconsistent) {
+			tag.children[0].innerHTML = getInnerHTML(renderedDOM);
+			inconsistent = false;
 		}
-		subEl.getHost = renderedSubElements[index].getHost = defaultFunctions.getHost.bind(subEl);
-	});
+		// if we have rendered any sub components, retrieve their actual DOM node
+		renderedSubElements.length > 0 && (tag.querySelectorAll && toArray(tag.querySelectorAll('[__ready]')) || []).forEach(function (subEl, index, arr) {
+			// apply all additional functionality to them (custom functions, attributes, etc...)
+			merge(subEl, renderedSubElements[index]);
+			// update getHost to return the DOM node instead of the vdom node
+			if (!renderedSubElements[index] || subEl.tagName.toLowerCase() !== renderedSubElements[index].tagName) {
+				console.info('Inconsistent state - might be caused by additional components generated in render callback: ', subEl, tag.__subs, arr);
+				inconsistent = true;
+				return;
+			}
+			subEl.getHost = renderedSubElements[index].getHost = defaultFunctions.getHost.bind(subEl);
+		});
+	} while (inconsistent);
 	tag.isRendered = true;
 
 	// if this is not a sub component's rendering run
 	if (!this || !this.noRenderCallback) {
 		// call all of our sub component's render functions
 		renderCallbacks.forEach(function (callback) {
-			return callback.fn.call(callback.tag.getHost());
+			try {
+				callback.fn.call(callback.tag.getHost());
+			} catch (e) {
+				throw new Error('Unable to call render callback for component ' + callback.tag.tagName + ': ' + (e.message || e));
+			}
 		});
 		// call our own rendering function
-		registryEntry.functions.render.call(tag);
+		try {
+			registryEntry.functions.render.call(tag);
+		} catch (e) {
+			throw new Error('Unable to call render callback for component ' + tag.tagName + ': ' + (e.message || e));
+		}
 	} else {
 		// just add this sub component's rendering function to the list
 		renderCallbacks.push({ fn: registryEntry.functions.render, tag: tag });
 	}
+
 	return { events: events, renderCallbacks: renderCallbacks, data: data, subElements: renderedSubElements };
 }
 
@@ -835,6 +854,7 @@ on('publish-style', function (data) {
 
 var urlRegistry = window.zinoTagRegistry || {};
 var dirtyTags = [];
+var mountTags = [];
 var parseCode = identity;
 var tagObserver = new MutationObserver(function (records) {
 	records.forEach(function (record) {
@@ -842,7 +862,7 @@ var tagObserver = new MutationObserver(function (records) {
 		    removed = record.removedNodes;
 
 		if (added.length > 0) {
-			[].forEach.call(added, actions.mount);
+			mountTags = [].concat.call(added, mountTags);
 		} else if (removed.length > 0) {
 			[].forEach.call(removed, function (tag) {
 				(tag.children && toArray(tag.querySelectorAll('[__ready]')) || []).concat(tag).forEach(actions.unmount);
@@ -922,14 +942,22 @@ tagObserver.observe(document.body, {
 	childList: true
 });
 
-requestAnimationFrame(function reRender() {
-	while (dirtyTags.length > 0) {
-		if (!dirtyTags[0].addEventListener) {
-			dirtyTags.shift();
+function loopList(list, action) {
+	while (list.length > 0) {
+		if (!list[0].addEventListener) {
+			list.shift();
 			continue;
 		}
-		actions.render(dirtyTags.shift());
+		action(list.shift());
 	}
+}
+
+requestAnimationFrame(function reRender() {
+	if (Zino.isRendering) return;
+	Zino.isRendering = true;
+	loopList(mountTags, actions.mount);
+	loopList(dirtyTags, actions.render);
+	Zino.isRendering = false;
 	requestAnimationFrame(reRender);
 });
 
