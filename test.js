@@ -494,7 +494,7 @@ function registerTag(fn, document, Zino) {
 }
 
 function mount(tag, ignoreRender) {
-	if (!tag.tagName) return {};
+	if (!tag || !tag.tagName) return {};
 	var entry = tagRegistry[tag.tagName.toLowerCase()];
 	if (!entry || tag.getAttribute('__ready')) return {};
 	if (ignoreRender) entry.functions.render = emptyFunc;
@@ -757,9 +757,9 @@ function renderTag(tag) {
 }
 
 function unmount(tag) {
-	var name = (tag.tagName || '').toLowerCase(),
+	var name = (tag && tag.tagName || '').toLowerCase(),
 	    entry = tagRegistry[name];
-	if (entry) {
+	if (tag && name && entry) {
 		[].forEach.call(tag.nodeType === 1 && tag.attributes || Object.keys(tag.attributes).map(function (attr) {
 			return tag.attributes[attr];
 		}), function (attr) {

@@ -81,7 +81,7 @@ function click(el) {
 }
 
 describe('zino', function () {
-	this.timeout(10000);
+	this.timeout(30000);
 
 	describe('simple element', function() {
 		it('can load a custom element', function(done) {
@@ -146,7 +146,7 @@ describe('zino', function () {
 			setTimeout(function() {
 				assertElementHasContent('second-tag div a[name]', 'Minkelhutz', 'Props change did trigger re-render');
 				done();
-			}, 32);
+			}, 100);
 		});
 		it('should transfer props to sub component', function (done) {
 			secondTag.setProps('list', [{
@@ -155,7 +155,7 @@ describe('zino', function () {
 			setTimeout(function() {
 				assertEqual(secondTag.querySelector('todo-list li input').value, 'XXX', 'props were transferred');
 				done();
-			}, 32);
+			}, 100);
 		});
 	});
 	describe('component preloading', function() {
@@ -171,7 +171,7 @@ describe('zino', function () {
 				assertNotEmpty(document.querySelectorAll('virtual-component .-shadow-root'), 'component rendered');
 				assertElementHasContent('virtual-component quote', 'Lorem ipsum dolor sit amet', 'attribute has been applied correctly');
 				done();
-			}, 50);
+			}, 100);
 		});
 
 		var component = document.createElement('my-component');
@@ -198,7 +198,7 @@ describe('zino', function () {
 			setTimeout(function() {
 				assertElementHasContent('my-component .-shadow-root #my-id', 'Hello,World!<p>Paragraph</p>');
 				done();
-			}, 32)
+			}, 100)
 		});
 	});
 
@@ -213,7 +213,7 @@ describe('zino', function () {
 			setTimeout(function() {
 				assertElementHasContent('ab .-shadow-root', 'X12 34Y', 'body contains expected value');
 				done();
-			}, 32);
+			}, 100);
 		});
 
 		it('re-renders after body change', function(done) {
@@ -221,7 +221,7 @@ describe('zino', function () {
 			setTimeout(function() {
 				assertElementHasContent('ab .-shadow-root', 'X34 56Y', 're-rendered after body change');
 				done();
-			}, 32);
+			}, 100);
 		});
 
 		it('re-renders after setProps', function(done) {
@@ -229,7 +229,7 @@ describe('zino', function () {
 			setTimeout(function() {
 				assertElementHasContent('ab .-shadow-root', 'Y34 56Y', 're-rendered after setProps');
 				done();
-			}, 32);
+			}, 100);
 		});
 
 		it('re-renders after setAttribute', function(done) {
@@ -237,7 +237,7 @@ describe('zino', function () {
 			setTimeout(function() {
 				assertElementHasContent('ab .-shadow-root', 'Y34 56Z', 're-rendered after setAttribute');
 				done();
-			}, 32);
+			}, 100);
 		});
 	});
 
@@ -257,7 +257,7 @@ describe('zino', function () {
 			setTimeout(function() {
 				assertElementHasContent('cb .-shadow-root .test .me', '123', 'renders HTML values correctly');
 				done();
-			}, 32);
+			}, 100);
 		});
 		it('updated the component correctly', function(done) {
 			cb.body = '<div class="me">test<span>huhu</span>123</div>';
@@ -266,19 +266,19 @@ describe('zino', function () {
 					throw new Error('Assertion failed: dynamic HTML in a component correctly' + cb.outerHTML);
 				}
 				done();
-			}, 32);
+			}, 100);
 		});
 	});
 
 	describe('Consistency', function() {
-		Zino.import(function Part1(Tag) {
+		Zino.import(function PartA(Tag) {
 			return {
 				render: function() {
 					return [Tag('div', {'class': 'x11'}, 'Simple static text content')];
 				}
 			}
 		});
-		Zino.import(function Part2(Tag) {
+		Zino.import(function PartB(Tag) {
 			return {
 				render: function() {
 					return [Tag('ul', null, [1, 2, 3].map(function(l) { return Tag('li', null, l); }))];
@@ -288,42 +288,45 @@ describe('zino', function () {
 		Zino.import(function ConsistencyTest(Tag) {
 			return {
 				render: function(data) {
-					return [Tag('h1', null, 'Click me'), Tag('part1'), Tag('p', null, 'Lorem ipsum')];
+					return [Tag('h1', null, 'Click me'), Tag('part-a'), Tag('p', null, 'Lorem ipsum')];
 				},
 				functions: {
 					props: {
-						part: 1
+						part: 'a'
 					},
 					events: {
-						h1: {click() {
-							this.getHost().setProps('part', this.getHost().props.part === 1 ? 2 : 1);
+						h1: {click: function() {
+							this.getHost().setProps('part', this.getHost().props.part === 'a' ? 'b' : 'a');
 						}}
 					},
-					render() {
-						let part = this.ownerDocument.createElement('part' + this.props.part);
-						this.querySelectorAll('.-shadow-root')[0].replaceChild(part, this.querySelectorAll('part1, part2')[0]);
+					render: function() {
+						var part = this.ownerDocument.createElement('part-' + this.props.part);
+						this.querySelectorAll('.-shadow-root')[0].replaceChild(part, this.querySelectorAll('part-a, part-b')[0]);
 					},
 				}
 			}
 		});
-		var consistencyTest = document.createElement('consistency-test');
-		document.body.appendChild(consistencyTest);
 		it('can deal with inconsistency', function(done) {
-			setTimeout(function() {
-				click(document.querySelector('consistency-test h1'));
+			var consistencyTest = document.createElement('consistency-test');
+			consistencyTest.onready = function() {
+				var h1 = document.querySelector('consistency-test h1');
+				click(h1);
 				setTimeout(function() {
-					assertNotEmpty(document.querySelectorAll('consistency-test part2 ul li'), 'has rendered lis');
-					click(document.querySelector('consistency-test h1'));
+					var h1 = document.querySelector('consistency-test h1');
+					assertNotEmpty(document.querySelectorAll('consistency-test part-b ul li'), 'has rendered lis');
+					click(h1);
 					setTimeout(function() {
-						assertNotEmpty(document.querySelectorAll('consistency-test part1 div.x11'), 'rendered original again');
-						click(document.querySelector('consistency-test h1'));
+						var h1 = document.querySelector('consistency-test h1');
+						assertNotEmpty(document.querySelectorAll('consistency-test part-a div.x11'), 'rendered original again');
+						click(h1);
 						setTimeout(function() {
-							assertNotEmpty(document.querySelectorAll('consistency-test part2 ul li'), 'has resolved inconsistency and events still work');
+							assertNotEmpty(document.querySelectorAll('consistency-test part-b ul li'), 'has resolved inconsistency and events still work');
 							done();
-						}, 32);
-					}, 32);
-				}, 32);
-			}, 32);
+						}, 100);
+					}, 100);
+				}, 100);
+			};
+			document.body.appendChild(consistencyTest);
 		});
 	});
 });

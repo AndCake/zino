@@ -88,9 +88,9 @@ tagObserver.observe(document.body, {
 function loopList(list, action) {
 	while (list.length > 0) {
 		let entry = list.shift();
-		if (entry instanceof NodeList) {
-			for (let part of entry) {
-				action(part);
+		if (entry instanceof NodeList || entry.length > 0) {
+			for (var all in entry) {
+				action(entry[all]);
 			}
 		} else {
 			action(entry);

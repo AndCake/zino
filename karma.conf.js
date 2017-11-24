@@ -44,7 +44,7 @@ module.exports = function(config) {
 		testName: 'Zino Unit Tests',
 		username: sauce.user,
 		accessKey: sauce.key,
-		recordVideo: true,
+		recordVideo: false,
 		build: require('./package.json').version + '-vdom-' + (+new Date)
 	},
 	customLaunchers: customLaunchers,
@@ -95,8 +95,10 @@ module.exports = function(config) {
 
 
 	// enable / disable watching file and executing tests whenever any file changes
-	autoWatch: true,
+	autoWatch: false,
 
+	browserNoActivityTimeout: 30000,
+	browserDisconnectTolerance: 3,
 
 	// start these browsers
 	// available browser launchers: https://npmjs.org/browse/keyword/karma-launcher
