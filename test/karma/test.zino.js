@@ -101,7 +101,7 @@ describe('zino', function () {
 				click(document.querySelector('button'));
 				assertEqual(location.hash, '#12', 'event did trigger');
 				done();
-			}, 500);
+			}, 50);
 		});
 	});
 	describe('complex element', function () {
@@ -146,7 +146,7 @@ describe('zino', function () {
 			setTimeout(function() {
 				assertElementHasContent('second-tag div a[name]', 'Minkelhutz', 'Props change did trigger re-render');
 				done();
-			}, 100);
+			}, 32);
 		});
 		it('should transfer props to sub component', function (done) {
 			secondTag.setProps('list', [{
@@ -155,22 +155,23 @@ describe('zino', function () {
 			setTimeout(function() {
 				assertEqual(secondTag.querySelector('todo-list li input').value, 'XXX', 'props were transferred');
 				done();
-			}, 100);
+			}, 32);
 		});
 	});
 	describe('component preloading', function() {
 		Zino.fetch('base/test/components/virtual-component.html', null, true, '<virtual-component>I render text: <quote>{{body}}</quote> -- yeah!</virtual-component>');
 		Zino.import('base/test/components/virtual-component.html');
+
 		var vc = document.createElement('virtual-component');
 		vc.innerHTML = 'Lorem ipsum dolor sit amet';
 		document.body.appendChild(vc);
-
+		
 		it('renders the component', function(done) {
 			setTimeout(function() {
 				assertNotEmpty(document.querySelectorAll('virtual-component .-shadow-root'), 'component rendered');
 				assertElementHasContent('virtual-component quote', 'Lorem ipsum dolor sit amet', 'attribute has been applied correctly');
 				done();
-			}, 100);
+			}, 50);
 		});
 
 		var component = document.createElement('my-component');
@@ -265,6 +266,63 @@ describe('zino', function () {
 					throw new Error('Assertion failed: dynamic HTML in a component correctly' + cb.outerHTML);
 				}
 				done();
+			}, 32);
+		});
+	});
+
+	describe('Consistency', function() {
+		Zino.import(function Part1(Tag) {
+			return {
+				render: function() {
+					return [Tag('div', {'class': 'x11'}, 'Simple static text content')];
+				}
+			}
+		});
+		Zino.import(function Part2(Tag) {
+			return {
+				render: function() {
+					return [Tag('ul', null, [1, 2, 3].map(function(l) { return Tag('li', null, l); }))];
+				}
+			}
+		});
+		Zino.import(function ConsistencyTest(Tag) {
+			return {
+				render: function(data) {
+					return [Tag('h1', null, 'Click me'), Tag('part1'), Tag('p', null, 'Lorem ipsum')];
+				},
+				functions: {
+					props: {
+						part: 1
+					},
+					events: {
+						h1: {click() {
+							this.getHost().setProps('part', this.getHost().props.part === 1 ? 2 : 1);
+						}}
+					},
+					render() {
+						let part = this.ownerDocument.createElement('part' + this.props.part);
+						this.querySelectorAll('.-shadow-root')[0].replaceChild(part, this.querySelectorAll('part1, part2')[0]);
+					},
+				}
+			}
+		});
+		var consistencyTest = document.createElement('consistency-test');
+		document.body.appendChild(consistencyTest);
+		it('can deal with inconsistency', function(done) {
+			setTimeout(function() {
+				click(document.querySelector('consistency-test h1'));
+				setTimeout(function() {
+					assertNotEmpty(document.querySelectorAll('consistency-test part2 ul li'), 'has rendered lis');
+					click(document.querySelector('consistency-test h1'));
+					setTimeout(function() {
+						assertNotEmpty(document.querySelectorAll('consistency-test part1 div.x11'), 'rendered original again');
+						click(document.querySelector('consistency-test h1'));
+						setTimeout(function() {
+							assertNotEmpty(document.querySelectorAll('consistency-test part2 ul li'), 'has resolved inconsistency and events still work');
+							done();
+						}, 32);
+					}, 32);
+				}, 32);
 			}, 32);
 		});
 	});

@@ -87,19 +87,19 @@ tagObserver.observe(document.body, {
 
 function loopList(list, action) {
 	while (list.length > 0) {
-		if (!list[0].addEventListener) {
-			list.shift();
-			continue;
+		let entry = list.shift();
+		if (entry instanceof NodeList) {
+			for (let part of entry) {
+				action(part);
+			}
+		} else {
+			action(entry);
 		}
-		action(list.shift());
 	}
 }
 
 requestAnimationFrame(function reRender() {
-	if (Zino.isRendering) return;
-	Zino.isRendering = true;
 	loopList(mountTags, actions.mount);
 	loopList(dirtyTags, actions.render);
-	Zino.isRendering = false;
 	requestAnimationFrame(reRender);
 });

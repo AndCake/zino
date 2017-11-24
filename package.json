@@ -1,6 +1,6 @@
 {
     "name": "zino",
-    "version": "4.0.0",
+    "version": "4.0.1",
     "description": "Micro component framework",
     "main": "zino-ssr.js",
     "directories": {

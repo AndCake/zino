@@ -1218,20 +1218,41 @@ tagObserver.observe(document.body, {
 
 function loopList(list, action) {
 	while (list.length > 0) {
-		if (!list[0].addEventListener) {
-			list.shift();
-			continue;
+		var entry = list.shift();
+		if (entry instanceof NodeList) {
+			var _iteratorNormalCompletion = true;
+			var _didIteratorError = false;
+			var _iteratorError = undefined;
+
+			try {
+				for (var _iterator = entry[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+					var part = _step.value;
+
+					action(part);
+				}
+			} catch (err) {
+				_didIteratorError = true;
+				_iteratorError = err;
+			} finally {
+				try {
+					if (!_iteratorNormalCompletion && _iterator.return) {
+						_iterator.return();
+					}
+				} finally {
+					if (_didIteratorError) {
+						throw _iteratorError;
+					}
+				}
+			}
+		} else {
+			action(entry);
 		}
-		action(list.shift());
 	}
 }
 
 requestAnimationFrame(function reRender() {
-	if (Zino$1.isRendering) return;
-	Zino$1.isRendering = true;
 	loopList(mountTags, actions.mount);
 	loopList(dirtyTags, actions.render);
-	Zino$1.isRendering = false;
 	requestAnimationFrame(reRender);
 });
 

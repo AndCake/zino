@@ -172,7 +172,7 @@ function attachSubEvents(subEvents, tag) {
 				el = tag.querySelectorAll(el)[count[el] - 1];
 			}
 			// if no events have been attached yet
-			if (el.children.length > 0 && !el.children[0].__eventsAttached) {
+			if (el && el.children.length > 0 && !el.children[0].__eventsAttached) {
 				// attach children tag events to the shadow root
 				attachEvent(el.children[0], event.childEvents, el);
 				// attach host events directly to the component!
@@ -557,6 +557,7 @@ function initializeTag(tag, registryEntry) {
 	if (!tag.attributes.__ready) {
 		defineAttribute(tag, '__ready', true);
 	}
+
 	if (!this || this.noEvents !== true) {
 		// attach sub events
 		attachSubEvents(subEvents, tag);
@@ -735,14 +736,23 @@ function renderTag(tag) {
 	if (!this || !this.noRenderCallback) {
 		// call all of our sub component's render functions
 		renderCallbacks.forEach(function (callback) {
-			return callback.fn.call(callback.tag.getHost());
+			try {
+				callback.fn.call(callback.tag.getHost());
+			} catch (e) {
+				throw new Error('Unable to call render callback for component ' + callback.tag.tagName + ': ' + (e.message || e));
+			}
 		});
 		// call our own rendering function
-		registryEntry.functions.render.call(tag);
+		try {
+			registryEntry.functions.render.call(tag);
+		} catch (e) {
+			throw new Error('Unable to call render callback for component ' + tag.tagName + ': ' + (e.message || e));
+		}
 	} else {
 		// just add this sub component's rendering function to the list
 		renderCallbacks.push({ fn: registryEntry.functions.render, tag: tag });
 	}
+
 	return { events: events, renderCallbacks: renderCallbacks, data: data, subElements: renderedSubElements };
 }
 
