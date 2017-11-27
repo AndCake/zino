@@ -79,7 +79,7 @@ export function attachSubEvents(subEvents, tag) {
 				el = tag.querySelectorAll(el)[count[el] - 1];
 			}
 			// if no events have been attached yet
-			if (el.children.length > 0 && !el.children[0].__eventsAttached) {
+			if (el && el.children.length > 0 && !el.children[0].__eventsAttached) {
 				// attach children tag events to the shadow root
 				attachEvent(el.children[0], event.childEvents, el);
 				// attach host events directly to the component!

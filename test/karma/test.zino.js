@@ -81,7 +81,7 @@ function click(el) {
 }
 
 describe('zino', function () {
-	this.timeout(10000);
+	this.timeout(30000);
 
 	describe('simple element', function() {
 		it('can load a custom element', function(done) {
@@ -101,7 +101,7 @@ describe('zino', function () {
 				click(document.querySelector('button'));
 				assertEqual(location.hash, '#12', 'event did trigger');
 				done();
-			}, 500);
+			}, 50);
 		});
 	});
 	describe('complex element', function () {
@@ -161,10 +161,11 @@ describe('zino', function () {
 	describe('component preloading', function() {
 		Zino.fetch('base/test/components/virtual-component.html', null, true, '<virtual-component>I render text: <quote>{{body}}</quote> -- yeah!</virtual-component>');
 		Zino.import('base/test/components/virtual-component.html');
+
 		var vc = document.createElement('virtual-component');
 		vc.innerHTML = 'Lorem ipsum dolor sit amet';
 		document.body.appendChild(vc);
-
+		
 		it('renders the component', function(done) {
 			setTimeout(function() {
 				assertNotEmpty(document.querySelectorAll('virtual-component .-shadow-root'), 'component rendered');
@@ -197,7 +198,7 @@ describe('zino', function () {
 			setTimeout(function() {
 				assertElementHasContent('my-component .-shadow-root #my-id', 'Hello,World!<p>Paragraph</p>');
 				done();
-			}, 32)
+			}, 100)
 		});
 	});
 
@@ -212,7 +213,7 @@ describe('zino', function () {
 			setTimeout(function() {
 				assertElementHasContent('ab .-shadow-root', 'X12 34Y', 'body contains expected value');
 				done();
-			}, 32);
+			}, 100);
 		});
 
 		it('re-renders after body change', function(done) {
@@ -220,7 +221,7 @@ describe('zino', function () {
 			setTimeout(function() {
 				assertElementHasContent('ab .-shadow-root', 'X34 56Y', 're-rendered after body change');
 				done();
-			}, 32);
+			}, 100);
 		});
 
 		it('re-renders after setProps', function(done) {
@@ -228,7 +229,7 @@ describe('zino', function () {
 			setTimeout(function() {
 				assertElementHasContent('ab .-shadow-root', 'Y34 56Y', 're-rendered after setProps');
 				done();
-			}, 32);
+			}, 100);
 		});
 
 		it('re-renders after setAttribute', function(done) {
@@ -236,7 +237,7 @@ describe('zino', function () {
 			setTimeout(function() {
 				assertElementHasContent('ab .-shadow-root', 'Y34 56Z', 're-rendered after setAttribute');
 				done();
-			}, 32);
+			}, 100);
 		});
 	});
 
@@ -256,7 +257,7 @@ describe('zino', function () {
 			setTimeout(function() {
 				assertElementHasContent('cb .-shadow-root .test .me', '123', 'renders HTML values correctly');
 				done();
-			}, 32);
+			}, 100);
 		});
 		it('updated the component correctly', function(done) {
 			cb.body = '<div class="me">test<span>huhu</span>123</div>';
@@ -265,7 +266,67 @@ describe('zino', function () {
 					throw new Error('Assertion failed: dynamic HTML in a component correctly' + cb.outerHTML);
 				}
 				done();
-			}, 32);
+			}, 100);
+		});
+	});
+
+	describe('Consistency', function() {
+		Zino.import(function PartA(Tag) {
+			return {
+				render: function() {
+					return [Tag('div', {'class': 'x11'}, 'Simple static text content')];
+				}
+			}
+		});
+		Zino.import(function PartB(Tag) {
+			return {
+				render: function() {
+					return [Tag('ul', null, [1, 2, 3].map(function(l) { return Tag('li', null, l); }))];
+				}
+			}
+		});
+		Zino.import(function ConsistencyTest(Tag) {
+			return {
+				render: function(data) {
+					return [Tag('h1', null, 'Click me'), Tag('part-a'), Tag('p', null, 'Lorem ipsum')];
+				},
+				functions: {
+					props: {
+						part: 'a'
+					},
+					events: {
+						h1: {click: function() {
+							this.getHost().setProps('part', this.getHost().props.part === 'a' ? 'b' : 'a');
+						}}
+					},
+					render: function() {
+						var part = this.ownerDocument.createElement('part-' + this.props.part);
+						this.querySelectorAll('.-shadow-root')[0].replaceChild(part, this.querySelectorAll('part-a, part-b')[0]);
+					},
+				}
+			}
+		});
+		it('can deal with inconsistency', function(done) {
+			var consistencyTest = document.createElement('consistency-test');
+			consistencyTest.onready = function() {
+				var h1 = document.querySelector('consistency-test h1');
+				click(h1);
+				setTimeout(function() {
+					var h1 = document.querySelector('consistency-test h1');
+					assertNotEmpty(document.querySelectorAll('consistency-test part-b ul li'), 'has rendered lis');
+					click(h1);
+					setTimeout(function() {
+						var h1 = document.querySelector('consistency-test h1');
+						assertNotEmpty(document.querySelectorAll('consistency-test part-a div.x11'), 'rendered original again');
+						click(h1);
+						setTimeout(function() {
+							assertNotEmpty(document.querySelectorAll('consistency-test part-b ul li'), 'has resolved inconsistency and events still work');
+							done();
+						}, 100);
+					}, 100);
+				}, 100);
+			};
+			document.body.appendChild(consistencyTest);
 		});
 	});
 });

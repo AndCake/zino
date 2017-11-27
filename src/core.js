@@ -63,7 +63,7 @@ export function registerTag(fn, document, Zino) {
 }
 
 export function mount(tag, ignoreRender) {
-	if (!tag.tagName) return {};
+	if (!tag || !tag.tagName) return {};
 	let entry = tagRegistry[tag.tagName.toLowerCase()];
 	if (!entry || tag.getAttribute('__ready')) return {};
 	if (ignoreRender) entry.functions.render = emptyFunc;
@@ -124,6 +124,7 @@ function initializeTag(tag, registryEntry) {
 	if (!tag.attributes.__ready) {
 		defineAttribute(tag, '__ready', true);
 	}
+	
 	if (!this || this.noEvents !== true) {
 		// attach sub events
 		attachSubEvents(subEvents, tag);
@@ -266,36 +267,56 @@ function renderTag(tag, registryEntry = tagRegistry[tag.tagName.toLowerCase()]) 
 	tag.__subs = renderedSubElements;
 	tag.__vdom = renderedDOM;
 
-	// if we have rendered any sub components, retrieve their actual DOM node
-	renderedSubElements.length > 0 && (tag.querySelectorAll && toArray(tag.querySelectorAll('[__ready]')) || []).forEach((subEl, index, arr) => {
-		// apply all additional functionality to them (custom functions, attributes, etc...)
-		merge(subEl, renderedSubElements[index]);
-		// update getHost to return the DOM node instead of the vdom node
-		if (!renderedSubElements[index] || subEl.tagName.toLowerCase() !== renderedSubElements[index].tagName) {
-			console.info('Inconsistent state - might be caused by additional components generated in render callback: ', subEl, tag.__subs, arr);
-			return;
+	let inconsistent = false;
+
+	do {
+		if (inconsistent) {
+			tag.children[0].innerHTML = vdom.getInnerHTML(renderedDOM);
+			inconsistent = false;
 		}
-		subEl.getHost = renderedSubElements[index].getHost = defaultFunctions.getHost.bind(subEl);
-	});
+		// if we have rendered any sub components, retrieve their actual DOM node
+		renderedSubElements.length > 0 && (tag.querySelectorAll && toArray(tag.querySelectorAll('[__ready]')) || []).forEach((subEl, index, arr) => {
+			// apply all additional functionality to them (custom functions, attributes, etc...)
+			merge(subEl, renderedSubElements[index]);
+			// update getHost to return the DOM node instead of the vdom node
+			if (!renderedSubElements[index] || subEl.tagName.toLowerCase() !== renderedSubElements[index].tagName) {
+				console.info('Inconsistent state - might be caused by additional components generated in render callback: ', subEl, tag.__subs, arr);
+				inconsistent = true;
+				return;
+			}
+			subEl.getHost = renderedSubElements[index].getHost = defaultFunctions.getHost.bind(subEl);
+		});
+	} while (inconsistent);
 	tag.isRendered = true;
 
 	// if this is not a sub component's rendering run
 	if (!this || !this.noRenderCallback) {
 		// call all of our sub component's render functions
-		renderCallbacks.forEach(callback => callback.fn.call(callback.tag.getHost()));
+		renderCallbacks.forEach(callback => {
+			try {
+				callback.fn.call(callback.tag.getHost())
+			} catch (e) {
+				throw new Error('Unable to call render callback for component ' + callback.tag.tagName + ': ' + (e.message || e));
+			}
+		});
 		// call our own rendering function
-		registryEntry.functions.render.call(tag);
+		try {
+			registryEntry.functions.render.call(tag);
+		} catch (e) {
+			throw new Error('Unable to call render callback for component ' + tag.tagName + ': ' + (e.message || e));
+		}
 	} else {
 		// just add this sub component's rendering function to the list
 		renderCallbacks.push({fn: registryEntry.functions.render, tag});
 	}
+
 	return {events, renderCallbacks, data, subElements: renderedSubElements};
 }
 
 export function unmount(tag) {
-	let name = (tag.tagName || '').toLowerCase(),
+	let name = (tag && tag.tagName || '').toLowerCase(),
 		entry = tagRegistry[name];
-	if (entry) {
+	if (tag && name && entry) {
 		[].forEach.call(tag.nodeType === 1 && tag.attributes || Object.keys(tag.attributes).map(attr => tag.attributes[attr]), attr => {
 			// cleanup saved data
 			if (attr.name.indexOf('data-') >= 0) {

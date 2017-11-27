@@ -4,6 +4,7 @@ import {setDataRegistry} from './core';
 
 let urlRegistry = window.zinoTagRegistry || {},
 	dirtyTags = [],
+	mountTags = [],
 	parseCode = identity,
 	tagObserver = new MutationObserver(records => {
 		records.forEach(record => {
@@ -11,7 +12,7 @@ let urlRegistry = window.zinoTagRegistry || {},
 				removed = record.removedNodes;
 
 			if (added.length > 0) {
-				[].forEach.call(added, actions.mount);
+				mountTags = [].concat.call(added, mountTags);
 			} else if (removed.length > 0) {
 				[].forEach.call(removed, tag => {
 					(tag.children && toArray(tag.querySelectorAll('[__ready]')) || []).concat(tag).forEach(actions.unmount);
@@ -84,13 +85,21 @@ tagObserver.observe(document.body, {
 	childList: true
 });
 
-requestAnimationFrame(function reRender() {
-	while (dirtyTags.length > 0) {
-		if (!dirtyTags[0].addEventListener) {
-			dirtyTags.shift();
-			continue;
+function loopList(list, action) {
+	while (list.length > 0) {
+		let entry = list.shift();
+		if (entry instanceof NodeList || entry.length > 0) {
+			for (var all in entry) {
+				action(entry[all]);
+			}
+		} else {
+			action(entry);
 		}
-		actions.render(dirtyTags.shift());
 	}
+}
+
+requestAnimationFrame(function reRender() {
+	loopList(mountTags, actions.mount);
+	loopList(dirtyTags, actions.render);
 	requestAnimationFrame(reRender);
 });
