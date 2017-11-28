@@ -6,9 +6,7 @@
 				degree: 0
 			},
 			render: function() {
-				requestAnimationFrame(function() {
-					this.setProps('degree', (this.props.degree + 1) % 360);
-				}.bind(this));
+				this.setProps('degree', (this.props.degree + 2) % 360);
 			},
 			mount: function() {
 				this.props.degree = parseInt(this.getAttribute('degree') || '0', 10);
@@ -17,6 +15,7 @@
 				bar: {
 					width: 50,
 					height: 5,
+					position: 'absolute',
 					display: 'inline-block',
 					borderRadius: 5
 				},

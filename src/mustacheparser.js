@@ -289,7 +289,7 @@ export function parse(data) {
 			// opening tag
 			tagStack.push(match[2]);
 			let attributes = makeAttributes(match[3]);
-			resultObject.render += `new Tag('${match[2]}', ${attributes}`;
+			resultObject.render += `Tag('${match[2]}', ${attributes}`;
 			if (!match[4]) {
 				// not a self-closing tag, so prepare for it's content
 				resultObject.render += ', [].concat(';

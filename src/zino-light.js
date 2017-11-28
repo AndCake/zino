@@ -85,7 +85,8 @@ tagObserver.observe(document.body, {
 	childList: true
 });
 
-function loopList(list, action) {
+function loopList(start, list, action) {
+	let end;
 	while (list.length > 0) {
 		let entry = list.shift();
 		if (entry instanceof NodeList || entry.length > 0) {
@@ -95,11 +96,14 @@ function loopList(list, action) {
 		} else {
 			action(entry);
 		}
+		end = performance.now();
+		if (end - start > 16) { break; }
 	}
+	return end;
 }
 
-requestAnimationFrame(function reRender() {
-	loopList(mountTags, actions.mount);
-	loopList(dirtyTags, actions.render);
+requestAnimationFrame(function reRender(start) {
+	loopList(start, mountTags, actions.mount);
+	loopList(start, dirtyTags, actions.render);
 	requestAnimationFrame(reRender);
 });

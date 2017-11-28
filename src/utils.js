@@ -5,13 +5,13 @@
  * @return {Object}         the merged object (same as first argument)
  */
 export function merge (target, ...args) {
-	args.forEach(arg => {
+	for (let arg, len = args.length, index = 0; arg = args[index], index < len; index += 1) {
 		for (let all in arg) {
 			if ((typeof HTMLElement !== 'undefined' && arg instanceof HTMLElement) || typeof propDetails(arg, all).value !== 'undefined' && (!target[all] || propDetails(target, all).writable)) {
 				if (all !== 'attributes') target[all] = arg[all];
 			}
 		}
-	});
+	}
 
 	return target;
 }

@@ -148,6 +148,7 @@ function applyText(domChild, dom, node, document) {
  * @param  {Document} document - the document that the DOM is based on, used for createElement() and createTextNode() calls
  */
 export function applyDOM(dom, vdom, document) {
+	if (!dom || !vdom) return;
 	if (!isArray(vdom)) {
 		// if we have a node
 		if (!isArray(vdom.children)) vdom.children = [vdom.children];
@@ -157,34 +158,35 @@ export function applyDOM(dom, vdom, document) {
 				// replace the node entirely
 				dom.parentNode.replaceChild(createElement(vdom, document), dom);
 			} else {
+				let attributes = Object.keys(vdom.attributes);
 				// check all vdom attributes
-				Object.keys(vdom.attributes).forEach(attr => {
+				for (let attr, index = 0, len = attributes.length; attr = vdom.attributes[attributes[index]], index < len; index += 1) {
 					// if the VDOM attribute is a non-object
-					if (typeof vdom.attributes[attr].value !== 'object') {
+					if (typeof attr.value !== 'object') {
 						// check if it differs
-						if (dom.getAttribute(attr) != vdom.attributes[attr].value) {
+						if (dom.getAttribute(attr.name) != attr.value) {
 							// if so, apply it
-							dom.setAttribute(attr, vdom.attributes[attr].value);
+							dom.setAttribute(attr.name, attr.value);
 						}
 					} else {
 						// the attribute is an object
-						if (dom.getAttribute(attr) && dom.getAttribute(attr).match(/^--|--$/g)) {
+						if (dom.getAttribute(attr.name) && dom.getAttribute(attr.name).match(/^--|--$/g)) {
 							// if it has a complex value, use the data resolver to define it on the DOM
-							let id = dataResolver(attr, vdom.attributes[attr].value, dom.getAttribute(attr).replace(/^--|--$/g, ''));
+							let id = dataResolver(attr.name, attr.value, dom.getAttribute(attr.name).replace(/^--|--$/g, ''));
 							// only set the ID with markers so that we know it is supposed to be a complex value
-							dom.setAttribute(attr, `--${id}--`);
+							dom.setAttribute(attr.name, `--${id}--`);
 						}
 					}
-				});
+				}
 				// if we have too many attributes in our DOM
-				if (dom.attributes.length > Object.keys(vdom.attributes).length) {
-					[].forEach.call(dom.attributes, attr => {
+				if (dom.attributes.length > attributes.length) {
+					for (let attr, index = 0, len = dom.attributes.length; attr = dom.attributes[index], index < len; index += 1) {
 						// if the respective attribute does not exist on the VDOM
-						if (typeof vdom.attributes[attr.name] === 'undefined') {
+						if (typeof attributes[attr.name] === 'undefined') {
 							// remove it
 							dom.removeAttribute(attr.name);
 						}
-					})
+					}
 				}
 			}
 		}
@@ -192,7 +194,7 @@ export function applyDOM(dom, vdom, document) {
 
 	// deal with the vdom's children
 	let children = (isArray(vdom) ? vdom : vdom.__hash !== dom.__hash ? vdom.children : []);
-	children.forEach((node, index) => {
+	for (let index = 0, node, len = children.length; node = children[index], index < len; index += 1) {
 		if (isArray(node)) return applyDOM(dom, node, document);
 		let domChild = dom.childNodes[index];
 		if (typeof domChild === 'undefined') {
@@ -216,10 +218,12 @@ export function applyDOM(dom, vdom, document) {
 				applyText(domChild, dom, node, document);
 			}
 		}
-	});
+	}
 	if (dom.__hash !== vdom.__hash && dom.childNodes.length > children.length) {
 		// remove superfluous child nodes
-		toArray(dom.childNodes, children.length).forEach(child => dom.removeChild(child));
+		for (let index = children.length, len = dom.childNodes.length; index < len; index += 1) {
+			dom.removeChild(dom.childNodes[index]);
+		}
 	}
 	dom.__hash = vdom.__hash;
 }

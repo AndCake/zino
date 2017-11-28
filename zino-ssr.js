@@ -24,13 +24,13 @@ function merge(target) {
 		args[_key - 1] = arguments[_key];
 	}
 
-	args.forEach(function (arg) {
+	for (var arg, len = args.length, index = 0; arg = args[index], index < len; index += 1) {
 		for (var all in arg) {
 			if (typeof HTMLElement !== 'undefined' && arg instanceof HTMLElement || typeof propDetails(arg, all).value !== 'undefined' && (!target[all] || propDetails(target, all).writable)) {
 				if (all !== 'attributes') target[all] = arg[all];
 			}
 		}
-	});
+	}
 
 	return target;
 }
@@ -188,7 +188,7 @@ function isArray(obj) {
 	return Object.prototype.toString.call(obj) === '[object Array]';
 }
 
-function hashCode$1(str) {
+function hashCode(str) {
 	var hash = 0,
 	    i = void 0,
 	    chr = void 0;
@@ -224,7 +224,7 @@ function Tag(tagName, attributes) {
 		children: children.filter(function (child) {
 			return child;
 		}),
-		__hash: hashCode$1(tagName + '!' + attributeHash + '@' + children.map(function (child) {
+		__hash: hashCode(tagName + '!' + attributeHash + '@' + children.map(function (child) {
 			return child && child.__hash || child;
 		}).join('!'))
 	};
@@ -337,6 +337,7 @@ function applyText(domChild, dom, node, document) {
  * @param  {Document} document - the document that the DOM is based on, used for createElement() and createTextNode() calls
  */
 function applyDOM(dom, vdom, document) {
+	if (!dom || !vdom) return;
 	if (!isArray(vdom)) {
 		// if we have a node
 		if (!isArray(vdom.children)) vdom.children = [vdom.children];
@@ -346,34 +347,35 @@ function applyDOM(dom, vdom, document) {
 				// replace the node entirely
 				dom.parentNode.replaceChild(createElement(vdom, document), dom);
 			} else {
+				var attributes = Object.keys(vdom.attributes);
 				// check all vdom attributes
-				Object.keys(vdom.attributes).forEach(function (attr) {
+				for (var attr, index = 0, len = attributes.length; attr = vdom.attributes[attributes[index]], index < len; index += 1) {
 					// if the VDOM attribute is a non-object
-					if (_typeof(vdom.attributes[attr].value) !== 'object') {
+					if (_typeof(attr.value) !== 'object') {
 						// check if it differs
-						if (dom.getAttribute(attr) != vdom.attributes[attr].value) {
+						if (dom.getAttribute(attr.name) != attr.value) {
 							// if so, apply it
-							dom.setAttribute(attr, vdom.attributes[attr].value);
+							dom.setAttribute(attr.name, attr.value);
 						}
 					} else {
 						// the attribute is an object
-						if (dom.getAttribute(attr) && dom.getAttribute(attr).match(/^--|--$/g)) {
+						if (dom.getAttribute(attr.name) && dom.getAttribute(attr.name).match(/^--|--$/g)) {
 							// if it has a complex value, use the data resolver to define it on the DOM
-							var id = dataResolver(attr, vdom.attributes[attr].value, dom.getAttribute(attr).replace(/^--|--$/g, ''));
+							var id = dataResolver(attr.name, attr.value, dom.getAttribute(attr.name).replace(/^--|--$/g, ''));
 							// only set the ID with markers so that we know it is supposed to be a complex value
-							dom.setAttribute(attr, '--' + id + '--');
+							dom.setAttribute(attr.name, '--' + id + '--');
 						}
 					}
-				});
+				}
 				// if we have too many attributes in our DOM
-				if (dom.attributes.length > Object.keys(vdom.attributes).length) {
-					[].forEach.call(dom.attributes, function (attr) {
+				if (dom.attributes.length > attributes.length) {
+					for (var _attr, _index = 0, _len2 = dom.attributes.length; _attr = dom.attributes[_index], _index < _len2; _index += 1) {
 						// if the respective attribute does not exist on the VDOM
-						if (typeof vdom.attributes[attr.name] === 'undefined') {
+						if (typeof attributes[_attr.name] === 'undefined') {
 							// remove it
-							dom.removeAttribute(attr.name);
+							dom.removeAttribute(_attr.name);
 						}
-					});
+					}
 				}
 			}
 		}
@@ -381,9 +383,9 @@ function applyDOM(dom, vdom, document) {
 
 	// deal with the vdom's children
 	var children = isArray(vdom) ? vdom : vdom.__hash !== dom.__hash ? vdom.children : [];
-	children.forEach(function (node, index) {
+	for (var _index2 = 0, node, _len3 = children.length; node = children[_index2], _index2 < _len3; _index2 += 1) {
 		if (isArray(node)) return applyDOM(dom, node, document);
-		var domChild = dom.childNodes[index];
+		var domChild = dom.childNodes[_index2];
 		if (typeof domChild === 'undefined') {
 			// does not exist, so it needs to be appended
 			dom.appendChild(createElement(node, document));
@@ -405,12 +407,12 @@ function applyDOM(dom, vdom, document) {
 				applyText(domChild, dom, node, document);
 			}
 		}
-	});
+	}
 	if (dom.__hash !== vdom.__hash && dom.childNodes.length > children.length) {
 		// remove superfluous child nodes
-		toArray(dom.childNodes, children.length).forEach(function (child) {
-			return dom.removeChild(child);
-		});
+		for (var _index3 = children.length, _len4 = dom.childNodes.length; _index3 < _len4; _index3 += 1) {
+			dom.removeChild(dom.childNodes[_index3]);
+		}
 	}
 	dom.__hash = vdom.__hash;
 }
@@ -638,6 +640,8 @@ function renderTag(tag) {
 	setDataResolver(resolveData);
 	clearTagsCreated();
 	var data = getAttributes(tag);
+	var dataList = [];
+
 	function dataToString(data) {
 		var depth = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
 
@@ -647,7 +651,8 @@ function renderTag(tag) {
 				num = hashCode(num + ';' + all + ':' + (data[all] === null || data[all] === undefined ? 'null' : data[all]).toString());
 			} else {
 				var res = all + ':';
-				if (depth < 10 && !(depth === 0 && all === 'element') && list.indexOf(data[all]) < 0) {
+				if (depth < 10 && !(depth === 0 && all === 'element') && dataList.indexOf(data[all]) < 0) {
+					dataList.push(data[all]);
 					res += dataToString(data[all], depth + 1);
 				}
 				num = hashCode(num + ';' + res);
@@ -655,6 +660,7 @@ function renderTag(tag) {
 		}
 		return num;
 	}
+	dataList = [];
 	var hash = dataToString(data);
 
 	if (tag.__dataHash === hash) {
@@ -714,17 +720,19 @@ function renderTag(tag) {
 			inconsistent = false;
 		}
 		// if we have rendered any sub components, retrieve their actual DOM node
-		renderedSubElements.length > 0 && (tag.querySelectorAll && toArray(tag.querySelectorAll('[__ready]')) || []).forEach(function (subEl, index, arr) {
-			// apply all additional functionality to them (custom functions, attributes, etc...)
-			merge(subEl, renderedSubElements[index]);
-			// update getHost to return the DOM node instead of the vdom node
-			if (!renderedSubElements[index] || subEl.tagName.toLowerCase() !== renderedSubElements[index].tagName) {
-				console.info('Inconsistent state - might be caused by additional components generated in render callback: ', subEl, tag.__subs, arr);
-				inconsistent = true;
-				return;
+		if (renderedSubElements.length > 0 && tag.querySelectorAll) {
+			for (var _subEl, ready = tag.querySelectorAll('[__ready]'), index = 0, _len = ready.length; _subEl = ready[index], index < _len; index += 1) {
+				// apply all additional functionality to them (custom functions, attributes, etc...)
+				merge(_subEl, renderedSubElements[index]);
+				// update getHost to return the DOM node instead of the vdom node
+				if (!renderedSubElements[index] || _subEl.tagName.toLowerCase() !== renderedSubElements[index].tagName) {
+					console.info('Inconsistent state - might be caused by additional components generated in render callback: ', _subEl, tag.__subs, arr);
+					inconsistent = true;
+					return;
+				}
+				_subEl.getHost = renderedSubElements[index].getHost = defaultFunctions.getHost.bind(_subEl);
 			}
-			subEl.getHost = renderedSubElements[index].getHost = defaultFunctions.getHost.bind(subEl);
-		});
+		}
 	} while (inconsistent);
 	tag.isRendered = true;
 

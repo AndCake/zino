@@ -278,17 +278,19 @@ function renderTag(tag, registryEntry = tagRegistry[tag.tagName.toLowerCase()]) 
 			inconsistent = false;
 		}
 		// if we have rendered any sub components, retrieve their actual DOM node
-		renderedSubElements.length > 0 && (tag.querySelectorAll && toArray(tag.querySelectorAll('[__ready]')) || []).forEach((subEl, index, arr) => {
-			// apply all additional functionality to them (custom functions, attributes, etc...)
-			merge(subEl, renderedSubElements[index]);
-			// update getHost to return the DOM node instead of the vdom node
-			if (!renderedSubElements[index] || subEl.tagName.toLowerCase() !== renderedSubElements[index].tagName) {
-				console.info('Inconsistent state - might be caused by additional components generated in render callback: ', subEl, tag.__subs, arr);
-				inconsistent = true;
-				return;
+		if (renderedSubElements.length > 0 && tag.querySelectorAll) {
+			for (let subEl, ready = tag.querySelectorAll('[__ready]'), index = 0, len = ready.length; subEl = ready[index], index < len; index += 1) {
+				// apply all additional functionality to them (custom functions, attributes, etc...)
+				merge(subEl, renderedSubElements[index]);
+				// update getHost to return the DOM node instead of the vdom node
+				if (!renderedSubElements[index] || subEl.tagName.toLowerCase() !== renderedSubElements[index].tagName) {
+					console.info('Inconsistent state - might be caused by additional components generated in render callback: ', subEl, tag.__subs, arr);
+					inconsistent = true;
+					return;
+				}
+				subEl.getHost = renderedSubElements[index].getHost = defaultFunctions.getHost.bind(subEl);
 			}
-			subEl.getHost = renderedSubElements[index].getHost = defaultFunctions.getHost.bind(subEl);
-		});
+		}
 	} while (inconsistent);
 	tag.isRendered = true;
 
