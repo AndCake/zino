@@ -200,23 +200,26 @@ function renderTag(tag, registryEntry = tagRegistry[tag.tagName.toLowerCase()]) 
 	vdom.setDataResolver(resolveData);
 	vdom.clearTagsCreated();
 	let data = getAttributes(tag);
+	let dataList = [];
 
 	function dataToString(data, depth = 0) {
-		let string = '';
+		let num = 0;
 		for (let all in data) {
 			if (typeof data[all] !== 'object') {
-				string += all + ': ' + (data[all] === null || data[all] === undefined ? 'null' : data[all]).toString() + '\n';
+				num = vdom.hashCode(num + ';' + all + ':' + (data[all] === null || data[all] === undefined ? 'null' : data[all]).toString());
 			} else {
-				string += all + ': {\n';
-				if (depth < 10 && !(depth === 0 && all === 'element')) {
-					string += dataToString(data[all], depth + 1);
+				let res = all + ':';
+				if (depth < 10 && !(depth === 0 && all === 'element') && dataList.indexOf(data[all]) < 0) {
+					dataList.push(data[all]);
+					res += dataToString(data[all], depth + 1);
 				}
-				string += '}\n';
+				num = vdom.hashCode(num + ';' + res);
 			}
 		}
-		return string;
+		return num;
 	}
-	let hash = vdom.hashCode(dataToString(data));
+	dataList = [];
+	let hash = dataToString(data);
 
 	if (tag.__dataHash === hash) {
 		// data did not change, so no re-render required

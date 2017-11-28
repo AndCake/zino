@@ -188,7 +188,7 @@ function isArray(obj) {
 	return Object.prototype.toString.call(obj) === '[object Array]';
 }
 
-function hashCode(str) {
+function hashCode$1(str) {
 	var hash = 0,
 	    i = void 0,
 	    chr = void 0;
@@ -224,7 +224,7 @@ function Tag(tagName, attributes) {
 		children: children.filter(function (child) {
 			return child;
 		}),
-		__hash: hashCode(tagName + '!' + attributeHash + '@' + children.map(function (child) {
+		__hash: hashCode$1(tagName + '!' + attributeHash + '@' + children.map(function (child) {
 			return child && child.__hash || child;
 		}).join('!'))
 	};
@@ -638,25 +638,24 @@ function renderTag(tag) {
 	setDataResolver(resolveData);
 	clearTagsCreated();
 	var data = getAttributes(tag);
-
 	function dataToString(data) {
 		var depth = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
 
-		var string = '';
+		var num = 0;
 		for (var all in data) {
 			if (_typeof(data[all]) !== 'object') {
-				string += all + ': ' + (data[all] === null || data[all] === undefined ? 'null' : data[all]).toString() + '\n';
+				num = hashCode(num + ';' + all + ':' + (data[all] === null || data[all] === undefined ? 'null' : data[all]).toString());
 			} else {
-				string += all + ': {\n';
-				if (depth < 10 && !(depth === 0 && all === 'element')) {
-					string += dataToString(data[all], depth + 1);
+				var res = all + ':';
+				if (depth < 10 && !(depth === 0 && all === 'element') && list.indexOf(data[all]) < 0) {
+					res += dataToString(data[all], depth + 1);
 				}
-				string += '}\n';
+				num = hashCode(num + ';' + res);
 			}
 		}
-		return string;
+		return num;
 	}
-	var hash = hashCode(dataToString(data));
+	var hash = dataToString(data);
 
 	if (tag.__dataHash === hash) {
 		// data did not change, so no re-render required
