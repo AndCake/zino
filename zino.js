@@ -608,6 +608,7 @@ function applyText(domChild, dom, node, document) {
  * @param  {Document} document - the document that the DOM is based on, used for createElement() and createTextNode() calls
  */
 function applyDOM(dom, vdom, document) {
+	if (!dom || !vdom) return;
 	if (!isArray(vdom)) {
 		// if we have a node
 		if (!isArray(vdom.children)) vdom.children = [vdom.children];
