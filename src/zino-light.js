@@ -86,7 +86,6 @@ tagObserver.observe(document.body, {
 });
 
 function loopList(start, list, action) {
-	let end;
 	while (list.length > 0) {
 		let entry = list.shift();
 		if (entry instanceof NodeList || entry.length > 0) {
@@ -96,10 +95,8 @@ function loopList(start, list, action) {
 		} else {
 			action(entry);
 		}
-		end = performance.now();
-		if (end - start > 16) { break; }
+		if (performance.now() - start > 16) { break; }
 	}
-	return end;
 }
 
 requestAnimationFrame(function reRender(start) {

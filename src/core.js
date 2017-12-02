@@ -44,8 +44,19 @@ export function getDataRegistry() { return dataRegistry; }
 export function setDataRegistry(newValues) { dataRegistry = newValues; }
 export function setResolveData(fn) { resolveData = fn; }
 export function registerTag(fn, document, Zino) {
-	let firstElement = fn(vdom.Tag, Zino),
-		tagName = firstElement.tagName || (fn.name||'').replace(/([A-Z])/g, (g, beginning) => '-' + beginning).toLowerCase().replace(/^-/, '');
+	let firstElement = new fn(vdom.Tag, Zino),
+		tagName = (firstElement && firstElement.tagName) || (fn.name||'').replace(/([A-Z])/g, (g, beginning) => '-' + beginning).toLowerCase().replace(/^-/, '');
+
+	if (firstElement instanceof fn) {
+		firstElement.__zino = Zino;
+		firstElement.functions = {
+			props: firstElement.props || {},
+			events: firstElement.events || {},
+			render: firstElement.onrender || emptyFunc,
+			mount: firstElement.onmount || emptyFunc,
+			unmount: firstElement.onunmount || emptyFunc
+		};
+	}
 
 	if (tagRegistry[tagName]) {
 		// tag is already registered
@@ -73,6 +84,7 @@ export function mount(tag, ignoreRender) {
 export function render(tag) {
 	if (!tag || !tag.addEventListener) return;
 	let subEvents = renderTag(tag);
+	if (!subEvents) return;
 	attachSubEvents(subEvents, tag);
 }
 
@@ -104,8 +116,9 @@ function initializeTag(tag, registryEntry) {
 	if (!tag.nodeType) while (tag.children.length > 1) {
 		tag.children.pop();
 	}
-	trigger('--zino-initialize-node', {tag, node: functions});
+	trigger('--zino-initialize-node', {tag, node: functions, entry: registryEntry});
 	tag.__vdom = {};
+	tag.createNode = vdom.Tag;
 
 	// render the tag's content
 	let subEvents = !tag.isRendered && renderTag.call(this, tag) || {events:[]};
@@ -124,7 +137,7 @@ function initializeTag(tag, registryEntry) {
 	if (!tag.attributes.__ready) {
 		defineAttribute(tag, '__ready', true);
 	}
-	
+
 	if (!this || this.noEvents !== true) {
 		// attach sub events
 		attachSubEvents(subEvents, tag);
@@ -148,7 +161,7 @@ function defineAttribute(tag, name, value) {
 	}
 }
 
-function initializeNode({tag, node: functions = defaultFunctions}) {
+function initializeNode({tag, node: functions = defaultFunctions, entry}) {
 	// copy all defined functions/attributes
 	for (let all in functions) {
 		let entry = functions[all];
@@ -183,7 +196,7 @@ function initializeNode({tag, node: functions = defaultFunctions}) {
 
 	try {
 		tag.mounting = true;
-		functions.mount.call(tag);
+		functions.mount.call(tag, entry.__zino);
 		delete tag.mounting;
 	} catch (e) {
 		throw new Error('Unable to call mount function for ' + tag.tagName + ': ' + (e.message || e));
@@ -284,7 +297,7 @@ function renderTag(tag, registryEntry = tagRegistry[tag.tagName.toLowerCase()]) 
 				merge(subEl, renderedSubElements[index]);
 				// update getHost to return the DOM node instead of the vdom node
 				if (!renderedSubElements[index] || subEl.tagName.toLowerCase() !== renderedSubElements[index].tagName) {
-					console.info('Inconsistent state - might be caused by additional components generated in render callback: ', subEl, tag.__subs, arr);
+					console.info('Inconsistent state - might be caused by additional components generated in render callback: ', subEl, tag.__subs, ready);
 					inconsistent = true;
 					return;
 				}
@@ -299,14 +312,14 @@ function renderTag(tag, registryEntry = tagRegistry[tag.tagName.toLowerCase()]) 
 		// call all of our sub component's render functions
 		renderCallbacks.forEach(callback => {
 			try {
-				callback.fn.call(callback.tag.getHost())
+				callback.fn.call(callback.tag.getHost(), tagRegistry[callback.tag.getHost().tagName.toLowerCase()].__zino);
 			} catch (e) {
 				throw new Error('Unable to call render callback for component ' + callback.tag.tagName + ': ' + (e.message || e));
 			}
 		});
 		// call our own rendering function
 		try {
-			registryEntry.functions.render.call(tag);
+			registryEntry.functions.render.call(tag, registryEntry.__zino);
 		} catch (e) {
 			throw new Error('Unable to call render callback for component ' + tag.tagName + ': ' + (e.message || e));
 		}
@@ -330,7 +343,7 @@ export function unmount(tag) {
 		});
 		try {
 			entry.__subs && entry.__subs.forEach(unmount);
-			entry.functions.unmount.call(tag);
+			entry.functions.unmount.call(tag, entry.__zino);
 		} catch (e) {
 			throw new Error('Unable to unmount tag ' + name + ': ' + (e.message || e));
 		}

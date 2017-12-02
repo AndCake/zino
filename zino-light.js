@@ -262,9 +262,9 @@ function getTagsCreated() {
  */
 function getInnerHTML(node) {
 	if (!node.children) return '';
-	if (!isArray(node.children)) node.children = [node.children];
+	if (!isArray(node.children) && typeof HTMLCollection !== 'undefined' && !(node.children instanceof HTMLCollection)) node.children = [node.children];
 
-	return (isArray(node) && node || node.children).map(function (child) {
+	return (isArray(node) && node || (typeof HTMLCollection !== 'undefined' && node.children instanceof HTMLCollection ? [].slice.call(node.children) : node.children)).map(function (child) {
 		if ((typeof child === 'undefined' ? 'undefined' : _typeof(child)) !== 'object') {
 			return '' + child;
 		} else if (isArray(child)) {
@@ -346,7 +346,7 @@ function applyDOM(dom, vdom, document) {
 			} else {
 				var attributes = Object.keys(vdom.attributes);
 				// check all vdom attributes
-				for (var attr, index = 0, len = attributes.length; attr = vdom.attributes[attributes[index]], index < len; index += 1) {
+				for (var attr, _index = 0, len = attributes.length; attr = vdom.attributes[attributes[_index]], _index < len; _index += 1) {
 					// if the VDOM attribute is a non-object
 					if (_typeof(attr.value) !== 'object') {
 						// check if it differs
@@ -365,14 +365,17 @@ function applyDOM(dom, vdom, document) {
 					}
 				}
 				// if we have too many attributes in our DOM
-				if (dom.attributes.length > attributes.length) {
-					for (var _attr, _index = 0, _len2 = dom.attributes.length; _attr = dom.attributes[_index], _index < _len2; _index += 1) {
-						// if the respective attribute does not exist on the VDOM
-						if (typeof attributes[_attr.name] === 'undefined') {
-							// remove it
-							dom.removeAttribute(_attr.name);
-						}
+				var index = 0;
+				while (dom.attributes.length > attributes.length) {
+					var _attr = dom.attributes[index];
+					// if the respective attribute does not exist on the VDOM
+					if (typeof attributes[_attr.name] === 'undefined') {
+						// remove it
+						dom.removeAttribute(_attr.name);
+						index = 0;
+						continue;
 					}
+					index += 1;
 				}
 			}
 		}
@@ -380,7 +383,7 @@ function applyDOM(dom, vdom, document) {
 
 	// deal with the vdom's children
 	var children = isArray(vdom) ? vdom : vdom.__hash !== dom.__hash ? vdom.children : [];
-	for (var _index2 = 0, node, _len3 = children.length; node = children[_index2], _index2 < _len3; _index2 += 1) {
+	for (var _index2 = 0, node, _len2 = children.length; node = children[_index2], _index2 < _len2; _index2 += 1) {
 		if (isArray(node)) return applyDOM(dom, node, document);
 		var domChild = dom.childNodes[_index2];
 		if (typeof domChild === 'undefined') {
@@ -407,8 +410,10 @@ function applyDOM(dom, vdom, document) {
 	}
 	if (dom.__hash !== vdom.__hash && dom.childNodes.length > children.length) {
 		// remove superfluous child nodes
-		for (var _index3 = children.length, _len4 = dom.childNodes.length; _index3 < _len4; _index3 += 1) {
+		for (var _index3 = children.length, _len3 = dom.childNodes.length; _index3 < _len3; _index3 += 1) {
 			dom.removeChild(dom.childNodes[_index3]);
+			_len3 -= 1;
+			_index3 -= 1;
 		}
 	}
 	dom.__hash = vdom.__hash;
@@ -463,10 +468,21 @@ function setDataRegistry(newValues) {
 }
 
 function registerTag(fn, document, Zino) {
-	var firstElement = fn(Tag, Zino),
-	    tagName = firstElement.tagName || (fn.name || '').replace(/([A-Z])/g, function (g, beginning) {
+	var firstElement = new fn(Tag, Zino),
+	    tagName = firstElement && firstElement.tagName || (fn.name || '').replace(/([A-Z])/g, function (g, beginning) {
 		return '-' + beginning;
 	}).toLowerCase().replace(/^-/, '');
+
+	if (firstElement instanceof fn) {
+		firstElement.__zino = Zino;
+		firstElement.functions = {
+			props: firstElement.props || {},
+			events: firstElement.events || {},
+			render: firstElement.onrender || emptyFunc,
+			mount: firstElement.onmount || emptyFunc,
+			unmount: firstElement.onunmount || emptyFunc
+		};
+	}
 
 	if (tagRegistry[tagName]) {
 		// tag is already registered
@@ -498,6 +514,7 @@ function mount(tag, ignoreRender) {
 function render(tag) {
 	if (!tag || !tag.addEventListener) return;
 	var subEvents = renderTag(tag);
+	if (!subEvents) return;
 	attachSubEvents(subEvents, tag);
 }
 
@@ -527,8 +544,9 @@ function initializeTag(tag, registryEntry) {
 	if (!tag.nodeType) while (tag.children.length > 1) {
 		tag.children.pop();
 	}
-	trigger('--zino-initialize-node', { tag: tag, node: functions });
+	trigger('--zino-initialize-node', { tag: tag, node: functions, entry: registryEntry });
 	tag.__vdom = {};
+	tag.createNode = Tag;
 
 	// render the tag's content
 	var subEvents = !tag.isRendered && renderTag.call(this, tag) || { events: [] };
@@ -576,16 +594,17 @@ function defineAttribute(tag, name, value) {
 function initializeNode(_ref) {
 	var tag = _ref.tag,
 	    _ref$node = _ref.node,
-	    functions = _ref$node === undefined ? defaultFunctions : _ref$node;
+	    functions = _ref$node === undefined ? defaultFunctions : _ref$node,
+	    entry = _ref.entry;
 
 	// copy all defined functions/attributes
 	for (var all in functions) {
-		var entry = functions[all];
+		var _entry = functions[all];
 		if (['mount', 'unmount', 'events', 'render'].indexOf(all) < 0) {
-			if (isFn(entry)) {
-				tag[all] = entry.bind(tag);
+			if (isFn(_entry)) {
+				tag[all] = _entry.bind(tag);
 			} else {
-				tag[all] = isObj(tag[all]) ? merge({}, entry, tag[all]) : entry;
+				tag[all] = isObj(tag[all]) ? merge({}, _entry, tag[all]) : _entry;
 			}
 		}
 	}
@@ -614,7 +633,7 @@ function initializeNode(_ref) {
 
 	try {
 		tag.mounting = true;
-		functions.mount.call(tag);
+		functions.mount.call(tag, entry.__zino);
 		delete tag.mounting;
 	} catch (e) {
 		throw new Error('Unable to call mount function for ' + tag.tagName + ': ' + (e.message || e));
@@ -719,7 +738,7 @@ function renderTag(tag) {
 				merge(_subEl, renderedSubElements[index]);
 				// update getHost to return the DOM node instead of the vdom node
 				if (!renderedSubElements[index] || _subEl.tagName.toLowerCase() !== renderedSubElements[index].tagName) {
-					console.info('Inconsistent state - might be caused by additional components generated in render callback: ', _subEl, tag.__subs, arr);
+					console.info('Inconsistent state - might be caused by additional components generated in render callback: ', _subEl, tag.__subs, ready);
 					inconsistent = true;
 					return;
 				}
@@ -734,14 +753,14 @@ function renderTag(tag) {
 		// call all of our sub component's render functions
 		renderCallbacks.forEach(function (callback) {
 			try {
-				callback.fn.call(callback.tag.getHost());
+				callback.fn.call(callback.tag.getHost(), tagRegistry[callback.tag.getHost().tagName.toLowerCase()].__zino);
 			} catch (e) {
 				throw new Error('Unable to call render callback for component ' + callback.tag.tagName + ': ' + (e.message || e));
 			}
 		});
 		// call our own rendering function
 		try {
-			registryEntry.functions.render.call(tag);
+			registryEntry.functions.render.call(tag, registryEntry.__zino);
 		} catch (e) {
 			throw new Error('Unable to call render callback for component ' + tag.tagName + ': ' + (e.message || e));
 		}
@@ -767,7 +786,7 @@ function unmount(tag) {
 		});
 		try {
 			entry.__subs && entry.__subs.forEach(unmount);
-			entry.functions.unmount.call(tag);
+			entry.functions.unmount.call(tag, entry.__zino);
 		} catch (e) {
 			throw new Error('Unable to unmount tag ' + name + ': ' + (e.message || e));
 		}
@@ -950,7 +969,6 @@ tagObserver.observe(document.body, {
 });
 
 function loopList(start, list, action) {
-	var end = void 0;
 	while (list.length > 0) {
 		var entry = list.shift();
 		if (entry instanceof NodeList || entry.length > 0) {
@@ -960,12 +978,10 @@ function loopList(start, list, action) {
 		} else {
 			action(entry);
 		}
-		end = performance.now();
-		if (end - start > 16) {
+		if (performance.now() - start > 16) {
 			break;
 		}
 	}
-	return end;
 }
 
 requestAnimationFrame(function reRender(start) {

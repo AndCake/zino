@@ -29,7 +29,7 @@ setComponentLoader((path, fn) => {
 			element = element(() => {}, Zino);
 			isDeep = true;
 		}
-		let tagName = element.tagName || (isDeep ? code() : code).name.replace(/([a-z])([A-Z])/g, (g, end, beginning) => end + '-' + beginning).toLowerCase();
+		let tagName = (element && element.tagName) || (isDeep ? code() : code).name.replace(/([a-z])([A-Z])/g, (g, end, beginning) => end + '-' + beginning).toLowerCase();
 		componentRegistry[tagName] = {path: originalExtBasePath + path, code: code.toString()};
 		fn(isDeep ? code() : code);
 	} catch(e) {
@@ -138,7 +138,7 @@ export function renderComponent(name, path, props) {
 				return styles + output + preloader;
 			};
 
-			Zino.off('--zino-rerender-tag', actions.render);	
+			Zino.off('--zino-rerender-tag', actions.render);
 			resolve(result);
 		});
 	});

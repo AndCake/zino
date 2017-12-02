@@ -78,9 +78,9 @@ export function getTagsCreated() {
  */
 export function getInnerHTML(node) {
 	if (!node.children) return '';
-	if (!isArray(node.children)) node.children = [node.children];
+	if (!isArray(node.children) && (typeof HTMLCollection !== 'undefined' && !(node.children instanceof HTMLCollection))) node.children = [node.children];
 
-	return (isArray(node) && node || node.children).map(child => {
+	return (isArray(node) && node || (typeof HTMLCollection !== 'undefined' && node.children instanceof HTMLCollection ? [].slice.call(node.children) : node.children)).map(child => {
 		if (typeof child !== 'object') {
 			return '' + child;
 		} else if (isArray(child)) {
@@ -179,14 +179,17 @@ export function applyDOM(dom, vdom, document) {
 					}
 				}
 				// if we have too many attributes in our DOM
-				if (dom.attributes.length > attributes.length) {
-					for (let attr, index = 0, len = dom.attributes.length; attr = dom.attributes[index], index < len; index += 1) {
-						// if the respective attribute does not exist on the VDOM
-						if (typeof attributes[attr.name] === 'undefined') {
-							// remove it
-							dom.removeAttribute(attr.name);
-						}
+				let index = 0;
+				while (dom.attributes.length > attributes.length) {
+					let attr = dom.attributes[index];
+					// if the respective attribute does not exist on the VDOM
+					if (typeof attributes[attr.name] === 'undefined') {
+						// remove it
+						dom.removeAttribute(attr.name);
+						index = 0;
+						continue;
 					}
+					index += 1;
 				}
 			}
 		}
@@ -223,6 +226,8 @@ export function applyDOM(dom, vdom, document) {
 		// remove superfluous child nodes
 		for (let index = children.length, len = dom.childNodes.length; index < len; index += 1) {
 			dom.removeChild(dom.childNodes[index]);
+			len -= 1;
+			index -= 1;
 		}
 	}
 	dom.__hash = vdom.__hash;
