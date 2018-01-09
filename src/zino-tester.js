@@ -14,6 +14,7 @@ import readline from 'readline-sync';
 const sha1 = data => createHash('sha1').update(data).digest('hex');
 let fileName = null,
 	tagPath,
+	dataRegistry = {},
 	eventList = [];
 
 merge(global, {
@@ -31,19 +32,23 @@ on('publish-script', src => {
 });
 
 export function importTag(tagFile, document) {
-	let data = fs.readFileSync(tagFile, 'utf-8');
 	let code;
-	tagPath = path.dirname(tagFile);
-	try {
-		// if we have HTML input
-		if (data.trim().indexOf('<') === 0) {
-			// convert it to JS
-			data = parse(data);
+	if (typeof tagFile === 'string') {
+		let data = fs.readFileSync(tagFile, 'utf-8');
+		tagPath = path.dirname(tagFile);
+		try {
+			// if we have HTML input
+			if (data.trim().indexOf('<') === 0) {
+				// convert it to JS
+				data = parse(data);
+			}
+			code = new Function('return ' + data.replace(/\bZino.import\s*\(/g, 'Zino.import.call({path: ' + JSON.stringify(path.dirname(tagFile)) + '}, ').trim().replace(/;$/, ''))();
+		} catch(e) {
+			e.message = 'Unable to import tag ' + tagFile + ': ' + e.message;
+			throw e;
 		}
-		code = new Function('return ' + data.replace(/\bZino.import\s*\(/g, 'Zino.import.call({path: ' + JSON.stringify(path.dirname(tagFile)) + '}, ').trim().replace(/;$/, ''))();
-	} catch(e) {
-		e.message = 'Unable to import tag ' + tagFile + ': ' + e.message;
-		throw e;
+	} else {
+		code = tagFile(vdom.Tag, Zino);
 	}
 	code && core.registerTag(code, document, Zino);
 }
@@ -72,12 +77,18 @@ export function matchesSnapshot(...args) {
 
 	name = name.replace(/[^a-zA-Z0-9._-]/g, '-');
 	fileName = './test/snapshots/' + code.children[0].tagName.toLowerCase() + '-' + (name && name + '-' || '') + sha1(html + JSON.stringify(props) + callback.toString()).substr(0, 5);
-	core.setResolveData((key, value) => sha1(key + '-' + JSON.stringify(value)));
-	let {events, data} = core.mount(code.children[0], true);
-
+	core.setResolveData((key, value, oldValue) => {
+		let id = sha1(key + '-' + JSON.stringify(value));
+		if (oldValue) {
+			delete dataRegistry[oldValue];
+		}
+		dataRegistry[id] = value;
+		return id;
+	}, (key) => dataRegistry[key]);
 	if (Object.keys(props).length > 0) {
-		code.children[0].setProps(props);
+		code.children[0].props = props;
 	}
+	let {events, data} = core.mount(code.children[0], true);
 
 	callback(code.children[0]);
 

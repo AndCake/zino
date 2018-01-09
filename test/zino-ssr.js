@@ -15,5 +15,5 @@ test('can deal with styles', t => {
 
 test('renders classes correctly', t => {
 	let result = renderComponent('server-test-class', './test/components/server-test-class');
-	result.then(page => t.is(('' + page).split('<script>')[0], '<server-test-class><div class="-shadow-root"><div class="test">Hello World!</div></div></server-test-class>'));
+	result.then(page => t.is(('' + page).split('<script>')[0], '<server-test-class><div class="-shadow-root"><div class="test">Hello World!</div></div></server-test-class>')).catch(e => t.is(false, true, 'Error: ' + e));
 });

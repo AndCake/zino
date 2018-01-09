@@ -703,6 +703,10 @@ var resolveData = function resolveData(key, value, oldID) {
 	return id;
 };
 
+var resolveDataKey = function resolveDataKey(key) {
+	return dataRegistry[key];
+};
+
 var tagRegistry = {};
 var dataRegistry = {};
 var defaultFunctions = {
@@ -743,7 +747,12 @@ function setDataRegistry(newValues) {
 
 function registerTag(fn, document, Zino) {
 	var firstElement = new fn(Tag, Zino),
-	    tagName = firstElement && firstElement.tagName || (fn.name || '').replace(/([A-Z])/g, function (g, beginning) {
+	    tagName = firstElement && firstElement.tagName || fn.name || '';
+	if (!tagName) {
+		tagName = fn.toString().split('\n')[0].replace(/^\s*function\s+(.*?)\s*\(.*$/, '$1');
+		if (!tagName.match(/^[A-Z][A-Za-z]*$/)) tagName = '';
+	}
+	tagName = tagName.replace(/([A-Z])/g, function (g, beginning) {
 		return '-' + beginning;
 	}).toLowerCase().replace(/^-/, '');
 
@@ -910,7 +919,8 @@ function initializeNode(_ref) {
 		functions.mount.call(tag, entry.__zino);
 		delete tag.mounting;
 	} catch (e) {
-		throw new Error('Unable to call mount function for ' + tag.tagName + ': ' + (e.message || e));
+		e.message = 'Unable to call mount function for ' + tag.tagName + ': ' + (e.message || e);
+		throw e;
 	}
 }
 
@@ -1014,7 +1024,7 @@ function renderTag(tag) {
 				if (!renderedSubElements[index] || _subEl.tagName.toLowerCase() !== renderedSubElements[index].tagName) {
 					console.info('Inconsistent state - might be caused by additional components generated in render callback: ', _subEl, tag.__subs, ready);
 					inconsistent = true;
-					return;
+					break;
 				}
 				_subEl.getHost = renderedSubElements[index].getHost = defaultFunctions.getHost.bind(_subEl);
 			}
@@ -1076,8 +1086,11 @@ function getAttributes(tag, propsOnly) {
 	}), function (attribute) {
 		var isComplex = attribute.name.indexOf('data-') >= 0 && typeof attribute.value === 'string' && attribute.value.substr(0, 2) === '--';
 		var value = attribute.value;
-		attrs[attribute.name] || (attrs[attribute.name] = isComplex && typeof value === 'string' && dataRegistry[value.replace(/^--|--$/g, '')] || value);
+		attrs[attribute.name] || (attrs[attribute.name] = isComplex && typeof value === 'string' && resolveDataKey(value.replace(/^--|--$/g, '')) || value);
 		if (attribute.name.indexOf('data-') === 0) {
+			if (typeof attrs[attribute.name] === 'string' && attrs[attribute.name].match(/^--[a-f0-9-]+--$/)) {
+				attrs[attribute.name] = resolveDataKey(value.replace(/^--|--$/g, ''));
+			}
 			props[attribute.name.replace(/^data-/g, '').replace(/(\w)-(\w)/g, function (g, m1, m2) {
 				return m1 + m2.toUpperCase();
 			})] = attrs[attribute.name];

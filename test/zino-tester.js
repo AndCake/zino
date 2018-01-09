@@ -70,3 +70,32 @@ test('Can manage event handling', t => {
 	Zino.trigger('my-event');
 
 });
+
+test('Can deal with empty props', t => {
+	let document = new Document('<prop-container></prop-container>');
+	zino.clearImports();
+	document.querySelectorAll('prop-container')[0].props = {
+		data: undefined
+	};
+	zino.importTag(function() { return function PropReceiver() {
+		this.render = function(data) {
+			return this.createNode('div', null, data.props.attr);
+		};
+	}});
+	zino.importTag(function() { return function PropContainer() {
+		this.render = function(data) {
+			return (
+				this.createNode('div', null,
+					this.createNode('prop-receiver', {'data-attr': data.props.data})
+				)
+			);
+		};
+	}}, document);
+	t.is(document.querySelectorAll('prop-receiver')[0].props.attr, undefined, 'receives prop as undefined');
+	document.querySelectorAll('prop-container')[0].setProps('data', null);
+	t.is(document.querySelectorAll('prop-receiver')[0].props.attr, undefined, 'receives prop as null');
+	document.querySelectorAll('prop-container')[0].setProps('data', '');
+	t.is(document.querySelectorAll('prop-receiver')[0].props.attr, undefined, 'receives prop as empty string');
+	document.querySelectorAll('prop-container')[0].setProps('data', undefined);
+	t.is(document.querySelectorAll('prop-receiver')[0].props.attr, undefined, 'receives prop as undefined');
+});

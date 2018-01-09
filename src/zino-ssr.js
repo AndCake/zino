@@ -139,6 +139,8 @@ export function renderComponent(name, path, props) {
 			};
 
 			Zino.off('--zino-rerender-tag', actions.render);
+			flushRegisteredTags();
+			setDataRegistry({});
 			resolve(result);
 		});
 	});

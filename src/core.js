@@ -12,6 +12,8 @@ let resolveData = (key, value, oldID) => {
 	return id;
 };
 
+let resolveDataKey = (key) => dataRegistry[key];
+
 let tagRegistry = {},
 	dataRegistry = {},
 	defaultFunctions = {
@@ -42,10 +44,15 @@ let tagRegistry = {},
 
 export function getDataRegistry() { return dataRegistry; }
 export function setDataRegistry(newValues) { dataRegistry = newValues; }
-export function setResolveData(fn) { resolveData = fn; }
+export function setResolveData(fn, fn2) { resolveData = fn; resolveDataKey = fn2; }
 export function registerTag(fn, document, Zino) {
 	let firstElement = new fn(vdom.Tag, Zino),
-		tagName = (firstElement && firstElement.tagName) || (fn.name||'').replace(/([A-Z])/g, (g, beginning) => '-' + beginning).toLowerCase().replace(/^-/, '');
+		tagName = (firstElement && firstElement.tagName) || (fn.name||'');
+	if (!tagName) {
+		tagName = fn.toString().split('\n')[0].replace(/^\s*function\s+(.*?)\s*\(.*$/, '$1');
+		if (!tagName.match(/^[A-Z][A-Za-z]*$/)) tagName = '';
+	}
+	tagName = tagName.replace(/([A-Z])/g, (g, beginning) => '-' + beginning).toLowerCase().replace(/^-/, '')
 
 	if (firstElement instanceof fn) {
 		firstElement.__zino = Zino;
@@ -199,7 +206,8 @@ function initializeNode({tag, node: functions = defaultFunctions, entry}) {
 		functions.mount.call(tag, entry.__zino);
 		delete tag.mounting;
 	} catch (e) {
-		throw new Error('Unable to call mount function for ' + tag.tagName + ': ' + (e.message || e));
+		e.message = 'Unable to call mount function for ' + tag.tagName + ': ' + (e.message || e);
+		throw e;
 	}
 }
 
@@ -299,7 +307,7 @@ function renderTag(tag, registryEntry = tagRegistry[tag.tagName.toLowerCase()]) 
 				if (!renderedSubElements[index] || subEl.tagName.toLowerCase() !== renderedSubElements[index].tagName) {
 					console.info('Inconsistent state - might be caused by additional components generated in render callback: ', subEl, tag.__subs, ready);
 					inconsistent = true;
-					return;
+					break;
 				}
 				subEl.getHost = renderedSubElements[index].getHost = defaultFunctions.getHost.bind(subEl);
 			}
@@ -357,8 +365,11 @@ function getAttributes(tag, propsOnly) {
 	[].forEach.call(tag.nodeType === 1 && tag.attributes || Object.keys(tag.attributes).map(attr => tag.attributes[attr]), attribute => {
 		let isComplex = attribute.name.indexOf('data-') >= 0 && typeof attribute.value === 'string' && attribute.value.substr(0, 2) === '--';
 		let value = attribute.value;
-		attrs[attribute.name] || (attrs[attribute.name] = isComplex && typeof value === 'string' && dataRegistry[value.replace(/^--|--$/g, '')] || value);
+		attrs[attribute.name] || (attrs[attribute.name] = isComplex && typeof value === 'string' && resolveDataKey(value.replace(/^--|--$/g, '')) || value);
 		if (attribute.name.indexOf('data-') === 0) {
+			if (typeof attrs[attribute.name] === 'string' && attrs[attribute.name].match(/^--[a-f0-9-]+--$/)) {
+				attrs[attribute.name] = resolveDataKey(value.replace(/^--|--$/g, ''));
+			}
 			props[attribute.name.replace(/^data-/g, '').replace(/(\w)-(\w)/g, (g, m1, m2) => m1 + m2.toUpperCase())] = attrs[attribute.name];
 		}
 	});

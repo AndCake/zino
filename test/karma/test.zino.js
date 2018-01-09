@@ -165,7 +165,7 @@ describe('zino', function () {
 		var vc = document.createElement('virtual-component');
 		vc.innerHTML = 'Lorem ipsum dolor sit amet';
 		document.body.appendChild(vc);
-		
+
 		it('renders the component', function(done) {
 			setTimeout(function() {
 				assertNotEmpty(document.querySelectorAll('virtual-component .-shadow-root'), 'component rendered');
@@ -285,27 +285,6 @@ describe('zino', function () {
 				}
 			}
 		});
-		Zino.import(function ConsistencyTest(Tag) {
-			return {
-				render: function(data) {
-					return [Tag('h1', null, 'Click me'), Tag('part-a'), Tag('p', null, 'Lorem ipsum')];
-				},
-				functions: {
-					props: {
-						part: 'a'
-					},
-					events: {
-						h1: {click: function() {
-							this.getHost().setProps('part', this.getHost().props.part === 'a' ? 'b' : 'a');
-						}}
-					},
-					render: function() {
-						var part = this.ownerDocument.createElement('part-' + this.props.part);
-						this.querySelectorAll('.-shadow-root')[0].replaceChild(part, this.querySelectorAll('part-a, part-b')[0]);
-					},
-				}
-			}
-		});
 		it('can deal with inconsistency', function(done) {
 			var consistencyTest = document.createElement('consistency-test');
 			consistencyTest.onready = function() {
@@ -322,11 +301,32 @@ describe('zino', function () {
 						setTimeout(function() {
 							assertNotEmpty(document.querySelectorAll('consistency-test part-b ul li'), 'has resolved inconsistency and events still work');
 							done();
-						}, 100);
-					}, 100);
-				}, 100);
+						}, 1000);
+					}, 1000);
+				}, 1000);
 			};
 			document.body.appendChild(consistencyTest);
+			Zino.import(function ConsistencyTest(Tag) {
+				return {
+					render: function(data) {
+						return [Tag('h1', null, 'Click me'), Tag('part-a'), Tag('p', null, 'Lorem ipsum')];
+					},
+					functions: {
+						props: {
+							part: 'a'
+						},
+						events: {
+							h1: {click: function() {
+								this.getHost().setProps('part', this.getHost().props.part === 'a' ? 'b' : 'a');
+							}}
+						},
+						render: function() {
+							var part = this.ownerDocument.createElement('part-' + this.props.part);
+							this.querySelectorAll('.-shadow-root')[0].replaceChild(part, this.querySelectorAll('part-a, part-b')[0]);
+						},
+					}
+				}
+			});
 		});
 	});
 });
