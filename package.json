@@ -22,7 +22,7 @@
         "build:light": "rollup -c -i src/zino-light.js -o zino-light.js &&  uglifyjs -m -c --screw-ie8 --in-source-map zino-light.js.map --source-map zino-light.min.js.map -o zino-light.min.js zino-light.js && gzip -c9 zino-light.min.js > zino-light.min.js.gz",
         "build:server": "rollup -c -f cjs -i src/zino-ssr.js -o zino-ssr.js",
         "start": "npm run build:light && npm run build:fat && npm run build:server",
-        "test": "(rollup -c rollup.config.test.js | node)",
+        "test": "(rollup -c rollup.config.test.js > func-test.js) && (istanbul cover func-test.js); rm func-test.js",
         "watch": "while inotifywait -qq -r -e close_write ./src ./test; do npm test; done",
         "debug": "rollup -c rollup.config.test.js -o index.js && node --inspect-brk index.js",
         "clean": "rm zino*.js* index.js",
@@ -51,6 +51,7 @@
     "dependencies": {
         "colors": "^1.1.2",
         "fast-diff": "^1.1.2",
+        "istanbul": "^0.4.5",
         "nano-dom": "^0.1.12",
         "now-promise": "0.0.3",
         "readline-sync": "^1.4.7"

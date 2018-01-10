@@ -93,9 +93,9 @@ test('Can deal with empty props', t => {
 	}}, document);
 	t.is(document.querySelectorAll('prop-receiver')[0].props.attr, undefined, 'receives prop as undefined');
 	document.querySelectorAll('prop-container')[0].setProps('data', null);
-	t.is(document.querySelectorAll('prop-receiver')[0].props.attr, undefined, 'receives prop as null');
+	t.is(document.querySelectorAll('prop-receiver')[0].props.attr, null, 'receives prop as null');
 	document.querySelectorAll('prop-container')[0].setProps('data', '');
-	t.is(document.querySelectorAll('prop-receiver')[0].props.attr, undefined, 'receives prop as empty string');
+	t.is(document.querySelectorAll('prop-receiver')[0].props.attr, '', 'receives prop as empty string');
 	document.querySelectorAll('prop-container')[0].setProps('data', undefined);
 	t.is(document.querySelectorAll('prop-receiver')[0].props.attr, undefined, 'receives prop as undefined');
 });

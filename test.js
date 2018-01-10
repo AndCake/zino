@@ -29,13 +29,13 @@ function merge(target) {
 		args[_key - 1] = arguments[_key];
 	}
 
-	args.forEach(function (arg) {
+	for (var arg, len = args.length, index = 0; arg = args[index], index < len; index += 1) {
 		for (var all in arg) {
 			if (typeof HTMLElement !== 'undefined' && arg instanceof HTMLElement || typeof propDetails(arg, all).value !== 'undefined' && (!target[all] || propDetails(target, all).writable)) {
 				if (all !== 'attributes') target[all] = arg[all];
 			}
 		}
-	});
+	}
 
 	return target;
 }
@@ -270,9 +270,9 @@ function getTagsCreated() {
  */
 function getInnerHTML(node) {
 	if (!node.children) return '';
-	if (!isArray(node.children)) node.children = [node.children];
+	if (!isArray(node.children) && typeof HTMLCollection !== 'undefined' && !(node.children instanceof HTMLCollection)) node.children = [node.children];
 
-	return (isArray(node) && node || node.children).map(function (child) {
+	return (isArray(node) && node || (typeof HTMLCollection !== 'undefined' && node.children instanceof HTMLCollection ? [].slice.call(node.children) : node.children)).map(function (child) {
 		if ((typeof child === 'undefined' ? 'undefined' : _typeof(child)) !== 'object') {
 			return '' + child;
 		} else if (isArray(child)) {
@@ -342,6 +342,7 @@ function applyText(domChild, dom, node, document) {
  * @param  {Document} document - the document that the DOM is based on, used for createElement() and createTextNode() calls
  */
 function applyDOM(dom, vdom, document) {
+	if (!dom || !vdom) return;
 	if (!isArray(vdom)) {
 		// if we have a node
 		if (!isArray(vdom.children)) vdom.children = [vdom.children];
@@ -351,34 +352,38 @@ function applyDOM(dom, vdom, document) {
 				// replace the node entirely
 				dom.parentNode.replaceChild(createElement(vdom, document), dom);
 			} else {
+				var attributes = Object.keys(vdom.attributes);
 				// check all vdom attributes
-				Object.keys(vdom.attributes).forEach(function (attr) {
+				for (var attr, _index = 0, len = attributes.length; attr = vdom.attributes[attributes[_index]], _index < len; _index += 1) {
 					// if the VDOM attribute is a non-object
-					if (_typeof(vdom.attributes[attr].value) !== 'object') {
+					if (_typeof(attr.value) !== 'object') {
 						// check if it differs
-						if (dom.getAttribute(attr) != vdom.attributes[attr].value) {
+						if (dom.getAttribute(attr.name) != attr.value) {
 							// if so, apply it
-							dom.setAttribute(attr, vdom.attributes[attr].value);
+							dom.setAttribute(attr.name, attr.value);
 						}
 					} else {
 						// the attribute is an object
-						if (dom.getAttribute(attr) && dom.getAttribute(attr).match(/^--|--$/g)) {
+						if (dom.getAttribute(attr.name) && dom.getAttribute(attr.name).match(/^--|--$/g)) {
 							// if it has a complex value, use the data resolver to define it on the DOM
-							var id = dataResolver(attr, vdom.attributes[attr].value, dom.getAttribute(attr).replace(/^--|--$/g, ''));
+							var id = dataResolver(attr.name, attr.value, dom.getAttribute(attr.name).replace(/^--|--$/g, ''));
 							// only set the ID with markers so that we know it is supposed to be a complex value
-							dom.setAttribute(attr, '--' + id + '--');
+							dom.setAttribute(attr.name, '--' + id + '--');
 						}
 					}
-				});
+				}
 				// if we have too many attributes in our DOM
-				if (dom.attributes.length > Object.keys(vdom.attributes).length) {
-					[].forEach.call(dom.attributes, function (attr) {
-						// if the respective attribute does not exist on the VDOM
-						if (typeof vdom.attributes[attr.name] === 'undefined') {
-							// remove it
-							dom.removeAttribute(attr.name);
-						}
-					});
+				var index = 0;
+				while (dom.attributes.length > attributes.length) {
+					var _attr = dom.attributes[index];
+					// if the respective attribute does not exist on the VDOM
+					if (typeof attributes[_attr.name] === 'undefined') {
+						// remove it
+						dom.removeAttribute(_attr.name);
+						index = 0;
+						continue;
+					}
+					index += 1;
 				}
 			}
 		}
@@ -386,9 +391,9 @@ function applyDOM(dom, vdom, document) {
 
 	// deal with the vdom's children
 	var children = isArray(vdom) ? vdom : vdom.__hash !== dom.__hash ? vdom.children : [];
-	children.forEach(function (node, index) {
+	for (var _index2 = 0, node, _len2 = children.length; node = children[_index2], _index2 < _len2; _index2 += 1) {
 		if (isArray(node)) return applyDOM(dom, node, document);
-		var domChild = dom.childNodes[index];
+		var domChild = dom.childNodes[_index2];
 		if (typeof domChild === 'undefined') {
 			// does not exist, so it needs to be appended
 			dom.appendChild(createElement(node, document));
@@ -410,12 +415,14 @@ function applyDOM(dom, vdom, document) {
 				applyText(domChild, dom, node, document);
 			}
 		}
-	});
+	}
 	if (dom.__hash !== vdom.__hash && dom.childNodes.length > children.length) {
 		// remove superfluous child nodes
-		toArray(dom.childNodes, children.length).forEach(function (child) {
-			return dom.removeChild(child);
-		});
+		for (var _index3 = children.length, _len3 = dom.childNodes.length; _index3 < _len3; _index3 += 1) {
+			dom.removeChild(dom.childNodes[_index3]);
+			_len3 -= 1;
+			_index3 -= 1;
+		}
 	}
 	dom.__hash = vdom.__hash;
 }
@@ -424,14 +431,18 @@ var resolveData = function resolveData(key, value, oldID) {
 	var id = uuid();
 	if (oldID) {
 		// unregister old entry
-		delete dataRegistry[oldID];
+		delete dataRegistry$1[oldID];
 	}
-	dataRegistry[id] = value;
+	dataRegistry$1[id] = value;
 	return id;
 };
 
+var resolveDataKey = function resolveDataKey(key) {
+	return dataRegistry$1[key];
+};
+
 var tagRegistry = {};
-var dataRegistry = {};
+var dataRegistry$1 = {};
 var defaultFunctions = {
 	'props': {},
 	'mount': emptyFunc,
@@ -465,14 +476,30 @@ var defaultFunctions = {
 
 
 
-function setResolveData(fn) {
-	resolveData = fn;
+function setResolveData(fn, fn2) {
+	resolveData = fn;resolveDataKey = fn2;
 }
 function registerTag(fn, document, Zino) {
-	var firstElement = fn(Tag, Zino),
-	    tagName = firstElement.tagName || (fn.name || '').replace(/([A-Z])/g, function (g, beginning) {
+	var firstElement = new fn(Tag, Zino),
+	    tagName = firstElement && firstElement.tagName || fn.name || '';
+	if (!tagName) {
+		tagName = fn.toString().split('\n')[0].replace(/^\s*function\s+(.*?)\s*\(.*$/, '$1');
+		if (!tagName.match(/^[A-Z][A-Za-z]*$/)) tagName = '';
+	}
+	tagName = tagName.replace(/([A-Z])/g, function (g, beginning) {
 		return '-' + beginning;
 	}).toLowerCase().replace(/^-/, '');
+
+	if (firstElement instanceof fn) {
+		firstElement.__zino = Zino;
+		firstElement.functions = {
+			props: firstElement.props || {},
+			events: firstElement.events || {},
+			render: firstElement.onrender || emptyFunc,
+			mount: firstElement.onmount || emptyFunc,
+			unmount: firstElement.onunmount || emptyFunc
+		};
+	}
 
 	if (tagRegistry[tagName]) {
 		// tag is already registered
@@ -504,6 +531,7 @@ function mount(tag, ignoreRender) {
 function render(tag) {
 	if (!tag || !tag.addEventListener) return;
 	var subEvents = renderTag(tag);
+	if (!subEvents) return;
 	attachSubEvents(subEvents, tag);
 }
 
@@ -535,8 +563,9 @@ function initializeTag(tag, registryEntry) {
 	if (!tag.nodeType) while (tag.children.length > 1) {
 		tag.children.pop();
 	}
-	trigger('--zino-initialize-node', { tag: tag, node: functions });
+	trigger('--zino-initialize-node', { tag: tag, node: functions, entry: registryEntry });
 	tag.__vdom = {};
+	tag.createNode = Tag;
 
 	// render the tag's content
 	var subEvents = !tag.isRendered && renderTag.call(this, tag) || { events: [] };
@@ -584,16 +613,17 @@ function defineAttribute(tag, name, value) {
 function initializeNode(_ref) {
 	var tag = _ref.tag,
 	    _ref$node = _ref.node,
-	    functions = _ref$node === undefined ? defaultFunctions : _ref$node;
+	    functions = _ref$node === undefined ? defaultFunctions : _ref$node,
+	    entry = _ref.entry;
 
 	// copy all defined functions/attributes
 	for (var all in functions) {
-		var entry = functions[all];
+		var _entry = functions[all];
 		if (['mount', 'unmount', 'events', 'render'].indexOf(all) < 0) {
-			if (isFn(entry)) {
-				tag[all] = entry.bind(tag);
+			if (isFn(_entry)) {
+				tag[all] = _entry.bind(tag);
 			} else {
-				tag[all] = isObj(tag[all]) ? merge({}, entry, tag[all]) : entry;
+				tag[all] = isObj(tag[all]) ? merge({}, _entry, tag[all]) : _entry;
 			}
 		}
 	}
@@ -622,10 +652,11 @@ function initializeNode(_ref) {
 
 	try {
 		tag.mounting = true;
-		functions.mount.call(tag);
+		functions.mount.call(tag, entry.__zino);
 		delete tag.mounting;
 	} catch (e) {
-		throw new Error('Unable to call mount function for ' + tag.tagName + ': ' + (e.message || e));
+		e.message = 'Unable to call mount function for ' + tag.tagName + ': ' + (e.message || e);
+		throw e;
 	}
 }
 
@@ -641,25 +672,28 @@ function renderTag(tag) {
 	setDataResolver(resolveData);
 	clearTagsCreated();
 	var data = getAttributes(tag);
+	var dataList = [];
 
 	function dataToString(data) {
 		var depth = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
 
-		var string = '';
+		var num = 0;
 		for (var all in data) {
 			if (_typeof(data[all]) !== 'object') {
-				string += all + ': ' + (data[all] === null || data[all] === undefined ? 'null' : data[all]).toString() + '\n';
+				num = hashCode(num + ';' + all + ':' + (data[all] === null || data[all] === undefined ? 'null' : data[all]).toString());
 			} else {
-				string += all + ': {\n';
-				if (depth < 10 && !(depth === 0 && all === 'element')) {
-					string += dataToString(data[all], depth + 1);
+				var res = all + ':';
+				if (depth < 10 && !(depth === 0 && all === 'element') && dataList.indexOf(data[all]) < 0) {
+					dataList.push(data[all]);
+					res += dataToString(data[all], depth + 1);
 				}
-				string += '}\n';
+				num = hashCode(num + ';' + res);
 			}
 		}
-		return string;
+		return num;
 	}
-	var hash = hashCode(dataToString(data));
+	dataList = [];
+	var hash = dataToString(data);
 
 	if (tag.__dataHash === hash) {
 		// data did not change, so no re-render required
@@ -718,17 +752,19 @@ function renderTag(tag) {
 			inconsistent = false;
 		}
 		// if we have rendered any sub components, retrieve their actual DOM node
-		renderedSubElements.length > 0 && (tag.querySelectorAll && toArray(tag.querySelectorAll('[__ready]')) || []).forEach(function (subEl, index, arr) {
-			// apply all additional functionality to them (custom functions, attributes, etc...)
-			merge(subEl, renderedSubElements[index]);
-			// update getHost to return the DOM node instead of the vdom node
-			if (!renderedSubElements[index] || subEl.tagName.toLowerCase() !== renderedSubElements[index].tagName) {
-				console.info('Inconsistent state - might be caused by additional components generated in render callback: ', subEl, tag.__subs, arr);
-				inconsistent = true;
-				return;
+		if (renderedSubElements.length > 0 && tag.querySelectorAll) {
+			for (var _subEl, ready = tag.querySelectorAll('[__ready]'), index = 0, _len = ready.length; _subEl = ready[index], index < _len; index += 1) {
+				// apply all additional functionality to them (custom functions, attributes, etc...)
+				merge(_subEl, renderedSubElements[index]);
+				// update getHost to return the DOM node instead of the vdom node
+				if (!renderedSubElements[index] || _subEl.tagName.toLowerCase() !== renderedSubElements[index].tagName) {
+					console.info('Inconsistent state - might be caused by additional components generated in render callback: ', _subEl, tag.__subs, ready);
+					inconsistent = true;
+					break;
+				}
+				_subEl.getHost = renderedSubElements[index].getHost = defaultFunctions.getHost.bind(_subEl);
 			}
-			subEl.getHost = renderedSubElements[index].getHost = defaultFunctions.getHost.bind(subEl);
-		});
+		}
 	} while (inconsistent);
 	tag.isRendered = true;
 
@@ -737,14 +773,14 @@ function renderTag(tag) {
 		// call all of our sub component's render functions
 		renderCallbacks.forEach(function (callback) {
 			try {
-				callback.fn.call(callback.tag.getHost());
+				callback.fn.call(callback.tag.getHost(), tagRegistry[callback.tag.getHost().tagName.toLowerCase()].__zino);
 			} catch (e) {
 				throw new Error('Unable to call render callback for component ' + callback.tag.tagName + ': ' + (e.message || e));
 			}
 		});
 		// call our own rendering function
 		try {
-			registryEntry.functions.render.call(tag);
+			registryEntry.functions.render.call(tag, registryEntry.__zino);
 		} catch (e) {
 			throw new Error('Unable to call render callback for component ' + tag.tagName + ': ' + (e.message || e));
 		}
@@ -765,12 +801,12 @@ function unmount(tag) {
 		}), function (attr) {
 			// cleanup saved data
 			if (attr.name.indexOf('data-') >= 0) {
-				delete dataRegistry[attr.value];
+				delete dataRegistry$1[attr.value];
 			}
 		});
 		try {
 			entry.__subs && entry.__subs.forEach(unmount);
-			entry.functions.unmount.call(tag);
+			entry.functions.unmount.call(tag, entry.__zino);
 		} catch (e) {
 			throw new Error('Unable to unmount tag ' + name + ': ' + (e.message || e));
 		}
@@ -786,8 +822,11 @@ function getAttributes(tag, propsOnly) {
 	}), function (attribute) {
 		var isComplex = attribute.name.indexOf('data-') >= 0 && typeof attribute.value === 'string' && attribute.value.substr(0, 2) === '--';
 		var value = attribute.value;
-		attrs[attribute.name] || (attrs[attribute.name] = isComplex && typeof value === 'string' && dataRegistry[value.replace(/^--|--$/g, '')] || value);
+		attrs[attribute.name] || (attrs[attribute.name] = isComplex && typeof value === 'string' && resolveDataKey(value.replace(/^--|--$/g, '')) || value);
 		if (attribute.name.indexOf('data-') === 0) {
+			if (typeof attrs[attribute.name] === 'string' && attrs[attribute.name].match(/^--[a-f0-9-]+--$/)) {
+				attrs[attribute.name] = resolveDataKey(value.replace(/^--|--$/g, ''));
+			}
 			props[attribute.name.replace(/^data-/g, '').replace(/(\w)-(\w)/g, function (g, m1, m2) {
 				return m1 + m2.toUpperCase();
 			})] = attrs[attribute.name];
@@ -1049,7 +1088,7 @@ function parse(data) {
 			// opening tag
 			tagStack.push(match[2]);
 			var attributes = makeAttributes(match[3]);
-			resultObject.render += 'new Tag(\'' + match[2] + '\', ' + attributes;
+			resultObject.render += 'Tag(\'' + match[2] + '\', ' + attributes;
 			if (!match[4]) {
 				// not a self-closing tag, so prepare for it's content
 				resultObject.render += ', [].concat(';
@@ -1099,6 +1138,7 @@ var sha1 = function sha1(data) {
 };
 var fileName = null;
 var tagPath = void 0;
+var dataRegistry = {};
 var eventList = [];
 
 merge(global, {
@@ -1118,19 +1158,23 @@ on('publish-script', function (src) {
 });
 
 function importTag(tagFile, document) {
-	var data = fs.readFileSync(tagFile, 'utf-8');
 	var code = void 0;
-	tagPath = path.dirname(tagFile);
-	try {
-		// if we have HTML input
-		if (data.trim().indexOf('<') === 0) {
-			// convert it to JS
-			data = parse(data);
+	if (typeof tagFile === 'string') {
+		var data = fs.readFileSync(tagFile, 'utf-8');
+		tagPath = path.dirname(tagFile);
+		try {
+			// if we have HTML input
+			if (data.trim().indexOf('<') === 0) {
+				// convert it to JS
+				data = parse(data);
+			}
+			code = new Function('return ' + data.replace(/\bZino.import\s*\(/g, 'Zino.import.call({path: ' + JSON.stringify(path.dirname(tagFile)) + '}, ').trim().replace(/;$/, ''))();
+		} catch (e) {
+			e.message = 'Unable to import tag ' + tagFile + ': ' + e.message;
+			throw e;
 		}
-		code = new Function('return ' + data.replace(/\bZino.import\s*\(/g, 'Zino.import.call({path: ' + JSON.stringify(path.dirname(tagFile)) + '}, ').trim().replace(/;$/, ''))();
-	} catch (e) {
-		e.message = 'Unable to import tag ' + tagFile + ': ' + e.message;
-		throw e;
+	} else {
+		code = tagFile(Tag, Zino);
 	}
 	code && registerTag(code, document, Zino);
 }
@@ -1176,17 +1220,23 @@ function matchesSnapshot() {
 
 	name = name.replace(/[^a-zA-Z0-9._-]/g, '-');
 	fileName = './test/snapshots/' + code.children[0].tagName.toLowerCase() + '-' + (name && name + '-' || '') + sha1(html + JSON.stringify(props) + callback.toString()).substr(0, 5);
-	setResolveData(function (key, value) {
-		return sha1(key + '-' + JSON.stringify(value));
+	setResolveData(function (key, value, oldValue) {
+		var id = sha1(key + '-' + JSON.stringify(value));
+		if (oldValue) {
+			delete dataRegistry[oldValue];
+		}
+		dataRegistry[id] = value;
+		return id;
+	}, function (key) {
+		return dataRegistry[key];
 	});
+	if (Object.keys(props).length > 0) {
+		code.children[0].props = props;
+	}
 
 	var _core$mount = mount(code.children[0], true),
 	    events = _core$mount.events,
 	    data = _core$mount.data;
-
-	if (Object.keys(props).length > 0) {
-		code.children[0].setProps(props);
-	}
 
 	callback(code.children[0]);
 

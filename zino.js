@@ -309,6 +309,7 @@ function parse(data) {
 			} else if (key[0] === '^') {
 				// handle inverted block start
 				result += '(safeAccess(' + getData() + ', \'' + value + '\') && (typeof safeAccess(' + getData() + ', \'' + value + '\') === \'boolean\' || safeAccess(' + getData() + ', \'' + value + '\').length > 0)) ? \'\' : spread([1].map(function() { var data$' + (level + 1) + ' = merge({}, data' + (0 >= level ? '' : '$' + level) + '); return [].concat(';
+				usesMerge = true;
 				usesSpread = true;
 				level += 1;
 			} else if (key[0] === '%') {
@@ -439,7 +440,14 @@ function parse(data) {
 	if (usesRenderStyle) {
 		resultObject.helperFunctions.push(renderStyle);
 	}
-	resultObject.functions = resultObject.functions.length > 0 ? 'merge({}, ' + (resultObject.functions.join(', ') || '{}') + ')' : '{}';
+	if (resultObject.functions.length > 0) {
+		resultObject.functions = 'merge({}, ' + (resultObject.functions.join(', ') || '{}') + ')';
+		if (!usesMerge) {
+			resultObject.helperFunctions.push(merge);
+		}
+	} else {
+		resultObject.functions = '{}';
+	}
 	resultObject.styles = resultObject.styles.length > 0 ? 'styles: ' + JSON.stringify(resultObject.styles) + ',' : '';
 	resultObject.helperFunctions = resultObject.helperFunctions.join('\n');
 
@@ -463,7 +471,6 @@ function hashCode(str) {
 	var hash = 0,
 	    i = void 0,
 	    chr = void 0;
-	if (str.length === 0) return hash;
 	for (i = 0; i < str.length; i++) {
 		chr = str.charCodeAt(i);
 		hash = (hash << 5) - hash + chr;
@@ -750,7 +757,9 @@ function registerTag(fn, document, Zino) {
 	    tagName = firstElement && firstElement.tagName || fn.name || '';
 	if (!tagName) {
 		tagName = fn.toString().split('\n')[0].replace(/^\s*function\s+(.*?)\s*\(.*$/, '$1');
-		if (!tagName.match(/^[A-Z][A-Za-z]*$/)) tagName = '';
+		if (!tagName.match(/^[A-Z][A-Za-z]*$/)) {
+			throw new Error('Unable to extract component\'s tag name from provided component function: ' + fn.toString());
+		}
 	}
 	tagName = tagName.replace(/([A-Z])/g, function (g, beginning) {
 		return '-' + beginning;

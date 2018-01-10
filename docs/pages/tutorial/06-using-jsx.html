@@ -229,7 +229,7 @@
         <span class="nx">buble</span><span class="p">({</span>
             <span class="na">exclude</span><span class="p">:</span> <span class="s1">'node_modules/**'</span><span class="p">,</span>
             <span class="c1">// configure JSX parser</span>
-            <span class="na">jsx</span><span class="p">:</span> <span class="s1">'Tag'</span>
+            <span class="na">jsx</span><span class="p">:</span> <span class="s1">'this.createNode'</span>
         <span class="p">})</span>
     <span class="p">]</span>
 <span class="p">}));</span>
@@ -239,19 +239,19 @@
 <p>Next, you can use it by creating your first Zino JSX component in src/:</p>
 
 <figure class="highlight"><pre><code class="language-js" data-lang="js"><span class="cm">/* hello.jsx */</span>
-<span class="kr">export</span> <span class="k">default</span> <span class="kd">function</span> <span class="nx">Hello</span><span class="p">(</span><span class="nx">Tag</span><span class="p">,</span> <span class="nx">Zino</span><span class="p">)</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="p">{</span>
-        <span class="nx">render</span><span class="p">(</span><span class="nx">data</span><span class="p">)</span> <span class="p">{</span>
-            <span class="k">return</span> <span class="p">(</span>
-                <span class="o">&lt;</span><span class="nx">div</span> <span class="kr">class</span><span class="o">=</span><span class="s2">"hello"</span><span class="o">&gt;</span>
-                    <span class="nx">Hello</span> <span class="nx">World</span><span class="o">!</span>
-                <span class="o">&lt;</span><span class="sr">/div</span><span class="err">&gt;
-</span>            <span class="p">);</span>
-        <span class="p">}</span>
-    <span class="p">};</span>
+<span class="kr">export</span> <span class="k">default</span> <span class="kr">class</span> <span class="nx">Hello</span> <span class="p">{</span>
+    <span class="nx">render</span><span class="p">(</span><span class="nx">data</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="o">&lt;</span><span class="nx">div</span> <span class="kr">class</span><span class="o">=</span><span class="s2">"hello"</span><span class="o">&gt;</span>
+                <span class="nx">Hello</span> <span class="nx">World</span><span class="o">!</span>
+            <span class="o">&lt;</span><span class="sr">/div</span><span class="err">&gt;
+</span>        <span class="p">);</span>
+    <span class="p">}</span>
 <span class="p">}</span></code></pre></figure>
 
-<p>As you can see above, the render function which normally uses the <code class="highlighter-rouge">Tag()</code> function to generate the DOM structure of a component can now be written in JSX, making the code more readable and providing all of the niceties of JSX. As before, the <code class="highlighter-rouge">data</code> parameter of the render function provides access to the component’s state and properties. The callbacks, state and event definitions still happen within the <code class="highlighter-rouge">functions</code> property of the outer return.</p>
+<p>As you can see above, the render function which normally uses the <code class="highlighter-rouge">this.createNode()</code> function to generate the DOM structure of a component can now be written in JSX, making the code more readable and providing all of the niceties of JSX. As before, the <code class="highlighter-rouge">data</code> parameter of the render function provides access to the component’s state and properties. The callbacks, state and event definitions can be added as additional methods / attributes to the class.</p>
+
+<p><strong>Note:</strong> The callback can be defined as class methods, if they are prefixed with <code class="highlighter-rouge">on</code>, for example <code class="highlighter-rouge">onmount</code>, <code class="highlighter-rouge">onrender</code> etc… . Things like the state and events can be defined as getters of the class, providing a nice shell for complex values.</p>
 
 <p>In order to compile it, simply run:</p>
 
@@ -262,65 +262,66 @@
 <p>A more complex example using JSX would look like that:</p>
 
 <figure class="highlight"><pre><code class="language-js" data-lang="js"><span class="cm">/* crud-list.jsx */</span>
-<span class="kr">export</span> <span class="k">default</span> <span class="kd">function</span> <span class="nx">CrudList</span><span class="p">(</span><span class="nx">Tag</span><span class="p">,</span> <span class="nx">Zino</span><span class="p">)</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="p">{</span>
-        <span class="nx">render</span><span class="p">(</span><span class="nx">data</span><span class="p">)</span> <span class="p">{</span>
-            <span class="k">return</span> <span class="p">(</span>
-                <span class="o">&lt;</span><span class="nx">div</span> <span class="kr">class</span><span class="o">=</span><span class="s2">"container"</span><span class="o">&gt;</span>
-                    <span class="o">&lt;</span><span class="nx">ul</span><span class="o">&gt;</span>
-                        <span class="p">{</span><span class="nx">data</span><span class="p">.</span><span class="nx">props</span><span class="p">.</span><span class="nx">list</span><span class="p">.</span><span class="nx">map</span><span class="p">(</span><span class="nx">entry</span> <span class="o">=&gt;</span> <span class="p">(</span>
-                            <span class="o">&lt;</span><span class="nx">li</span> <span class="nx">data</span><span class="o">-</span><span class="nx">id</span><span class="o">=</span><span class="s2">"{entry.id}"</span><span class="o">&gt;</span>
-                                <span class="o">&lt;</span><span class="nx">span</span><span class="o">&gt;</span><span class="p">{</span><span class="nx">entry</span><span class="p">.</span><span class="nx">name</span><span class="p">}</span><span class="o">&lt;</span><span class="sr">/span</span><span class="err">&gt;
-</span>                                <span class="o">&lt;</span><span class="nx">button</span> <span class="nx">type</span><span class="o">=</span><span class="s2">"button"</span> <span class="kr">class</span><span class="o">=</span><span class="s2">"delete"</span><span class="o">&gt;</span><span class="k">delete</span><span class="o">&lt;</span><span class="sr">/button</span><span class="err">&gt;
-</span>                            <span class="o">&lt;</span><span class="sr">/li</span><span class="err">&gt;
-</span>                        <span class="p">)).</span><span class="nx">concat</span><span class="p">(</span><span class="nx">data</span><span class="p">.</span><span class="nx">props</span><span class="p">.</span><span class="nx">isAdding</span> <span class="p">?</span> <span class="p">(</span>
-                            <span class="o">&lt;</span><span class="nx">li</span><span class="o">&gt;</span>
-                                <span class="o">&lt;</span><span class="nx">input</span> <span class="nx">name</span><span class="o">=</span><span class="s2">"name"</span><span class="o">/&gt;</span>
-                                <span class="o">&lt;</span><span class="nx">button</span> <span class="nx">type</span><span class="o">=</span><span class="s2">"button"</span> <span class="kr">class</span><span class="o">=</span><span class="s2">"delete"</span><span class="o">&gt;</span><span class="k">delete</span><span class="o">&lt;</span><span class="sr">/button</span><span class="err">&gt;
-</span>                            <span class="o">&lt;</span><span class="sr">/li</span><span class="err">&gt;
-</span>                        <span class="p">),</span> <span class="p">[])}</span>
-                    <span class="o">&lt;</span><span class="sr">/ul</span><span class="err">&gt;
-</span>                    <span class="o">&lt;</span><span class="nx">button</span> <span class="nx">type</span><span class="o">=</span><span class="s2">"button"</span> <span class="kr">class</span><span class="o">=</span><span class="s2">"add"</span><span class="o">&gt;</span><span class="p">{</span><span class="nx">data</span><span class="p">.</span><span class="nx">props</span><span class="p">.</span><span class="nx">isAdding</span> <span class="p">?</span> <span class="s1">'save'</span> <span class="p">:</span> <span class="s1">'new entry'</span><span class="p">}</span><span class="o">&lt;</span><span class="sr">/button</span><span class="err">&gt;
-</span>                <span class="o">&lt;</span><span class="sr">/div</span><span class="err">&gt;
-</span>            <span class="p">);</span>
-        <span class="p">},</span>
+<span class="kr">export</span> <span class="k">default</span> <span class="kr">class</span> <span class="nx">CrudList</span> <span class="p">{</span>
+    <span class="nx">render</span><span class="p">(</span><span class="nx">data</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="o">&lt;</span><span class="nx">div</span> <span class="kr">class</span><span class="o">=</span><span class="s2">"container"</span><span class="o">&gt;</span>
+                <span class="o">&lt;</span><span class="nx">ul</span><span class="o">&gt;</span>
+                    <span class="p">{</span><span class="nx">data</span><span class="p">.</span><span class="nx">props</span><span class="p">.</span><span class="nx">list</span><span class="p">.</span><span class="nx">map</span><span class="p">((</span><span class="nx">entry</span> <span class="o">=&gt;</span> <span class="p">(</span>
+                        <span class="o">&lt;</span><span class="nx">li</span> <span class="nx">data</span><span class="o">-</span><span class="nx">id</span><span class="o">=</span><span class="s2">"{entry.id}"</span><span class="o">&gt;</span>
+                            <span class="o">&lt;</span><span class="nx">span</span><span class="o">&gt;</span><span class="p">{</span><span class="nx">entry</span><span class="p">.</span><span class="nx">name</span><span class="p">}</span><span class="o">&lt;</span><span class="sr">/span</span><span class="err">&gt;
+</span>                            <span class="o">&lt;</span><span class="nx">button</span> <span class="nx">type</span><span class="o">=</span><span class="s2">"button"</span> <span class="kr">class</span><span class="o">=</span><span class="s2">"delete"</span><span class="o">&gt;</span><span class="k">delete</span><span class="o">&lt;</span><span class="sr">/button</span><span class="err">&gt;
+</span>                        <span class="o">&lt;</span><span class="sr">/li</span><span class="err">&gt;
+</span>                    <span class="p">)).</span><span class="nx">bind</span><span class="p">(</span><span class="k">this</span><span class="p">)).</span><span class="nx">concat</span><span class="p">(</span><span class="nx">data</span><span class="p">.</span><span class="nx">props</span><span class="p">.</span><span class="nx">isAdding</span> <span class="p">?</span> <span class="p">(</span>
+                        <span class="o">&lt;</span><span class="nx">li</span><span class="o">&gt;</span>
+                            <span class="o">&lt;</span><span class="nx">input</span> <span class="nx">name</span><span class="o">=</span><span class="s2">"name"</span><span class="o">/&gt;</span>
+                            <span class="o">&lt;</span><span class="nx">button</span> <span class="nx">type</span><span class="o">=</span><span class="s2">"button"</span> <span class="kr">class</span><span class="o">=</span><span class="s2">"delete"</span><span class="o">&gt;</span><span class="k">delete</span><span class="o">&lt;</span><span class="sr">/button</span><span class="err">&gt;
+</span>                        <span class="o">&lt;</span><span class="sr">/li</span><span class="err">&gt;
+</span>                    <span class="p">)</span> <span class="p">:</span> <span class="p">[])}</span>
+                <span class="o">&lt;</span><span class="sr">/ul</span><span class="err">&gt;
+</span>                <span class="o">&lt;</span><span class="nx">button</span> <span class="nx">type</span><span class="o">=</span><span class="s2">"button"</span> <span class="kr">class</span><span class="o">=</span><span class="s2">"add"</span><span class="o">&gt;</span><span class="p">{</span><span class="nx">data</span><span class="p">.</span><span class="nx">props</span><span class="p">.</span><span class="nx">isAdding</span> <span class="p">?</span> <span class="s1">'save'</span> <span class="p">:</span> <span class="s1">'new entry'</span><span class="p">}</span><span class="o">&lt;</span><span class="sr">/button</span><span class="err">&gt;
+</span>            <span class="o">&lt;</span><span class="sr">/div</span><span class="err">&gt;
+</span>        <span class="p">);</span>
+    <span class="p">}</span>
 
-        <span class="nx">functions</span><span class="p">:</span> <span class="p">{</span>
-            <span class="na">props</span><span class="p">:</span> <span class="p">{</span>
-                <span class="na">list</span><span class="p">:</span> <span class="p">[],</span>
-                <span class="na">isAdding</span><span class="p">:</span> <span class="kc">false</span>
-            <span class="p">},</span>
+    <span class="nx">constructor</span><span class="p">()</span> <span class="p">{</span>
+        <span class="kd">let</span> <span class="nx">_this</span> <span class="o">=</span> <span class="k">this</span> <span class="o">||</span> <span class="p">{};</span>
+        <span class="nx">_this</span><span class="p">.</span><span class="nx">props</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="na">list</span><span class="p">:</span> <span class="p">[],</span>
+            <span class="na">isAdding</span><span class="p">:</span> <span class="kc">false</span>
+        <span class="p">};</span>
+    <span class="p">}</span>
 
-            <span class="na">events</span><span class="p">:</span> <span class="p">{</span>
-                <span class="s1">'.add'</span><span class="p">:</span> <span class="p">{</span><span class="nl">click</span><span class="p">:</span> <span class="p">()</span> <span class="o">=&gt;</span> <span class="p">{</span>
-                    <span class="kd">let</span> <span class="nx">host</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">getHost</span><span class="p">();</span>
-                    <span class="k">if</span> <span class="p">(</span><span class="nx">host</span><span class="p">.</span><span class="nx">props</span><span class="p">.</span><span class="nx">isAdding</span><span class="p">)</span> <span class="p">{</span>
-                        <span class="c1">// save entry</span>
-                        <span class="nx">Zino</span><span class="p">.</span><span class="nx">trigger</span><span class="p">(</span><span class="s1">'list-store:entry-added'</span><span class="p">,</span> <span class="p">{</span>
-                            <span class="na">id</span><span class="p">:</span> <span class="nx">host</span><span class="p">.</span><span class="nx">props</span><span class="p">.</span><span class="nx">list</span><span class="p">.</span><span class="nx">length</span><span class="p">,</span>
-                            <span class="na">name</span><span class="p">:</span> <span class="k">this</span><span class="p">.</span><span class="nx">parentNode</span><span class="p">.</span><span class="nx">querySelector</span><span class="p">(</span><span class="s1">'input[name="name"]'</span><span class="p">).</span><span class="nx">value</span>
-                        <span class="p">});</span>
-                    <span class="p">}</span>
-                <span class="p">}},</span>
-                <span class="s1">'.delete'</span><span class="p">:</span> <span class="p">{</span><span class="nl">click</span><span class="p">:</span> <span class="p">()</span> <span class="o">=&gt;</span> <span class="p">{</span>
-                    <span class="kd">let</span> <span class="nx">host</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">getHost</span><span class="p">();</span>
-                    <span class="k">if</span> <span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">parentNode</span><span class="p">.</span><span class="nx">dataset</span><span class="p">.</span><span class="nx">id</span><span class="p">)</span> <span class="p">{</span>
-                        <span class="kd">let</span> <span class="nx">list</span> <span class="o">=</span> <span class="nx">host</span><span class="p">.</span><span class="nx">props</span><span class="p">.</span><span class="nx">list</span><span class="p">.</span><span class="nx">slice</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
-                        <span class="nx">list</span><span class="p">.</span><span class="nx">splice</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">parentNode</span><span class="p">.</span><span class="nx">dataset</span><span class="p">.</span><span class="nx">id</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
-                        <span class="nx">host</span><span class="p">.</span><span class="nx">setProps</span><span class="p">(</span><span class="s1">'list'</span><span class="p">,</span> <span class="nx">list</span><span class="p">);</span>
-                    <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="nx">host</span><span class="p">.</span><span class="nx">props</span><span class="p">.</span><span class="nx">isAdding</span><span class="p">)</span> <span class="p">{</span>
-                        <span class="c1">// cancel add</span>
-                        <span class="nx">host</span><span class="p">.</span><span class="nx">setProps</span><span class="p">(</span><span class="s1">'isAdding'</span><span class="p">,</span> <span class="kc">false</span><span class="p">);</span>
-                    <span class="p">}</span>
-                <span class="p">}}</span>
-            <span class="p">},</span>
+    <span class="nx">get</span> <span class="nx">events</span><span class="p">()</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s1">'.add'</span><span class="p">:</span> <span class="p">{</span><span class="nx">click</span><span class="p">()</span> <span class="p">{</span>
+                <span class="kd">let</span> <span class="nx">props</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">getHost</span><span class="p">().</span><span class="nx">props</span><span class="p">;</span>
+                <span class="k">if</span> <span class="p">(</span><span class="nx">props</span><span class="p">.</span><span class="nx">isAdding</span><span class="p">)</span> <span class="p">{</span>
+                    <span class="c1">// save entry</span>
+                    <span class="nx">Zino</span><span class="p">.</span><span class="nx">trigger</span><span class="p">(</span><span class="s1">'list-store:entry-added'</span><span class="p">,</span> <span class="p">{</span>
+                        <span class="na">id</span><span class="p">:</span> <span class="nx">props</span><span class="p">.</span><span class="nx">list</span><span class="p">.</span><span class="nx">length</span><span class="p">,</span>
+                        <span class="na">name</span><span class="p">:</span> <span class="k">this</span><span class="p">.</span><span class="nx">parentNode</span><span class="p">.</span><span class="nx">querySelector</span><span class="p">(</span><span class="s1">'input[name="name"]'</span><span class="p">).</span><span class="nx">value</span>
+                    <span class="p">});</span>
+                <span class="p">}</span>
+            <span class="p">}},</span>
+            <span class="s1">'.delete'</span><span class="p">:</span> <span class="p">{</span><span class="nx">click</span><span class="p">()</span> <span class="p">{</span>
+                <span class="kd">let</span> <span class="nx">host</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">getHost</span><span class="p">();</span>
+                <span class="k">if</span> <span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">parentNode</span><span class="p">.</span><span class="nx">dataset</span><span class="p">.</span><span class="nx">id</span><span class="p">)</span> <span class="p">{</span>
+                    <span class="kd">let</span> <span class="nx">list</span> <span class="o">=</span> <span class="nx">host</span><span class="p">.</span><span class="nx">props</span><span class="p">.</span><span class="nx">list</span><span class="p">.</span><span class="nx">slice</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+                    <span class="nx">list</span><span class="p">.</span><span class="nx">splice</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">parentNode</span><span class="p">.</span><span class="nx">dataset</span><span class="p">.</span><span class="nx">id</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+                    <span class="nx">host</span><span class="p">.</span><span class="nx">setProps</span><span class="p">(</span><span class="s1">'list'</span><span class="p">,</span> <span class="nx">list</span><span class="p">);</span>
+                <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="nx">host</span><span class="p">.</span><span class="nx">props</span><span class="p">.</span><span class="nx">isAdding</span><span class="p">)</span> <span class="p">{</span>
+                    <span class="c1">// cancel add</span>
+                    <span class="nx">host</span><span class="p">.</span><span class="nx">setProps</span><span class="p">(</span><span class="s1">'isAdding'</span><span class="p">,</span> <span class="kc">false</span><span class="p">);</span>
+                <span class="p">}</span>
+            <span class="p">}}</span>
+        <span class="p">};</span>
+    <span class="p">}</span>
 
-            <span class="nx">mount</span><span class="p">()</span> <span class="p">{</span>
-                <span class="nx">Zino</span><span class="p">.</span><span class="nx">on</span><span class="p">(</span><span class="s1">'list-store:list-changed'</span><span class="p">,</span> <span class="nx">data</span> <span class="o">=&gt;</span> <span class="p">{</span>
-                    <span class="k">this</span><span class="p">.</span><span class="nx">getHost</span><span class="p">().</span><span class="nx">setProps</span><span class="p">(</span><span class="s1">'list'</span><span class="p">,</span> <span class="nx">data</span><span class="p">);</span>
-                <span class="p">});</span>
-            <span class="p">}</span>
-        <span class="p">}</span>
+    <span class="nx">onmount</span><span class="p">(</span><span class="nx">z</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">z</span><span class="p">.</span><span class="nx">on</span><span class="p">(</span><span class="s1">'list-store:list-changed'</span><span class="p">,</span> <span class="nx">data</span> <span class="o">=&gt;</span> <span class="p">{</span>
+            <span class="k">this</span><span class="p">.</span><span class="nx">getHost</span><span class="p">().</span><span class="nx">setProps</span><span class="p">(</span><span class="s1">'list'</span><span class="p">,</span> <span class="nx">data</span><span class="p">);</span>
+        <span class="p">});</span>
     <span class="p">}</span>
 <span class="p">}</span></code></pre></figure>
 

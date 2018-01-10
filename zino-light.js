@@ -189,7 +189,6 @@ function hashCode(str) {
 	var hash = 0,
 	    i = void 0,
 	    chr = void 0;
-	if (str.length === 0) return hash;
 	for (i = 0; i < str.length; i++) {
 		chr = str.charCodeAt(i);
 		hash = (hash << 5) - hash + chr;
@@ -476,7 +475,9 @@ function registerTag(fn, document, Zino) {
 	    tagName = firstElement && firstElement.tagName || fn.name || '';
 	if (!tagName) {
 		tagName = fn.toString().split('\n')[0].replace(/^\s*function\s+(.*?)\s*\(.*$/, '$1');
-		if (!tagName.match(/^[A-Z][A-Za-z]*$/)) tagName = '';
+		if (!tagName.match(/^[A-Z][A-Za-z]*$/)) {
+			throw new Error('Unable to extract component\'s tag name from provided component function: ' + fn.toString());
+		}
 	}
 	tagName = tagName.replace(/([A-Z])/g, function (g, beginning) {
 		return '-' + beginning;

@@ -50,7 +50,9 @@ export function registerTag(fn, document, Zino) {
 		tagName = (firstElement && firstElement.tagName) || (fn.name||'');
 	if (!tagName) {
 		tagName = fn.toString().split('\n')[0].replace(/^\s*function\s+(.*?)\s*\(.*$/, '$1');
-		if (!tagName.match(/^[A-Z][A-Za-z]*$/)) tagName = '';
+		if (!tagName.match(/^[A-Z][A-Za-z]*$/)) {
+			throw new Error('Unable to extract component\'s tag name from provided component function: ' + fn.toString());
+		}
 	}
 	tagName = tagName.replace(/([A-Z])/g, (g, beginning) => '-' + beginning).toLowerCase().replace(/^-/, '')
 

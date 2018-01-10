@@ -3,21 +3,12 @@ import {Tag, getInnerHTML, setDataResolver} from '../src/vdom';
 import test from './test';
 
 function run(code) {
-	try {
-		return new Function('return ' + code)()(Tag);
-	} catch(e) {
-		console.log(code);
-		throw new Error('Generated code invalid!');
-	}
+	return new Function('return ' + code)()(Tag);
 }
 
 function render (code, data, debug) {
 	let parsed = parse(code);
 	let dom = run(parsed);
-	if (debug) {
-		console.log(parsed, dom, data);
-		debugger;
-	}
 	let result = dom.render(data);
 	result = Tag('div', {class: '-shadow-root'}, result);
 	return getInnerHTML(result);
@@ -89,6 +80,7 @@ test('parse blocks', t => {
 	t.is(render(`<a>x{{#test}}y{{/test}}z</a>`, {test: [1, 2, 3]}), 'xyyyz', 'evaluates array values');
 	t.is(render(`<a>x{{^test}}y{{/test}}z</a>`, {test: true}), 'xz', 'evaluates inverted truish values');
 	t.is(render(`<a>x{{^test}}y{{/test}}z</a>`, {test: false}), 'xyz', 'evaluates inverted false values');
+
 	t.throws((()=>render(`<a>x{{#test}}y</a>`, {test: 1})), 'Unexpected end of block', 'opening block');
 	t.throws((()=>render(`<a>x{{/test}}y</a>`, {test: 1})), 'Unexpected end of block: test', 'closing block');
 });

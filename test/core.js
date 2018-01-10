@@ -167,8 +167,11 @@ test('re-renders tag dynamically', t => {
 	body.children[0].setProps('x', 'Y');
 	t.is(body.children[0].children[0].innerHTML, 'Y34 56Y', 're-rendered after setProps');
 
+	body.children[0].setProps({x: 'A'});
+	t.is(body.children[0].children[0].innerHTML, 'A34 56Y', 're-rendered after setProps called with object');
+
 	body.children[0].setAttribute('x', 'Z');
-	t.is(body.children[0].children[0].innerHTML, 'Y34 56Z', 're-rendered after setAttribute');
+	t.is(body.children[0].children[0].innerHTML, 'A34 56Z', 're-rendered after setAttribute');
 	off('--zino-rerender-tag');
 });
 
@@ -332,6 +335,33 @@ test('resolve inconsistencies', t => {
 	core.setDataRegistry({});
 	core.flushRegisteredTags();
 	off('--zino-rerender-tag', core.render);
+});
+
+test('Detects tag name on component', t => {
+	core.setDataRegistry({});
+	core.flushRegisteredTags();
+	document.body.innerHTML = '<my-component></my-component>';
+	core.registerTag(function MyComponent() {
+		return {
+			render() {
+				return 'Is able to render component';
+			}
+		}
+	}, document);
+	t.is(document.body.querySelectorAll('my-component')[0].childNodes[0].innerHTML, 'Is able to render component', 'correctly extracted tag name from function name');
+
+	core.setDataRegistry({});
+	core.flushRegisteredTags();
+	document.body.innerHTML = '<my-component></my-component>';
+	t.throws(() => {
+		core.registerTag(function() {
+			return {
+				render() {
+					return 'Will never be run.';
+				}
+			};
+		});
+	});
 });
 
 function getNthChild(root, pos) {
