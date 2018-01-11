@@ -83,6 +83,58 @@ var identity = function identity(a) {
 	return a;
 };
 
+function attachEvent(el, events, host) {
+	if (!isFn(el.addEventListener)) return;
+	var findEl = function findEl(selector, target) {
+		var node = toArray(el.querySelectorAll(selector));
+		while (node.length > 0 && target !== host) {
+			if (node.indexOf(target) >= 0) return node[node.indexOf(target)];
+			target = target.parentNode;
+		}
+		return false;
+	};
+	events.forEach(function (eventObj) {
+		Object.keys(eventObj.handlers).forEach(function (event) {
+			el.addEventListener(event, function (e) {
+				var target = void 0;
+				if (eventObj.selector === ':host' || (target = findEl(eventObj.selector, e.target))) {
+					target && (target.getHost = function () {
+						return host.getHost();
+					});
+					eventObj.handlers[event].call(target || host, e);
+				}
+			}, false);
+		});
+	});
+}
+
+function attachSubEvents(events) {
+	var subEvents = events.subEvents,
+	    tag = events.tag;
+
+	var count = {};
+	// make sure that we only attach events if we are actually in browser context
+	if (tag.addEventListener.toString().indexOf('[native code]') >= 0) {
+		subEvents.events.forEach(function (event) {
+			var el = event.tag;
+			if (!isObj(el)) {
+				// we have a selector rather than an element
+				count[el] = (count[el] || 0) + 1;
+				// turn the selector into the corresponding element
+				el = tag.querySelectorAll(el)[count[el] - 1];
+			}
+			// if no events have been attached yet
+			if (el && el.children.length > 0 && !el.children[0].__eventsAttached) {
+				// attach children tag events to the shadow root
+				attachEvent(el.children[0], event.childEvents, el);
+				// attach host events directly to the component!
+				attachEvent(el, event.hostEvents, el);
+				el.children[0].__eventsAttached = true;
+			}
+		});
+	}
+}
+
 var eventQueue = {};
 
 function publishEvent(type, data) {
@@ -124,55 +176,6 @@ function one(name, fn) {
 		fn.apply(this, arguments);
 		off(name, self);
 	});
-}
-
-function attachEvent(el, events, host) {
-	if (!isFn(el.addEventListener)) return;
-	var findEl = function findEl(selector, target) {
-		var node = toArray(el.querySelectorAll(selector));
-		while (node.length > 0 && target !== host) {
-			if (node.indexOf(target) >= 0) return node[node.indexOf(target)];
-			target = target.parentNode;
-		}
-		return false;
-	};
-	events.forEach(function (eventObj) {
-		Object.keys(eventObj.handlers).forEach(function (event) {
-			el.addEventListener(event, function (e) {
-				var target = void 0;
-				if (eventObj.selector === ':host' || (target = findEl(eventObj.selector, e.target))) {
-					target && (target.getHost = function () {
-						return host.getHost();
-					});
-					eventObj.handlers[event].call(target || host, e);
-				}
-			}, false);
-		});
-	});
-}
-
-function attachSubEvents(subEvents, tag) {
-	var count = {};
-	// make sure that we only attach events if we are actually in browser context
-	if (tag.addEventListener.toString().indexOf('[native code]') >= 0) {
-		subEvents.events.forEach(function (event) {
-			var el = event.tag;
-			if (!isObj(el)) {
-				// we have a selector rather than an element
-				count[el] = (count[el] || 0) + 1;
-				// turn the selector into the corresponding element
-				el = tag.querySelectorAll(el)[count[el] - 1];
-			}
-			// if no events have been attached yet
-			if (el && el.children.length > 0 && !el.children[0].__eventsAttached) {
-				// attach children tag events to the shadow root
-				attachEvent(el.children[0], event.childEvents, el);
-				// attach host events directly to the component!
-				attachEvent(el, event.hostEvents, el);
-				el.children[0].__eventsAttached = true;
-			}
-		});
-	}
 }
 
 var tagFilter = [];
@@ -525,7 +528,10 @@ function render(tag) {
 	if (!tag || !tag.addEventListener) return;
 	var subEvents = renderTag(tag);
 	if (!subEvents) return;
-	attachSubEvents(subEvents, tag);
+	trigger('--zino-attach-events', {
+		subEvents: subEvents,
+		tag: tag
+	});
 }
 
 
@@ -580,7 +586,7 @@ function initializeTag(tag, registryEntry) {
 
 	if (!this || this.noEvents !== true) {
 		// attach sub events
-		attachSubEvents(subEvents, tag);
+		trigger('--zino-attach-events', { subEvents: subEvents, tag: tag });
 
 		[tag].concat(tag.__subs).forEach(function (el) {
 			var actual = el && el.getHost() || {};
@@ -741,6 +747,7 @@ function renderTag(tag) {
 		if (inconsistent) {
 			tag.children[0].innerHTML = getInnerHTML(renderedDOM);
 			inconsistent = false;
+			break;
 		}
 		// if we have rendered any sub components, retrieve their actual DOM node
 		if (renderedSubElements.length > 0 && tag.querySelectorAll) {
@@ -970,6 +977,7 @@ function setParser(fn) {
 	parseCode = fn;
 }
 
+Zino.on('--zino-attach-events', attachSubEvents);
 Zino.on('--zino-rerender-tag', function (tag) {
 	return dirtyTags.indexOf(tag) < 0 && dirtyTags.push(tag);
 });

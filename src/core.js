@@ -1,6 +1,6 @@
 import * as vdom from './vdom';
 import {emptyFunc, isFn, isObj, uuid, merge, toArray} from './utils';
-import {trigger, on, attachSubEvents} from './events';
+import {trigger, on} from './events';
 
 let resolveData = (key, value, oldID) => {
 	let id = uuid();
@@ -94,7 +94,10 @@ export function render(tag) {
 	if (!tag || !tag.addEventListener) return;
 	let subEvents = renderTag(tag);
 	if (!subEvents) return;
-	attachSubEvents(subEvents, tag);
+	trigger('--zino-attach-events', {
+		subEvents,
+		tag
+	});
 }
 
 export function flushRegisteredTags() {
@@ -149,7 +152,7 @@ function initializeTag(tag, registryEntry) {
 
 	if (!this || this.noEvents !== true) {
 		// attach sub events
-		attachSubEvents(subEvents, tag);
+		trigger('--zino-attach-events', {subEvents, tag});
 
 		[tag].concat(tag.__subs).forEach(function(el) {
 			let actual = el && el.getHost() || {};
@@ -299,6 +302,7 @@ function renderTag(tag, registryEntry = tagRegistry[tag.tagName.toLowerCase()]) 
 		if (inconsistent) {
 			tag.children[0].innerHTML = vdom.getInnerHTML(renderedDOM);
 			inconsistent = false;
+			break;
 		}
 		// if we have rendered any sub components, retrieve their actual DOM node
 		if (renderedSubElements.length > 0 && tag.querySelectorAll) {

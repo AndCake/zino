@@ -1,4 +1,5 @@
 import {isObj, toArray, identity} from './utils';
+import * as browser from './browser';
 import {Zino, actions, setDocument, setComponentLoader} from './facade';
 import {setDataRegistry} from './core';
 
@@ -77,6 +78,7 @@ setDocument(window.document);
 export {Zino};
 export function setParser(fn) { parseCode = fn; };
 
+Zino.on('--zino-attach-events', browser.attachSubEvents);
 Zino.on('--zino-rerender-tag', tag => dirtyTags.indexOf(tag) < 0 && dirtyTags.push(tag));
 Zino.trigger('publish-style', '[__ready] { contain: content; }');
 toArray(document.querySelectorAll('[rel="zino-tag"]')).forEach(tag => Zino.import(tag.href));
