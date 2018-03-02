@@ -95,6 +95,24 @@ export function getInnerHTML(node) {
 	}).join('');
 }
 
+function setAttribute(name, value) {
+	// ignore setAttribute definition for custom tags
+	if (this.tagName.indexOf('-') >= 0) return;
+	HTMLElement.prototype.setAttribute.call(this, name, value);
+	var el = this;
+	do {
+		delete el.__hash;
+		el = el.parentNode;
+	} while (el && el.__hash);
+}
+
+function attachSetAttribute(node) {
+	node.setAttribute = setAttribute.bind(node);
+	for (var index = 0, length = node.children.length, child; child = node.children[index], index < length; index += 1) {
+		attachSetAttribute(child);
+	}
+}
+
 /**
  * Creates a new DOM node
  *
@@ -116,6 +134,7 @@ function createElement(node, document) {
 		// define it's inner structure
 		tag.innerHTML = getInnerHTML(node);
 		tag.__hash = node.__hash;
+		attachSetAttribute(tag);
 	}
 
 	return tag;
@@ -182,7 +201,7 @@ export function applyDOM(dom, vdom, document) {
 				while (dom.attributes.length > attributes.length) {
 					let attr = dom.attributes[index];
 					// if the respective attribute does not exist on the VDOM
-					if (typeof attributes[attr.name] === 'undefined') {
+					if (typeof vdom.attributes[attr.name] === 'undefined') {
 						// remove it
 						dom.removeAttribute(attr.name);
 						index = 0;
@@ -230,4 +249,5 @@ export function applyDOM(dom, vdom, document) {
 		}
 	}
 	dom.__hash = vdom.__hash;
+	dom.setAttribute = setAttribute.bind(dom);
 }

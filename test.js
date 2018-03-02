@@ -134,55 +134,6 @@ function one(name, fn) {
 	});
 }
 
-function attachEvent(el, events, host) {
-	if (!isFn(el.addEventListener)) return;
-	var findEl = function findEl(selector, target) {
-		var node = toArray(el.querySelectorAll(selector));
-		while (node.length > 0 && target !== host) {
-			if (node.indexOf(target) >= 0) return node[node.indexOf(target)];
-			target = target.parentNode;
-		}
-		return false;
-	};
-	events.forEach(function (eventObj) {
-		Object.keys(eventObj.handlers).forEach(function (event) {
-			el.addEventListener(event, function (e) {
-				var target = void 0;
-				if (eventObj.selector === ':host' || (target = findEl(eventObj.selector, e.target))) {
-					target && (target.getHost = function () {
-						return host.getHost();
-					});
-					eventObj.handlers[event].call(target || host, e);
-				}
-			}, false);
-		});
-	});
-}
-
-function attachSubEvents(subEvents, tag) {
-	var count = {};
-	// make sure that we only attach events if we are actually in browser context
-	if (tag.addEventListener.toString().indexOf('[native code]') >= 0) {
-		subEvents.events.forEach(function (event) {
-			var el = event.tag;
-			if (!isObj(el)) {
-				// we have a selector rather than an element
-				count[el] = (count[el] || 0) + 1;
-				// turn the selector into the corresponding element
-				el = tag.querySelectorAll(el)[count[el] - 1];
-			}
-			// if no events have been attached yet
-			if (el && el.children.length > 0 && !el.children[0].__eventsAttached) {
-				// attach children tag events to the shadow root
-				attachEvent(el.children[0], event.childEvents, el);
-				// attach host events directly to the component!
-				attachEvent(el, event.hostEvents, el);
-				el.children[0].__eventsAttached = true;
-			}
-		});
-	}
-}
-
 var tagFilter = [];
 var tagsCreated = [];
 var dataResolver = function dataResolver(attr, value) {
@@ -197,7 +148,6 @@ function hashCode(str) {
 	var hash = 0,
 	    i = void 0,
 	    chr = void 0;
-	if (str.length === 0) return hash;
 	for (i = 0; i < str.length; i++) {
 		chr = str.charCodeAt(i);
 		hash = (hash << 5) - hash + chr;
@@ -377,7 +327,7 @@ function applyDOM(dom, vdom, document) {
 				while (dom.attributes.length > attributes.length) {
 					var _attr = dom.attributes[index];
 					// if the respective attribute does not exist on the VDOM
-					if (typeof attributes[_attr.name] === 'undefined') {
+					if (typeof vdom.attributes[_attr.name] === 'undefined') {
 						// remove it
 						dom.removeAttribute(_attr.name);
 						index = 0;
@@ -484,7 +434,9 @@ function registerTag(fn, document, Zino) {
 	    tagName = firstElement && firstElement.tagName || fn.name || '';
 	if (!tagName) {
 		tagName = fn.toString().split('\n')[0].replace(/^\s*function\s+(.*?)\s*\(.*$/, '$1');
-		if (!tagName.match(/^[A-Z][A-Za-z]*$/)) tagName = '';
+		if (!tagName.match(/^[A-Z][A-Za-z]*$/)) {
+			throw new Error('Unable to extract component\'s tag name from provided component function: ' + fn.toString());
+		}
 	}
 	tagName = tagName.replace(/([A-Z])/g, function (g, beginning) {
 		return '-' + beginning;
@@ -532,7 +484,10 @@ function render(tag) {
 	if (!tag || !tag.addEventListener) return;
 	var subEvents = renderTag(tag);
 	if (!subEvents) return;
-	attachSubEvents(subEvents, tag);
+	trigger('--zino-attach-events', {
+		subEvents: subEvents,
+		tag: tag
+	});
 }
 
 function flushRegisteredTags() {
@@ -589,7 +544,7 @@ function initializeTag(tag, registryEntry) {
 
 	if (!this || this.noEvents !== true) {
 		// attach sub events
-		attachSubEvents(subEvents, tag);
+		trigger('--zino-attach-events', { subEvents: subEvents, tag: tag });
 
 		[tag].concat(tag.__subs).forEach(function (el) {
 			var actual = el && el.getHost() || {};
@@ -750,6 +705,7 @@ function renderTag(tag) {
 		if (inconsistent) {
 			tag.children[0].innerHTML = getInnerHTML(renderedDOM);
 			inconsistent = false;
+			break;
 		}
 		// if we have rendered any sub components, retrieve their actual DOM node
 		if (renderedSubElements.length > 0 && tag.querySelectorAll) {
@@ -993,6 +949,7 @@ function parse(data) {
 			} else if (key[0] === '^') {
 				// handle inverted block start
 				result += '(safeAccess(' + getData() + ', \'' + value + '\') && (typeof safeAccess(' + getData() + ', \'' + value + '\') === \'boolean\' || safeAccess(' + getData() + ', \'' + value + '\').length > 0)) ? \'\' : spread([1].map(function() { var data$' + (level + 1) + ' = merge({}, data' + (0 >= level ? '' : '$' + level) + '); return [].concat(';
+				usesMerge = true;
 				usesSpread = true;
 				level += 1;
 			} else if (key[0] === '%') {
@@ -1123,7 +1080,14 @@ function parse(data) {
 	if (usesRenderStyle) {
 		resultObject.helperFunctions.push(renderStyle);
 	}
-	resultObject.functions = resultObject.functions.length > 0 ? 'merge({}, ' + (resultObject.functions.join(', ') || '{}') + ')' : '{}';
+	if (resultObject.functions.length > 0) {
+		resultObject.functions = 'merge({}, ' + (resultObject.functions.join(', ') || '{}') + ')';
+		if (!usesMerge) {
+			resultObject.helperFunctions.push(merge$1);
+		}
+	} else {
+		resultObject.functions = '{}';
+	}
 	resultObject.styles = resultObject.styles.length > 0 ? 'styles: ' + JSON.stringify(resultObject.styles) + ',' : '';
 	resultObject.helperFunctions = resultObject.helperFunctions.join('\n');
 

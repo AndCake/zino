@@ -301,9 +301,9 @@ describe('zino', function () {
 						setTimeout(function() {
 							assertNotEmpty(document.querySelectorAll('consistency-test part-b ul li'), 'has resolved inconsistency and events still work');
 							done();
-						}, 1000);
-					}, 1000);
-				}, 1000);
+						}, 100);
+					}, 100);
+				}, 100);
 			};
 			document.body.appendChild(consistencyTest);
 			Zino.import(function ConsistencyTest(Tag) {
@@ -326,6 +326,37 @@ describe('zino', function () {
 						},
 					}
 				}
+			});
+		});
+		it('can correctly identify changed attributes', function (done) {
+			var el = document.createElement('consistency-attribute-test');
+			el.onready = function () {
+				assert(el.querySelector('input').checked, 'First element was checked');
+				el.setProps('values', [1, 2, 3]);
+				setTimeout(function() {
+					assert(!el.querySelector('input').checked, 'first element was unchecked again');
+					done();
+				}, 20);
+			};
+			document.body.appendChild(el);
+			Zino.import(function ConsistencyAttributeTest(Tag) {
+				return {
+					render: function (data) {
+						return data.props.values.map(function (value) {
+							return Tag('label', null, Tag('input', {type: 'checkbox', value: value}));
+						});
+					},
+					functions: {
+						props: {
+							values: [1, 2]
+						},
+						render: function() {
+							if (this.props.values.length === 2) {
+								this.querySelector('input').setAttribute('checked', 'checked');
+							}
+						}
+					}
+				};
 			});
 		});
 	});
